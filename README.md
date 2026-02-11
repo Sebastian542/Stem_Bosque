@@ -170,5 +170,5 @@ Este proyecto es de carácter **educativo**, desarrollado en el marco de la inic
 ---
 
 <div align="center">
-  <b>Hecho con ❤️ para enseñar programación en español 🌱</b>
+  <b>Hecho con ❤️ para enseñar  habilidades STEM  🌱</b>
 </div>
