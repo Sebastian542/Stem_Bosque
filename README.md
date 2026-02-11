@@ -165,7 +165,7 @@ FIN PROGRAMA
 
 ## 📄 Licencia
 
-Este proyecto es de carácter **educativo**, desarrollado en el marco de la iniciativa **STEMBosque**. Libre para uso, estudio y adaptación con fines pedagógicos.
+Este proyecto es de carácter **educativo**, desarrollado en el marco de la iniciativa **STEMBosque**. para uso, estudio y adaptación con fines pedagógicos.
 
 ---
 
