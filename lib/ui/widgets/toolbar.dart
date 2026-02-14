@@ -7,7 +7,9 @@ class Toolbar extends StatelessWidget {
   final VoidCallback? onClear;
   final VoidCallback? onOpen;
   final VoidCallback? onSave;
+  final VoidCallback? onBluetooth;
   final bool isRunning;
+  final bool isBluetoothOpen;
 
   const Toolbar({
     Key? key,
@@ -15,7 +17,9 @@ class Toolbar extends StatelessWidget {
     this.onClear,
     this.onOpen,
     this.onSave,
+    this.onBluetooth,
     this.isRunning = false,
+    this.isBluetoothOpen = false,
   }) : super(key: key);
 
   @override
@@ -77,6 +81,18 @@ class Toolbar extends StatelessWidget {
           ),
           
           const Spacer(),
+          
+          // Botón Bluetooth
+          _buildButton(
+            context: context,
+            label: isBluetoothOpen ? 'Cerrar BT' : 'Bluetooth',
+            icon: isBluetoothOpen ? Icons.bluetooth_connected : Icons.bluetooth,
+            color: isBluetoothOpen ? AppTheme.cyan : AppTheme.comment,
+            onPressed: onBluetooth,
+            textColor: AppTheme.background,
+          ),
+          
+          const SizedBox(width: 16),
           
           // Información de versión
           const Text(

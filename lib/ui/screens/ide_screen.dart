@@ -1,22 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../compiler/lexer/lexer.dart';
 import '../../compiler/parser/parser.dart';
 import '../../compiler/semantic/semantic_analyzer.dart';
 import '../../compiler/executor/program_executor.dart';
 import '../../compiler/executor/instruction.dart';
-import '../../robot/robot.dart';
 import '../../utils/file_utils.dart';
 
 import '../widgets/code_editor.dart';
 import '../widgets/console_output.dart';
-import '../widgets/robot_canvas.dart';
 import '../widgets/toolbar.dart';
+import '../widgets/bluetooth_panel.dart';
 import '../theme/app_theme.dart';
 
-/// Pantalla principal del IDE de StemBosque
 class IDEScreen extends StatefulWidget {
   const IDEScreen({Key? key}) : super(key: key);
 
@@ -25,17 +22,13 @@ class IDEScreen extends StatefulWidget {
 }
 
 class _IDEScreenState extends State<IDEScreen> {
-  // Controladores
   final TextEditingController _codeController = TextEditingController();
-  
-  // Estado
   final List<LogMessage> _consoleMessages = [];
-  late Robot _robot;
   bool _isRunning = false;
-  
-  // Layout
-  double _verticalSplitRatio = 0.5;
-  double _horizontalSplitRatio = 0.7;
+  bool _showBluetoothPanel = false;
+
+  // Ratio editor/consola (arrastrable)
+  double _splitRatio = 0.72;
 
   static const String _sampleCode = '''/*Un sencillo programa de ejemplo.*/
 PROGRAMA "Programa numero 1"
@@ -68,7 +61,6 @@ FIN PROGRAMA''';
   void initState() {
     super.initState();
     _codeController.text = _sampleCode;
-    _robot = Robot(x: 430, y: 285);
     _addLog('Esperando ejecución...', LogType.info);
   }
 
@@ -92,24 +84,30 @@ FIN PROGRAMA''';
             onClear: _clearCode,
             onOpen: _openFile,
             onSave: _saveFile,
+            onBluetooth: _toggleBluetoothPanel,
             isRunning: _isRunning,
+            isBluetoothOpen: _showBluetoothPanel,
           ),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ── Editor + Consola ──────────────────────────────────────────
                 Expanded(
-                  flex: (_verticalSplitRatio * 100).toInt(),
                   child: Column(
                     children: [
+                      // Editor
                       Expanded(
-                        flex: (_horizontalSplitRatio * 100).toInt(),
+                        flex: (_splitRatio * 1000).toInt(),
                         child: AdvancedCodeEditor(
                           controller: _codeController,
                         ),
                       ),
-                      _buildHorizontalDivider(),
+                      // Divisor arrastrable
+                      _buildDivider(),
+                      // Consola
                       Expanded(
-                        flex: ((1 - _horizontalSplitRatio) * 100).toInt(),
+                        flex: ((1 - _splitRatio) * 1000).toInt(),
                         child: ConsoleOutput(
                           messages: _consoleMessages,
                           onClear: _clearConsole,
@@ -118,20 +116,15 @@ FIN PROGRAMA''';
                     ],
                   ),
                 ),
-                _buildVerticalDivider(),
-                Expanded(
-                  flex: ((1 - _verticalSplitRatio) * 100).toInt(),
-                  child: Center(
-                    child: SizedBox(
-                      width: 860,
-                      height: 570,
-                      child: RobotCanvas(
-                        robot: _robot,
-                        showGrid: true,
-                      ),
+                // ── Panel Bluetooth ───────────────────────────────────────────
+                if (_showBluetoothPanel)
+                  BluetoothPanel(
+                    codeContent: _codeController.text,
+                    onLog: (msg, isError) => _addLog(
+                      msg,
+                      isError ? LogType.error : LogType.success,
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -140,146 +133,74 @@ FIN PROGRAMA''';
     );
   }
 
-  Widget _buildVerticalDivider() {
-    return MouseRegion(
-      cursor: SystemMouseCursors.resizeColumn,
-      child: GestureDetector(
-        onHorizontalDragUpdate: (details) {
-          setState(() {
-            final width = MediaQuery.of(context).size.width;
-            _verticalSplitRatio = (_verticalSplitRatio + details.delta.dx / width)
-                .clamp(0.2, 0.8);
-          });
-        },
-        child: Container(
-          width: 8,
-          color: AppTheme.currentLine,
-          child: Center(
-            child: Container(
-              width: 2,
-              color: AppTheme.comment,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHorizontalDivider() {
+  Widget _buildDivider() {
     return MouseRegion(
       cursor: SystemMouseCursors.resizeRow,
       child: GestureDetector(
-        onVerticalDragUpdate: (details) {
+        onVerticalDragUpdate: (d) {
           setState(() {
-            final height = MediaQuery.of(context).size.height;
-            _horizontalSplitRatio = (_horizontalSplitRatio + details.delta.dy / height)
-                .clamp(0.3, 0.9);
+            final h = MediaQuery.of(context).size.height;
+            _splitRatio = (_splitRatio + d.delta.dy / h).clamp(0.25, 0.90);
           });
         },
         child: Container(
           height: 6,
           color: AppTheme.currentLine,
           child: Center(
-            child: Container(
-              height: 2,
-              color: AppTheme.comment,
-            ),
+            child: Container(height: 2, color: AppTheme.comment),
           ),
         ),
       ),
     );
   }
 
-  // === MÉTODOS DE ACCIÓN ===
+  // ── Acciones ──────────────────────────────────────────────────────────────────
 
   Future<void> _executeProgram() async {
     if (_isRunning) return;
-
-    setState(() {
-      _isRunning = true;
-      _consoleMessages.clear();
-    });
-
+    setState(() { _isRunning = true; _consoleMessages.clear(); });
     _addLog('Iniciando compilación...', LogType.info);
 
     try {
-      // 1. Análisis léxico
-      final lexer = Lexer(_codeController.text);
+      final lexer  = Lexer(_codeController.text);
       final tokens = lexer.tokenize();
-      _addLog('✓ Análisis léxico completado (${tokens.length} tokens)', LogType.success);
+      _addLog('✓ Análisis léxico (${tokens.length} tokens)', LogType.success);
 
-      // 2. Análisis sintáctico
       final parser = Parser(tokens);
-      final ast = parser.parse();
-      _addLog('✓ Análisis sintáctico completado', LogType.success);
-      _addLog('  Programa: "${ast.nombre}"', LogType.info);
+      final ast    = parser.parse();
+      _addLog('✓ Análisis sintáctico — "${ast.nombre}"', LogType.success);
 
-      // 3. Análisis semántico
       final analyzer = SemanticAnalyzer();
-      final isValid = analyzer.analyze(ast);
-      
-      if (!isValid) {
-        _addLog('✗ Errores semánticos:', LogType.error);
-        for (final error in analyzer.errors) {
-          _addLog('  $error', LogType.error);
-        }
+      if (!analyzer.analyze(ast)) {
+        for (final e in analyzer.errors) _addLog('  ✗ $e', LogType.error);
         setState(() => _isRunning = false);
         return;
       }
-      _addLog('✓ Análisis semántico completado', LogType.success);
+      _addLog('✓ Análisis semántico', LogType.success);
 
-      // 4. Ejecución
-      final executor = ProgramExecutor();
+      final executor     = ProgramExecutor();
       final instructions = executor.execute(ast);
-      _addLog('✓ Programa compilado (${instructions.length} instrucciones)', LogType.success);
+      _addLog('✓ Compilado — ${instructions.length} instrucciones', LogType.success);
 
-      // 5. Reiniciar robot
-      _robot.reset(860, 570);
-      setState(() {});
-
-      // 6. Ejecutar instrucciones con animación
-      _addLog('Ejecutando programa...', LogType.info);
-      await _executeInstructions(instructions);
-      
-      _addLog('✓ Programa ejecutado exitosamente', LogType.success);
-      
+      await _runInstructions(instructions);
+      _addLog('✓ Ejecución completada', LogType.success);
     } catch (e) {
-      _addLog('✗ Error: $e', LogType.error);
+      _addLog('✗ $e', LogType.error);
     } finally {
       setState(() => _isRunning = false);
     }
   }
 
-  Future<void> _executeInstructions(List<Instruction> instructions) async {
-    for (final instruction in instructions) {
-      _addLog('  → ${instruction.toString()}', LogType.info);
-      
-      switch (instruction.type) {
-        case InstructionType.avanzar:
-          final repetir = instruction.value.abs();
-          final dir = instruction.value >= 0 ? 1 : -1;
-          
-          for (int i = 0; i < repetir; i++) {
-            _robot.avanzar(dir);
-            setState(() {});
-            await Future.delayed(const Duration(milliseconds: 100));
-          }
-          break;
-          
-        case InstructionType.girar:
-          final repetir = instruction.value.abs();
-          final dir = instruction.value >= 0 ? 1 : -1;
-          
-          for (int i = 0; i < repetir; i++) {
-            _robot.girar(dir);
-            setState(() {});
-            await Future.delayed(const Duration(milliseconds: 100));
-          }
-          break;
-          
-        case InstructionType.asignar:
-          // Las asignaciones ya fueron procesadas
-          break;
+  Future<void> _runInstructions(List<Instruction> instructions) async {
+    for (final ins in instructions) {
+      _addLog('  → $ins', LogType.info);
+      final reps = ins.value.abs();
+      final dir  = ins.value >= 0 ? 1 : -1;
+      if (ins.type == InstructionType.avanzar ||
+          ins.type == InstructionType.girar) {
+        for (int i = 0; i < reps; i++) {
+          await Future.delayed(const Duration(milliseconds: 50));
+        }
       }
     }
   }
@@ -287,14 +208,12 @@ FIN PROGRAMA''';
   void _clearCode() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (_) => AlertDialog(
         title: const Text('Limpiar código'),
-        content: const Text('¿Está seguro de que desea limpiar todo el código?'),
+        content: const Text('¿Deseas limpiar todo el código?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
           TextButton(
             onPressed: () {
               _codeController.clear();
@@ -313,37 +232,33 @@ FIN PROGRAMA''';
       final content = await FileUtils.openFile();
       if (content != null) {
         _codeController.text = content;
-        _addLog('Archivo abierto exitosamente', LogType.success);
+        _addLog('Archivo abierto', LogType.success);
       }
-    } catch (e) {
-      _addLog('Error al abrir archivo: $e', LogType.error);
-    }
+    } catch (e) { _addLog('Error: $e', LogType.error); }
   }
 
   Future<void> _saveFile() async {
     try {
-      final saved = await FileUtils.saveFile(_codeController.text);
-      if (saved) {
-        _addLog('Archivo guardado exitosamente', LogType.success);
+      if (await FileUtils.saveFile(_codeController.text)) {
+        _addLog('Archivo guardado', LogType.success);
       }
-    } catch (e) {
-      _addLog('Error al guardar archivo: $e', LogType.error);
-    }
+    } catch (e) { _addLog('Error: $e', LogType.error); }
   }
 
-  void _clearConsole() {
-    setState(() {
-      _consoleMessages.clear();
-      _addLog('Consola limpiada', LogType.info);
-    });
+  void _clearConsole() => setState(() {
+    _consoleMessages.clear();
+    _addLog('Consola limpiada', LogType.info);
+  });
+
+  void _toggleBluetoothPanel() {
+    setState(() => _showBluetoothPanel = !_showBluetoothPanel);
+    _addLog(
+      _showBluetoothPanel ? 'Bluetooth abierto' : 'Bluetooth cerrado',
+      LogType.info,
+    );
   }
 
-  void _addLog(String message, LogType type) {
-    setState(() {
-      _consoleMessages.add(LogMessage(
-        message: message,
-        type: type,
-      ));
-    });
-  }
+  void _addLog(String message, LogType type) => setState(() {
+    _consoleMessages.add(LogMessage(message: message, type: type));
+  });
 }
