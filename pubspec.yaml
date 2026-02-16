@@ -1,26 +1,31 @@
 name: stem_bosque
-description: "DSL para programación de robots - StemBosque IDE"
+description: "IDE de desarrollo para lenguaje DSL de robótica educativa"
 publish_to: 'none'
-
-version: 0.5.0+1
+version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.7
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-
-  cupertino_icons: ^1.0.8
-
-  # Gestión de archivos (solo lo esencial)
-  file_picker: ^8.1.4
-  path_provider: ^2.1.5
+  
+  # Dependencias de UI
+  cupertino_icons: ^1.0.6
+  
+  # Manejo de archivos
+  file_picker: ^8.0.0+1
+  path_provider: ^2.1.2
+  
+  # Bluetooth - Soporte para BLE y Clásico
+  flutter_blue_plus: ^1.32.11  # Para BLE
+  flutter_bluetooth_serial: ^0.4.0  # Para Bluetooth Clásico
+  permission_handler: ^11.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true

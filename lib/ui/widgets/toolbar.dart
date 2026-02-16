@@ -7,6 +7,7 @@ class Toolbar extends StatelessWidget {
   final VoidCallback? onClear;
   final VoidCallback? onOpen;
   final VoidCallback? onSave;
+  final VoidCallback? onBluetooth;
   final bool isRunning;
 
   const Toolbar({
@@ -15,6 +16,7 @@ class Toolbar extends StatelessWidget {
     this.onClear,
     this.onOpen,
     this.onSave,
+    this.onBluetooth,
     this.isRunning = false,
   }) : super(key: key);
 
@@ -74,6 +76,17 @@ class Toolbar extends StatelessWidget {
             color: AppTheme.red,
             onPressed: onClear,
             textColor: Colors.white,
+          ),
+          
+          const SizedBox(width: 10),
+          
+          // Botón Bluetooth
+          _buildButton(
+            context: context,
+            label: 'Bluetooth',
+            icon: Icons.bluetooth,
+            color: AppTheme.cyan,
+            onPressed: onBluetooth,
           ),
           
           const Spacer(),
