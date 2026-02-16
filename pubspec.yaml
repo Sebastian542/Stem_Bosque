@@ -18,9 +18,7 @@ dependencies:
   path_provider: ^2.1.2
   
   # Bluetooth - Soporte para BLE y Clásico
-  flutter_blue_plus: ^1.32.11  # Para BLE
   flutter_bluetooth_serial: ^0.4.0  # Para Bluetooth Clásico
-  permission_handler: ^11.3.0
 
   # Bluetooth BLE
   flutter_blue_plus: 1.32.12
