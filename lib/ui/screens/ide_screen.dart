@@ -24,6 +24,8 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart' as classic;
 import 'package:permission_handler/permission_handler.dart';
 
+import 'package:share_plus/share_plus.dart';
+
 /// Tipo de dispositivo Bluetooth
 enum BluetoothDeviceType { ble, classic }
 
@@ -470,6 +472,16 @@ FIN PROGRAMA''';
                   onTap: () {
                     Navigator.pop(context);
                     _saveFile();
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Icons.share,
+                  title: 'Compartir archivo',
+                  subtitle: 'Enviar por Bluetooth u otra app',
+                  color: AppTheme.cyan,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _shareFileViaBluetooth();
                   },
                 ),
                 _buildDrawerItem(
@@ -1002,6 +1014,32 @@ FIN PROGRAMA''';
     } catch (e) {
       _addLog('Error al guardar archivo: $e', LogType.error);
     }
+  }
+
+  Future<void> _shareFileViaBluetooth() async {
+    // Primero guardar si hay cambios
+    if (_hasUnsavedChanges()) {
+      await _saveCodeToFile();
+    }
+
+    if (_currentFilePath == null) {
+      _addLog('✗ No hay archivo guardado para compartir', LogType.error);
+      return;
+    }
+
+    final file = File(_currentFilePath!);
+    if (!await file.exists()) {
+      _addLog('✗ Archivo no encontrado', LogType.error);
+      return;
+    }
+
+    // Abre el menú nativo de Android para compartir
+    await Share.shareXFiles(
+      [XFile(_currentFilePath!)],
+      subject: 'Programa StemBosque',
+    );
+
+    _addLog('✓ Menú de compartir abierto', LogType.success);
   }
 
   void _clearConsole() {

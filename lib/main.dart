@@ -23,4 +23,3 @@ class StemBosqueApp extends StatelessWidget {
     );
   }
 }
-

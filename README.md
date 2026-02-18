@@ -26,6 +26,163 @@ Todo corre 100% en el navegador — sin instalaciones, sin servidores, sin compl
 
 ---
 
+
+Readme · MD
+Copiar
+
+# StemBosque — Documentación Técnica
+
+## Solución: Error de Namespace en `flutter_bluetooth_serial`
+
+### Descripción del problema
+
+Al compilar el proyecto con versiones modernas del Android Gradle Plugin (AGP 7+), el build falla con el siguiente error:
+
+```
+A problem occurred configuring project ':flutter_bluetooth_serial'.
+> Could not create an instance of type com.android.build.api.variant.impl.LibraryVariantBuilderImpl.
+   > Namespace not specified. Specify a namespace in the module's build file:
+     C:\Users\<usuario>\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_bluetooth_serial-0.4.0\android\build.gradle.
+```
+
+**Causa:** El paquete `flutter_bluetooth_serial 0.4.0` fue publicado antes de que AGP hiciera obligatorio declarar el campo `namespace` en el `build.gradle` de cada módulo. El paquete está desactualizado y no incluye esta declaración.
+
+---
+
+### Solución aplicada
+
+Se editó manualmente el `build.gradle` del paquete en la caché local de pub para agregar la declaración de `namespace`.
+
+#### Pasos para reproducir la solución
+
+**1. Localizar el archivo a editar**
+
+Navegar a la siguiente ruta (reemplazar `<usuario>` con el nombre de usuario de Windows):
+
+```
+C:\Users\<usuario>\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_bluetooth_serial-0.4.0\android\build.gradle
+```
+
+**2. Reemplazar el contenido completo del archivo**
+
+Abrir el archivo con cualquier editor de texto (VS Code, Notepad++, etc.) y reemplazar todo el contenido con lo siguiente:
+
+```groovy
+group 'io.github.edufolly.flutterbluetoothserial'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:4.1.0'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'io.github.edufolly.flutterbluetoothserial'   // ← línea añadida
+    compileSdkVersion 30
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        minSdkVersion 19
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+
+    dependencies {
+        implementation 'androidx.appcompat:appcompat:1.3.0'
+    }
+
+    buildToolsVersion '30.0.3'
+}
+
+dependencies {
+}
+```
+
+El único cambio respecto al archivo original es la línea:
+```groovy
+namespace 'io.github.edufolly.flutterbluetoothserial'
+```
+
+**3. Limpiar y recompilar**
+
+Ejecutar en la terminal, desde la raíz del proyecto Flutter:
+
+```bash
+flutter clean
+flutter pub get
+flutter run
+```
+
+---
+
+### ⚠️ Advertencia importante
+
+Esta modificación se realiza sobre la **caché global de pub**, no sobre el proyecto. Esto significa que:
+
+- El cambio afecta a todos los proyectos Flutter del equipo que usen este paquete.
+- Si se ejecuta `dart pub cache repair` o se borra la caché manualmente, el parche se perderá y habrá que aplicarlo de nuevo.
+- Si otro desarrollador clona el proyecto en una máquina nueva, deberá aplicar este mismo parche.
+
+**Recomendación a futuro:** Evaluar migrar a `flutter_blue_plus`, que es el sucesor activo de `flutter_bluetooth_serial`, tiene soporte para Android e iOS, y no presenta este problema de compatibilidad.
+
+---
+
+### Permisos requeridos en AndroidManifest.xml
+
+Para que Bluetooth funcione correctamente en Android, el archivo `android/app/src/main/AndroidManifest.xml` debe incluir los siguientes permisos antes del bloque `<application>`:
+
+```xml
+
+
+
+
+
+
+
+
+
+
+
+```
+
+---
+
+### Dependencias del proyecto relacionadas
+
+```yaml
+# pubspec.yaml
+dependencies:
+  flutter_bluetooth_serial: ^0.4.0   # Bluetooth Clásico (SPP)
+  permission_handler: ^11.3.1        # Solicitud de permisos en runtime
+```
+
+---
+
+*Documentado por el equipo StemBosque — Universidad del Bosque*
+---
+
 ## 📖 Sintaxis del Lenguaje
 
 ### Estructura básica
