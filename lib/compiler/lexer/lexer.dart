@@ -1,222 +1,193 @@
-import 'token.dart';
-import 'token_type.dart';
+import '../models/token.dart';
 
-/// Analizador léxico que convierte código fuente en tokens
-class Lexer {
-  final String source;
-  final List<Token> _tokens = [];
-  
-  int _start = 0;
-  int _current = 0;
-  int _line = 1;
-  int _column = 1;
+class ErrorLexico implements Exception {
+  final String mensaje;
+  ErrorLexico(this.mensaje);
+  @override
+  String toString() => '❌ Error Léxico: $mensaje';
+}
 
-  // Palabras clave del lenguaje
-  static const Map<String, TokenType> _keywords = {
-    'PROGRAMA': TokenType.programa,
-    'FIN': TokenType.fin,
-    'SI': TokenType.si,
-    'ENTONCES': TokenType.entonces,
-    'REPETIR': TokenType.repetir,
-    'VECES': TokenType.veces,
-    'AVANZAR': TokenType.avanzar,
-    'GIRAR': TokenType.girar,
+class AnalizadorLexico {
+  final String fuente;
+  int _pos = 0;
+  int _linea = 1;
+
+  static const Map<String, TipoToken> _palabrasClave = {
+    'PROGRAMA': TipoToken.PROGRAMA,
+    'FIN':      TipoToken.FIN,
+    'GIRAR':    TipoToken.GIRAR,
+    'AVANZAR':  TipoToken.AVANZAR,
+    'SI':       TipoToken.SI,
+    'ENTONCES': TipoToken.ENTONCES,
+    'REPETIR':  TipoToken.REPETIR,
+    'VECES':    TipoToken.VECES,
   };
 
-  Lexer(this.source);
+  AnalizadorLexico(this.fuente);
 
-  /// Tokeniza el código fuente completo
-  List<Token> tokenize() {
-    while (!_isAtEnd()) {
-      _start = _current;
-      _scanToken();
-    }
+  List<Token> tokenizar() {
+    final tokens = <Token>[];
 
-    _addToken(TokenType.finArchivo);
-    return _tokens;
-  }
+    while (_pos < fuente.length) {
+      _saltarEspacios();
+      if (_pos >= fuente.length) break;
 
-  void _scanToken() {
-    final c = _advance();
-    
-    switch (c) {
-      case ' ':
-      case '\r':
-      case '\t':
-        _column++;
-        break;
-        
-      case '\n':
-        _line++;
-        _column = 1;
-        break;
-        
-      case '=':
-        if (_match('=')) {
-          _addToken(TokenType.igualIgual);
-        } else {
-          _addToken(TokenType.igual);
-        }
-        break;
-        
-      case '<':
-        _addToken(TokenType.menorQue);
-        break;
-        
-      case '>':
-        _addToken(TokenType.mayorQue);
-        break;
-        
-      case '[':
-        _addToken(TokenType.corcheteAbre);
-        break;
-        
-      case ']':
-        _addToken(TokenType.corcheteCierra);
-        break;
-        
-      case ':':
-        _addToken(TokenType.dobleComa);
-        break;
-        
-      case '"':
-        _string();
-        break;
-        
-      case '/':
-        if (_match('*')) {
-          _multiLineComment();
-        } else if (_match('/')) {
-          _singleLineComment();
-        }
-        break;
-        
-      default:
-        if (_isDigit(c) || (c == '-' && _isDigit(_peek()))) {
-          _number();
-        } else if (_isAlpha(c)) {
-          _identifier();
-        } else {
-          _addToken(TokenType.desconocido);
-        }
-    }
-  }
+      final ch = fuente[_pos];
 
-  void _string() {
-    while (_peek() != '"' && !_isAtEnd()) {
-      if (_peek() == '\n') {
-        _line++;
-        _column = 1;
+      // Salto de línea
+      if (ch == '\n') {
+        _linea++;
+        _pos++;
+        continue;
       }
-      _advance();
-    }
 
-    if (_isAtEnd()) {
-      throw Exception('Cadena sin cerrar en línea $_line');
-    }
-
-    _advance(); // Comilla de cierre
-    
-    final value = source.substring(_start + 1, _current - 1);
-    _addToken(TokenType.cadena, value);
-  }
-
-  void _multiLineComment() {
-    while (!_isAtEnd()) {
-      if (_peek() == '*' && _peekNext() == '/') {
-        _advance(); // *
-        _advance(); // /
-        break;
+      // ── Comentarios ────────────────────────────────────────
+      if (ch == '/' && _pos + 1 < fuente.length) {
+        // Comentario de línea: // ...
+        if (fuente[_pos + 1] == '/') {
+          while (_pos < fuente.length && fuente[_pos] != '\n') _pos++;
+          continue;
+        }
+        // Comentario de bloque: /* ... */
+        if (fuente[_pos + 1] == '*') {
+          _pos += 2; // saltar /*
+          while (_pos < fuente.length) {
+            if (fuente[_pos] == '\n') {
+              _linea++;
+              _pos++;
+            } else if (fuente[_pos] == '*' &&
+                _pos + 1 < fuente.length &&
+                fuente[_pos + 1] == '/') {
+              _pos += 2; // saltar */
+              break;
+            } else {
+              _pos++;
+            }
+          }
+          continue;
+        }
       }
-      if (_peek() == '\n') {
-        _line++;
-        _column = 1;
+
+      // Cadena de texto entre comillas
+      if (ch == '"') {
+        tokens.add(_leerTexto());
+        continue;
       }
-      _advance();
+
+      // Número positivo
+      if (_esDigito(ch)) {
+        tokens.add(_leerNumero());
+        continue;
+      }
+
+      // ── Número negativo: - seguido inmediatamente de dígito ─
+      if (ch == '-' &&
+          _pos + 1 < fuente.length &&
+          _esDigito(fuente[_pos + 1])) {
+        tokens.add(_leerNumero(negativo: true));
+        continue;
+      }
+
+      // Identificador o palabra clave
+      if (_esLetra(ch)) {
+        tokens.add(_leerPalabra());
+        continue;
+      }
+
+      // Operadores y puntuación
+      switch (ch) {
+        case '=':
+          if (_pos + 1 < fuente.length && fuente[_pos + 1] == '=') {
+            tokens.add(Token(TipoToken.IGUAL, '==', _linea));
+            _pos += 2;
+          } else {
+            tokens.add(Token(TipoToken.ASIGNACION, '=', _linea));
+            _pos++;
+          }
+          break;
+        case '>':
+          tokens.add(Token(TipoToken.MAYOR, '>', _linea));
+          _pos++;
+          break;
+        case '<':
+          tokens.add(Token(TipoToken.MENOR, '<', _linea));
+          _pos++;
+          break;
+        case ':':
+          tokens.add(Token(TipoToken.DOS_PUNTOS, ':', _linea));
+          _pos++;
+          break;
+        case '[':
+          tokens.add(Token(TipoToken.CORCHETE_IZQ, '[', _linea));
+          _pos++;
+          break;
+        case ']':
+          tokens.add(Token(TipoToken.CORCHETE_DER, ']', _linea));
+          _pos++;
+          break;
+        default:
+          throw ErrorLexico('Carácter inesperado "$ch" en línea $_linea');
+      }
     }
-    _addToken(TokenType.comentario);
+
+    tokens.add(Token(TipoToken.FIN_ARCHIVO, '', _linea));
+    return tokens;
   }
 
-  void _singleLineComment() {
-    while (_peek() != '\n' && !_isAtEnd()) {
-      _advance();
+  void _saltarEspacios() {
+    while (_pos < fuente.length &&
+        fuente[_pos] != '\n' &&
+        (fuente[_pos] == ' ' ||
+            fuente[_pos] == '\t' ||
+            fuente[_pos] == '\r')) {
+      _pos++;
     }
-    _addToken(TokenType.comentario);
   }
 
-  void _number() {
-    bool isNegative = false;
-    if (_peekPrevious() == '-') {
-      isNegative = true;
+  Token _leerTexto() {
+    _pos++; // saltar "
+    final sb = StringBuffer();
+    while (_pos < fuente.length && fuente[_pos] != '"') {
+      if (fuente[_pos] == '\n') _linea++;
+      sb.write(fuente[_pos]);
+      _pos++;
     }
-    
-    while (_isDigit(_peek())) {
-      _advance();
+    if (_pos >= fuente.length) {
+      throw ErrorLexico('Cadena sin cerrar, línea $_linea');
     }
-
-    final value = int.parse(source.substring(_start, _current));
-    _addToken(TokenType.numero, value);
+    _pos++; // saltar "
+    return Token(TipoToken.TEXTO, sb.toString(), _linea);
   }
 
-  void _identifier() {
-    while (_isAlphaNumeric(_peek())) {
-      _advance();
+  // negativo: true → consume el '-' inicial también
+  Token _leerNumero({bool negativo = false}) {
+    final inicio = _pos;
+    if (negativo) _pos++; // saltar el '-'
+    while (_pos < fuente.length && _esDigito(fuente[_pos])) _pos++;
+    final raw = fuente.substring(inicio, _pos); // ej: "-45" o "45"
+    return Token(TipoToken.NUMERO, raw, _linea);
+  }
+
+  Token _leerPalabra() {
+    final inicio = _pos;
+    while (_pos < fuente.length &&
+        (_esLetra(fuente[_pos]) ||
+            _esDigito(fuente[_pos]) ||
+            fuente[_pos] == '_')) {
+      _pos++;
     }
-
-    final text = source.substring(_start, _current);
-    final type = _keywords[text.toUpperCase()] ?? TokenType.identificador;
-    _addToken(type);
+    final palabra = fuente.substring(inicio, _pos);
+    final tipo = _palabrasClave[palabra] ?? TipoToken.IDENTIFICADOR;
+    return Token(tipo, palabra, _linea);
   }
 
-  bool _match(String expected) {
-    if (_isAtEnd()) return false;
-    if (source[_current] != expected) return false;
+  bool _esDigito(String c) =>
+      c.codeUnitAt(0) >= 48 && c.codeUnitAt(0) <= 57;
 
-    _current++;
-    _column++;
-    return true;
-  }
-
-  String _advance() {
-    _column++;
-    return source[_current++];
-  }
-
-  String _peek() {
-    if (_isAtEnd()) return '\0';
-    return source[_current];
-  }
-
-  String _peekNext() {
-    if (_current + 1 >= source.length) return '\0';
-    return source[_current + 1];
-  }
-
-  String _peekPrevious() {
-    if (_current - 1 < 0) return '\0';
-    return source[_current - 1];
-  }
-
-  bool _isAtEnd() => _current >= source.length;
-
-  bool _isDigit(String c) => c.compareTo('0') >= 0 && c.compareTo('9') <= 0;
-
-  bool _isAlpha(String c) {
-    return (c.compareTo('a') >= 0 && c.compareTo('z') <= 0) ||
-           (c.compareTo('A') >= 0 && c.compareTo('Z') <= 0) ||
-           c == '_';
-  }
-
-  bool _isAlphaNumeric(String c) => _isAlpha(c) || _isDigit(c);
-
-  void _addToken(TokenType type, [dynamic literal]) {
-    final text = source.substring(_start, _current);
-    _tokens.add(Token(
-      type: type,
-      lexeme: text,
-      literal: literal,
-      line: _line,
-      column: _column - text.length,
-    ));
+  bool _esLetra(String c) {
+    final code = c.codeUnitAt(0);
+    return (code >= 65 && code <= 90) ||
+        (code >= 97 && code <= 122) ||
+        c == '_';
   }
 }
