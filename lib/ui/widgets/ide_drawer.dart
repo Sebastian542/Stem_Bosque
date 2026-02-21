@@ -5,7 +5,7 @@ class IDEDrawer extends StatelessWidget {
   final bool hasUnsavedChanges;
   final bool isRunning;
   final bool bluetoothEnabled;
-  final bool showBluetoothPanel;
+  //final bool showBluetoothPanel;
   final String? currentFilePath;
 
   final VoidCallback onOpenFile;
@@ -19,7 +19,7 @@ class IDEDrawer extends StatelessWidget {
     required this.hasUnsavedChanges,
     required this.isRunning,
     required this.bluetoothEnabled,
-    required this.showBluetoothPanel,
+    //required this.showBluetoothPanel,
     required this.currentFilePath,
     required this.onOpenFile,
     required this.onSaveFile,
@@ -74,17 +74,38 @@ class IDEDrawer extends StatelessWidget {
                   onTap: onShareFile,
                 ),
                 const Divider(color: AppTheme.currentLine, height: 1),
+                // ANTES: el item tenía un Switch que mostraba/ocultaba el panel
+                // y el valor era showBluetoothPanel
+                // _buildItem(
+                //   context,
+                //   icon: bluetoothEnabled
+                //       ? Icons.bluetooth
+                //       : Icons.bluetooth_disabled,
+                //   title: 'Bluetooth',
+                //   subtitle: bluetoothEnabled ? 'Disponible' : 'Desactivado',
+                //   color: bluetoothEnabled ? AppTheme.green : AppTheme.red,
+                //   onTap: onToggleBluetooth,
+                //   trailing: Switch(
+                //     value: showBluetoothPanel,
+                //     onChanged: (_) => onToggleBluetooth(),
+                //     activeColor: AppTheme.green,
+                //   ),
+                // ),
+                // AHORA: el Switch refleja si el bluetooth del celular
+                // está encendido o apagado, y al tocarlo lo enciende/apaga
                 _buildItem(
                   context,
                   icon: bluetoothEnabled
                       ? Icons.bluetooth
                       : Icons.bluetooth_disabled,
                   title: 'Bluetooth',
-                  subtitle: bluetoothEnabled ? 'Disponible' : 'Desactivado',
-                  color: bluetoothEnabled ? AppTheme.green : AppTheme.red,
+                  subtitle: bluetoothEnabled
+                      ? 'Encendido — toca para apagar'
+                      : 'Apagado — toca para encender',
+                  color: bluetoothEnabled ? AppTheme.green : AppTheme.comment,
                   onTap: onToggleBluetooth,
                   trailing: Switch(
-                    value: showBluetoothPanel,
+                    value: bluetoothEnabled,  // ANTES: showBluetoothPanel
                     onChanged: (_) => onToggleBluetooth(),
                     activeColor: AppTheme.green,
                   ),

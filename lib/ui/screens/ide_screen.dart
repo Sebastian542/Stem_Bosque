@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:android_intent_plus/android_intent.dart';
+
 import '../../bluetooth/bluetooth_manager.dart';
 import '../../compiler/compiler.dart';
 import '../../services/file_manager.dart';
@@ -89,7 +91,17 @@ FIN PROGRAMA''';
   // ─────────────────────────────────────────────────────────────
 
   BluetoothCallbacks get _btCallbacks => BluetoothCallbacks(
-    onLog: (msg, _) => debugPrint('[BT] $msg'),
+    onLog: (msg, isError) {
+      debugPrint('[BT] $msg');
+      // Optionally surface errors to UI
+      if (isError && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(msg),
+          backgroundColor: AppTheme.currentLine,
+          duration: const Duration(seconds: 2),
+        ));
+      }
+    },
     onBluetoothStateChanged: (v) {
       if (mounted) setState(() => _bluetoothEnabled = v);
     },
@@ -457,15 +469,36 @@ FIN PROGRAMA''';
     }
   }
 
+
   Future<void> _sendProgram() async {
     if (_fm.hasUnsavedChanges(_codeController.text)) {
       await _fm.saveToFile(_codeController.text);
     }
     if (_fm.currentFilePath == null) return;
+
     final file = File(_fm.currentFilePath!);
     if (!await file.exists()) return;
-    await _fm.share(_fm.currentFilePath!);
+
+    if (Platform.isAndroid) {
+      final intent = AndroidIntent(
+        action: 'android.intent.action.SEND',
+        type: 'text/plain',
+        package: 'com.android.bluetooth',
+        arguments: <String, dynamic>{
+          'android.intent.extra.TEXT': await file.readAsString(),
+        },
+      );
+      try {
+        await intent.launch();
+      } catch (_) {
+        await _fm.share(_fm.currentFilePath!);
+      }
+    } else {
+      await _fm.share(_fm.currentFilePath!);
+    }
   }
+
+// _shareFile queda exactamente igual que antes, no lo toques
 
   // ─────────────────────────────────────────────────────────────
   // BUILD
@@ -534,13 +567,14 @@ FIN PROGRAMA''';
         hasUnsavedChanges: unsaved,
         isRunning:         _isRunning,
         bluetoothEnabled:  _bluetoothEnabled,
-        showBluetoothPanel: _showBluetoothPanel,
+        //showBluetoothPanel: _showBluetoothPanel,
         currentFilePath:   _fm.currentFilePath,
         onOpenFile:        _openFile,
         onSaveFile:        _saveWithName,
         onClearCode:       _clearCode,
         onShareFile:       _shareFile,
-        onToggleBluetooth: _toggleBluetoothPanel,
+        //onToggleBluetooth: _toggleBluetoothPanel,
+        onToggleBluetooth: () => _bt.toggleBluetooth(),
       ),
       body: Column(
         children: [

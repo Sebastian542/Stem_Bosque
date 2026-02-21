@@ -4,7 +4,7 @@ class ErrorLexico implements Exception {
   final String mensaje;
   ErrorLexico(this.mensaje);
   @override
-  String toString() => '❌ Error Léxico: $mensaje';
+  String toString() => mensaje;
 }
 
 class AnalizadorLexico {
@@ -23,6 +23,18 @@ class AnalizadorLexico {
     'VECES':    TipoToken.VECES,
   };
 
+  // NUEVO: mapa de palabras en minúsculas/mixtas → corrección
+  static const Map<String, String> _correccionPalabras = {
+    'programa': 'PROGRAMA',
+    'fin':      'FIN',
+    'girar':    'GIRAR',
+    'avanzar':  'AVANZAR',
+    'si':       'SI',
+    'entonces': 'ENTONCES',
+    'repetir':  'REPETIR',
+    'veces':    'VECES',
+  };
+
   AnalizadorLexico(this.fuente);
 
   List<Token> tokenizar() {
@@ -34,23 +46,19 @@ class AnalizadorLexico {
 
       final ch = fuente[_pos];
 
-      // Salto de línea
       if (ch == '\n') {
         _linea++;
         _pos++;
         continue;
       }
 
-      // ── Comentarios ────────────────────────────────────────
       if (ch == '/' && _pos + 1 < fuente.length) {
-        // Comentario de línea: // ...
         if (fuente[_pos + 1] == '/') {
           while (_pos < fuente.length && fuente[_pos] != '\n') _pos++;
           continue;
         }
-        // Comentario de bloque: /* ... */
         if (fuente[_pos + 1] == '*') {
-          _pos += 2; // saltar /*
+          _pos += 2;
           while (_pos < fuente.length) {
             if (fuente[_pos] == '\n') {
               _linea++;
@@ -58,7 +66,7 @@ class AnalizadorLexico {
             } else if (fuente[_pos] == '*' &&
                 _pos + 1 < fuente.length &&
                 fuente[_pos + 1] == '/') {
-              _pos += 2; // saltar */
+              _pos += 2;
               break;
             } else {
               _pos++;
@@ -68,19 +76,16 @@ class AnalizadorLexico {
         }
       }
 
-      // Cadena de texto entre comillas
       if (ch == '"') {
         tokens.add(_leerTexto());
         continue;
       }
 
-      // Número positivo
       if (_esDigito(ch)) {
         tokens.add(_leerNumero());
         continue;
       }
 
-      // ── Número negativo: - seguido inmediatamente de dígito ─
       if (ch == '-' &&
           _pos + 1 < fuente.length &&
           _esDigito(fuente[_pos + 1])) {
@@ -88,13 +93,11 @@ class AnalizadorLexico {
         continue;
       }
 
-      // Identificador o palabra clave
       if (_esLetra(ch)) {
         tokens.add(_leerPalabra());
         continue;
       }
 
-      // Operadores y puntuación
       switch (ch) {
         case '=':
           if (_pos + 1 < fuente.length && fuente[_pos + 1] == '=') {
@@ -126,7 +129,12 @@ class AnalizadorLexico {
           _pos++;
           break;
         default:
-          throw ErrorLexico('Carácter inesperado "$ch" en línea $_linea');
+        // ANTES: throw ErrorLexico('Carácter inesperado "$ch" en línea $_linea');
+        // AHORA: mensaje amigable
+          throw ErrorLexico(
+              '😕 ¡Ups! En la línea $_linea hay un símbolo que no entiendo: "$ch"\n'
+                  '💡 Revisa que no hayas escrito un símbolo raro o un espacio de más.'
+          );
       }
     }
 
@@ -145,7 +153,7 @@ class AnalizadorLexico {
   }
 
   Token _leerTexto() {
-    _pos++; // saltar "
+    _pos++;
     final sb = StringBuffer();
     while (_pos < fuente.length && fuente[_pos] != '"') {
       if (fuente[_pos] == '\n') _linea++;
@@ -153,18 +161,21 @@ class AnalizadorLexico {
       _pos++;
     }
     if (_pos >= fuente.length) {
-      throw ErrorLexico('Cadena sin cerrar, línea $_linea');
+      // ANTES: throw ErrorLexico('Cadena sin cerrar, línea $_linea');
+      throw ErrorLexico(
+          '😕 En la línea $_linea abriste unas comillas " pero nunca las cerraste.\n'
+              '💡 Asegúrate de que el nombre del programa esté entre comillas: "Mi programa"'
+      );
     }
-    _pos++; // saltar "
+    _pos++;
     return Token(TipoToken.TEXTO, sb.toString(), _linea);
   }
 
-  // negativo: true → consume el '-' inicial también
   Token _leerNumero({bool negativo = false}) {
     final inicio = _pos;
-    if (negativo) _pos++; // saltar el '-'
+    if (negativo) _pos++;
     while (_pos < fuente.length && _esDigito(fuente[_pos])) _pos++;
-    final raw = fuente.substring(inicio, _pos); // ej: "-45" o "45"
+    final raw = fuente.substring(inicio, _pos);
     return Token(TipoToken.NUMERO, raw, _linea);
   }
 
@@ -177,6 +188,15 @@ class AnalizadorLexico {
       _pos++;
     }
     final palabra = fuente.substring(inicio, _pos);
+
+    // NUEVO: si está en minúsculas/mixtas, corregir automáticamente
+    final enMayusculas = palabra.toUpperCase();
+    if (_palabrasClave.containsKey(enMayusculas) &&
+        !_palabrasClave.containsKey(palabra)) {
+      // Es una palabra clave escrita en minúsculas → corregir sin error
+      return Token(_palabrasClave[enMayusculas]!, enMayusculas, _linea);
+    }
+
     final tipo = _palabrasClave[palabra] ?? TipoToken.IDENTIFICADOR;
     return Token(tipo, palabra, _linea);
   }
