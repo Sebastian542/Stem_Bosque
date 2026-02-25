@@ -77,6 +77,26 @@ class FileManager {
     );
   }
 
+  Future<String?> saveCompiled(String content) async {
+    try {
+      final dir  = await getAppDirectory();
+      final file = File('${dir.path}/compilado.txt');
+      await file.writeAsString(content);
+      return file.path;
+    } catch (e) {
+      debugPrint('Error al guardar compilado: $e');
+      return null;
+    }
+  }
+
+  Future<void> deleteCompiled() async {
+    try {
+      final dir  = await getAppDirectory();
+      final file = File('${dir.path}/compilado.txt');
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
+  }
+
   void clear() {
     currentFilePath  = null;
     lastSavedContent = null;

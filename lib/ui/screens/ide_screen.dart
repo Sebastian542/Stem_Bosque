@@ -23,17 +23,20 @@ class IDEScreen extends StatefulWidget {
 class _IDEScreenState extends State<IDEScreen> {
 
   // ── Servicios ────────────────────────────────────────────────
+
   final _bt   = BluetoothManager();
   final _fm   = FileManager();
 
   // ── Editor ───────────────────────────────────────────────────
   final _codeController = TextEditingController();
-  bool         _isRunning   = false;
-  bool         _codeIsValid = false;
-  bool         _showConsole = false;
-  bool         _execSuccess = false;
+  bool         _isRunning     = false;
+  bool         _codeIsValid   = false;
+  bool         _showConsole   = false;
+  bool         _execSuccess   = false;
   String?      _execError;
-  List<String> _execLines   = [];
+  List<String> _execLines     = [];
+  List<String> _compiledLines  = []; // comandos expandidos post-compilación
+  String?      _compiledFilePath;          // ruta del compilado.txt guardado
 
   // ── Bluetooth UI ─────────────────────────────────────────────
   bool _bluetoothEnabled   = false;
@@ -93,7 +96,6 @@ FIN PROGRAMA''';
   BluetoothCallbacks get _btCallbacks => BluetoothCallbacks(
     onLog: (msg, isError) {
       debugPrint('[BT] $msg');
-      // Optionally surface errors to UI
       if (isError && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(msg),
@@ -199,7 +201,6 @@ FIN PROGRAMA''';
 
     final name = nameCtrl.text.trim();
 
-    // Dispose seguro: después de que el dialog ya cerró
     WidgetsBinding.instance.addPostFrameCallback((_) {
       nameCtrl.dispose();
     });
@@ -432,6 +433,7 @@ FIN PROGRAMA''';
     );
   }
 
+  // _shareFile: sin cambios, comparte el código fuente tal cual
   Future<void> _shareFile() async {
     if (_fm.hasUnsavedChanges(_codeController.text)) {
       await _fm.saveToFile(_codeController.text);
@@ -452,53 +454,65 @@ FIN PROGRAMA''';
     try {
       final r = Compilador().compilar(_codeController.text);
       setState(() {
-        _showConsole = true;
-        _execSuccess = r.exito;
-        _execError   = r.error;
-        _execLines   = r.salidaEjecucion ?? [];
+        _showConsole   = true;
+        _execSuccess   = r.exito;
+        _execError     = r.error;
+        _execLines     = r.salidaEjecucion ?? [];
+        // Guardar solo GIRAR/AVANZAR expandidos para el envío
+        _compiledLines = r.exito
+            ? (r.salidaEjecucion ?? [])
+            .where((l) {
+          final t = l.trim();
+          return t.startsWith('GIRAR') || t.startsWith('AVANZAR');
+        })
+            .toList()
+            : [];
       });
+      // Guardar compilado en archivo (reemplaza el anterior)
+      if (r.exito && _compiledLines.isNotEmpty) {
+        await _fm.deleteCompiled();
+        _compiledFilePath = await _fm.saveCompiled(_compiledLines.join('\n'));
+      } else {
+        _compiledFilePath = null;
+      }
     } catch (e) {
       setState(() {
-        _showConsole = true;
-        _execSuccess = false;
-        _execError   = e.toString();
-        _execLines   = [];
+        _showConsole   = true;
+        _execSuccess   = false;
+        _execError     = e.toString();
+        _execLines     = [];
+        _compiledLines    = [];
+        _compiledFilePath = null;
       });
     } finally {
       setState(() => _isRunning = false);
     }
   }
 
-
+  // _sendProgram: comparte compilado.txt (Bluetooth aparece en el share sheet)
   Future<void> _sendProgram() async {
-    if (_fm.hasUnsavedChanges(_codeController.text)) {
-      await _fm.saveToFile(_codeController.text);
-    }
-    if (_fm.currentFilePath == null) return;
+    if (_compiledLines.isEmpty || _compiledFilePath == null) return;
 
-    final file = File(_fm.currentFilePath!);
+    if (!_bluetoothEnabled) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Row(children: [
+          Icon(Icons.bluetooth_disabled, color: Colors.white),
+          SizedBox(width: 12),
+          Flexible(child: Text('Debes encender el Bluetooth para enviar el programa.')),
+        ]),
+        backgroundColor: Colors.redAccent,
+        duration: Duration(seconds: 3),
+      ));
+      return;
+    }
+
+    final file = File(_compiledFilePath!);
     if (!await file.exists()) return;
 
-    if (Platform.isAndroid) {
-      final intent = AndroidIntent(
-        action: 'android.intent.action.SEND',
-        type: 'text/plain',
-        package: 'com.android.bluetooth',
-        arguments: <String, dynamic>{
-          'android.intent.extra.TEXT': await file.readAsString(),
-        },
-      );
-      try {
-        await intent.launch();
-      } catch (_) {
-        await _fm.share(_fm.currentFilePath!);
-      }
-    } else {
-      await _fm.share(_fm.currentFilePath!);
-    }
+    // Compartir el .txt real — Bluetooth lo recibe como archivo, no como HTML
+    await _fm.share(_compiledFilePath!);
   }
-
-// _shareFile queda exactamente igual que antes, no lo toques
 
   // ─────────────────────────────────────────────────────────────
   // BUILD
@@ -567,13 +581,11 @@ FIN PROGRAMA''';
         hasUnsavedChanges: unsaved,
         isRunning:         _isRunning,
         bluetoothEnabled:  _bluetoothEnabled,
-        //showBluetoothPanel: _showBluetoothPanel,
         currentFilePath:   _fm.currentFilePath,
         onOpenFile:        _openFile,
         onSaveFile:        _saveWithName,
         onClearCode:       _clearCode,
         onShareFile:       _shareFile,
-        //onToggleBluetooth: _toggleBluetoothPanel,
         onToggleBluetooth: () => _bt.toggleBluetooth(),
       ),
       body: Column(
