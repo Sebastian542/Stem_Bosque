@@ -23,7 +23,9 @@ dependencies:
   # Bluetooth BLE
   flutter_blue_plus: 1.32.12
   permission_handler: ^11.3.1
-    
+
+  android_intent_plus: ^4.0.0
+
   share_plus: ^7.2.2
 
 dev_dependencies:

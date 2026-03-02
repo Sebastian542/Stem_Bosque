@@ -1,224 +1,226 @@
-import '../lexer/token.dart';
-import '../lexer/token_type.dart';
-import 'ast_nodes.dart';
+import '../models/token.dart';
+import '../ast/nodes.dart';
 
-/// Analizador sintáctico que construye el AST
+class ErrorSintactico implements Exception {
+  final String mensaje;
+  ErrorSintactico(this.mensaje);
+  @override
+  String toString() => mensaje;
+}
+
 class Parser {
   final List<Token> tokens;
-  int _current = 0;
+  int _pos = 0;
 
   Parser(this.tokens);
 
-  /// Parsea el programa completo
-  ProgramNode parse() {
-    try {
-      return _programa();
-    } catch (e) {
-      throw Exception('Error de sintaxis: $e');
+  Token get _actual => tokens[_pos];
+  bool _es(TipoToken tipo) => _actual.tipo == tipo;
+
+  Token _consumir(TipoToken tipo) {
+    if (_actual.tipo != tipo) {
+      throw ErrorSintactico(_mensajeError(tipo, _actual));
+    }
+    return tokens[_pos++];
+  }
+
+  String _mensajeError(TipoToken esperado, Token encontrado) {
+    final linea = encontrado.linea;
+    final encontradoStr = encontrado.valor.isEmpty
+        ? 'el final del programa'
+        : '"${encontrado.valor}"';
+
+    switch (esperado) {
+      case TipoToken.PROGRAMA:
+        return '😕 Línea $linea: Tu programa debe comenzar con la palabra PROGRAMA.\n'
+            '💡 Ejemplo: PROGRAMA "Mi robot"';
+      case TipoToken.FIN:
+        return '😕 Línea $linea: Falta la palabra FIN para cerrar un bloque.\n'
+            '💡 Cada REPETIR y cada SI necesitan su propio FIN al terminar.';
+      case TipoToken.TEXTO:
+        return '😕 Línea $linea: Después de PROGRAMA debes poner el nombre entre comillas.\n'
+            '💡 Ejemplo: PROGRAMA "Mi robot explorador"';
+      case TipoToken.ENTONCES:
+        return '😕 Línea $linea: Después de la condición del SI falta escribir ENTONCES:\n'
+            '💡 Ejemplo: SI N < 10 ENTONCES:';
+      case TipoToken.DOS_PUNTOS:
+        return '😕 Línea $linea: Falta el símbolo ":" al final de esta línea.\n'
+            '💡 El ENTONCES: y el VECES: siempre llevan dos puntos al final.';
+      case TipoToken.VECES:
+        return '😕 Línea $linea: Después de los corchetes falta escribir VECES:\n'
+            '💡 Ejemplo: REPETIR [N] VECES:';
+      case TipoToken.CORCHETE_IZQ:
+        return '😕 Línea $linea: Falta el corchete "[" antes del nombre de la variable.\n'
+            '💡 Ejemplo: REPETIR [N] VECES:';
+      case TipoToken.CORCHETE_DER:
+        return '😕 Línea $linea: Falta el corchete "]" después del nombre de la variable.\n'
+            '💡 Ejemplo: REPETIR [N] VECES:';
+      case TipoToken.IDENTIFICADOR:
+        return '😕 Línea $linea: Aquí se esperaba el nombre de una variable pero encontré $encontradoStr.\n'
+            '💡 Los nombres de variables solo pueden tener letras y números, sin espacios.';
+      case TipoToken.NUMERO:
+        return '😕 Línea $linea: Aquí se necesita un número pero encontré $encontradoStr.\n'
+            '💡 Ejemplo: GIRAR 90  o  AVANZAR -5';
+      case TipoToken.ASIGNACION:
+        return '😕 Línea $linea: Falta el signo "=" para darle un valor a la variable.\n'
+            '💡 Ejemplo: N = 10';
+      case TipoToken.SI:
+        return '😕 Línea $linea: Falta cerrar el bloque con FIN SI.\n'
+            '💡 Recuerda escribir FIN SI al terminar el bloque condicional.';
+      case TipoToken.REPETIR:
+        return '😕 Línea $linea: Falta cerrar el bloque con FIN REPETIR.\n'
+            '💡 Recuerda escribir FIN REPETIR al terminar el ciclo.';
+      default:
+        return '😕 Línea $linea: Algo no está bien cerca de $encontradoStr.\n'
+            '💡 Revisa que las palabras estén bien escritas y en el orden correcto.';
     }
   }
 
-  // Programa = "PROGRAMA" cadena Instrucciones "FIN" "PROGRAMA"
-  ProgramNode _programa() {
-    _consume(TokenType.programa, 'Se esperaba PROGRAMA');
-    
-    final nombreToken = _consume(TokenType.cadena, 'Se esperaba nombre del programa');
-    final nombre = nombreToken.literal as String;
-    
-    final instrucciones = _instrucciones();
-    
-    _consume(TokenType.fin, 'Se esperaba FIN');
-    _consume(TokenType.programa, 'Se esperaba PROGRAMA');
-    
-    return ProgramNode(nombre: nombre, instrucciones: instrucciones);
+  bool _esInicioInstruccion() {
+    switch (_actual.tipo) {
+      case TipoToken.IDENTIFICADOR:
+      case TipoToken.GIRAR:
+      case TipoToken.AVANZAR:
+      case TipoToken.SI:
+      case TipoToken.REPETIR:
+        return true;
+      default:
+        return false;
+    }
   }
 
-  // Instrucciones = Instruccion+
-  List<ASTNode> _instrucciones() {
-    final instrucciones = <ASTNode>[];
-    
-    while (!_check(TokenType.fin) && !_isAtEnd()) {
-      try {
-        final inst = _instruccion();
-        if (inst != null) {
-          instrucciones.add(inst);
-        }
-      } catch (e) {
-        // Ignorar tokens inválidos y continuar
-        if (!_isAtEnd()) _advance();
+  NodoPrograma parsePrograma() {
+    _consumir(TipoToken.PROGRAMA);
+    final nombre = _consumir(TipoToken.TEXTO).valor;
+    final instrucciones = parseInstrucciones();
+    _consumir(TipoToken.FIN);
+    _consumir(TipoToken.PROGRAMA);
+    if (!_es(TipoToken.FIN_ARCHIVO)) {
+      throw ErrorSintactico(
+          '😕 Línea ${_actual.linea}: Hay código después de FIN PROGRAMA.\n'
+              '💡 FIN PROGRAMA debe ser lo último que escribas.'
+      );
+    }
+    return NodoPrograma(nombre, instrucciones);
+  }
+
+  NodoInstrucciones parseInstrucciones() {
+    final lista = <Nodo>[];
+    while (_esInicioInstruccion()) {
+      lista.add(parseInstruccion());
+    }
+    if (lista.isEmpty) {
+      final linea     = _actual.linea;
+      final siguiente = _actual.tipo;
+
+      if (siguiente == TipoToken.FIN) {
+        throw ErrorSintactico(
+            '😕 Línea $linea: ¡Este bloque está vacío!\n'
+                '💡 Dentro de un SI o REPETIR debes poner al menos una instrucción.\n'
+                '   Ejemplo:\n'
+                '   SI N < 2 ENTONCES:\n'
+                '     AVANZAR 5\n'
+                '   FIN SI'
+        );
       }
+
+      if (siguiente == TipoToken.FIN_ARCHIVO) {
+        throw ErrorSintactico(
+            '😕 Línea $linea: El programa termina de repente sin instrucciones.\n'
+                '💡 Agrega al menos un GIRAR o AVANZAR dentro del programa.'
+        );
+      }
+
+      throw ErrorSintactico(
+          '😕 Línea $linea: Aquí se esperaba una instrucción pero encontré "${_actual.valor}".\n'
+              '💡 Las instrucciones válidas son: GIRAR, AVANZAR, SI, REPETIR, o una variable.'
+      );
     }
-    
-    return instrucciones;
+    return NodoInstrucciones(lista);
   }
 
-  // Instruccion = Asignacion | Accion | Ciclo | Condicional
-  ASTNode? _instruccion() {
-    if (_check(TokenType.identificador) && _checkNext(TokenType.igual)) {
-      return _asignacion();
+  Nodo parseInstruccion() {
+    switch (_actual.tipo) {
+      case TipoToken.IDENTIFICADOR: return parseAsignacion();
+      case TipoToken.GIRAR:         return parseGirar();
+      case TipoToken.AVANZAR:       return parseAvanzar();
+      case TipoToken.SI:            return parseCondicional();
+      case TipoToken.REPETIR:       return parseCiclo();
+      default:
+        throw ErrorSintactico(
+            '😕 Línea ${_actual.linea}: No reconozco la instrucción "${_actual.valor}".\n'
+                '💡 Las instrucciones válidas son: GIRAR, AVANZAR, SI, REPETIR, o el nombre de una variable.'
+        );
     }
-    
-    if (_check(TokenType.avanzar)) {
-      return _avanzar();
-    }
-    
-    if (_check(TokenType.girar)) {
-      return _girar();
-    }
-    
-    if (_check(TokenType.repetir)) {
-      return _ciclo();
-    }
-    
-    if (_check(TokenType.si)) {
-      return _condicional();
-    }
-    
-    return null;
   }
 
-  // Asignacion = Variable "=" Valor
-  AsignacionNode _asignacion() {
-    final variable = _consume(TokenType.identificador, 'Se esperaba nombre de variable');
-    _consume(TokenType.igual, 'Se esperaba =');
-    final valor = _valor();
-    
-    return AsignacionNode(
-      variable: variable.lexeme,
-      valor: valor,
+  NodoAsignacion parseAsignacion() {
+    final id  = _consumir(TipoToken.IDENTIFICADOR).valor;
+    _consumir(TipoToken.ASIGNACION);
+    final num = int.parse(_consumir(TipoToken.NUMERO).valor);
+    return NodoAsignacion(id, num);
+  }
+
+  NodoGirar parseGirar() {
+    _consumir(TipoToken.GIRAR);
+    final num = int.parse(_consumir(TipoToken.NUMERO).valor);
+    return NodoGirar(num);
+  }
+
+  NodoAvanzar parseAvanzar() {
+    _consumir(TipoToken.AVANZAR);
+    final num = int.parse(_consumir(TipoToken.NUMERO).valor);
+    return NodoAvanzar(num);
+  }
+
+  NodoCondicional parseCondicional() {
+    _consumir(TipoToken.SI);
+    final condicion = parseCondicion();
+    _consumir(TipoToken.ENTONCES);
+    _consumir(TipoToken.DOS_PUNTOS);
+    final instrucciones = parseInstrucciones();
+    _consumir(TipoToken.FIN);
+    _consumir(TipoToken.SI);
+    return NodoCondicional(condicion, instrucciones);
+  }
+
+  NodoCiclo parseCiclo() {
+    _consumir(TipoToken.REPETIR);
+
+    // ANTES: [N] era opcional, permitía REPETIR VECES: sin variable
+    // AHORA: [N] es obligatorio
+    if (!_es(TipoToken.CORCHETE_IZQ)) {
+      throw ErrorSintactico(
+          '😕 Línea ${_actual.linea}: Después de REPETIR debes poner la variable entre corchetes.\n'
+              '💡 Ejemplo: REPETIR [N] VECES:'
+      );
+    }
+    _consumir(TipoToken.CORCHETE_IZQ);
+    final identificador = _consumir(TipoToken.IDENTIFICADOR).valor;
+    _consumir(TipoToken.CORCHETE_DER);
+    _consumir(TipoToken.VECES);
+    _consumir(TipoToken.DOS_PUNTOS);
+    final instrucciones = parseInstrucciones();
+    _consumir(TipoToken.FIN);
+    _consumir(TipoToken.REPETIR);
+    return NodoCiclo(identificador, instrucciones);
+  }
+
+  NodoCondicion parseCondicion() {
+    final id   = _consumir(TipoToken.IDENTIFICADOR).valor;
+    final comp = parseComparador();
+    final num  = int.parse(_consumir(TipoToken.NUMERO).valor);
+    return NodoCondicion(id, comp, num);
+  }
+
+  String parseComparador() {
+    if (_es(TipoToken.IGUAL)) { _pos++; return '=='; }
+    if (_es(TipoToken.MAYOR)) { _pos++; return '>'; }
+    if (_es(TipoToken.MENOR)) { _pos++; return '<'; }
+    throw ErrorSintactico(
+        '😕 Línea ${_actual.linea}: Aquí necesito un comparador pero encontré "${_actual.valor}".\n'
+            '💡 Los comparadores válidos son:  ==  (igual),  >  (mayor que),  <  (menor que)\n'
+            '   Ejemplo: SI N < 10 ENTONCES:'
     );
-  }
-
-  // Avanzar = "AVANZAR" Valor
-  AvanzarNode _avanzar() {
-    _consume(TokenType.avanzar, 'Se esperaba AVANZAR');
-    final distancia = _valor();
-    
-    return AvanzarNode(distancia: distancia);
-  }
-
-  // Girar = "GIRAR" Valor
-  GirarNode _girar() {
-    _consume(TokenType.girar, 'Se esperaba GIRAR');
-    final angulo = _valor();
-    
-    return GirarNode(angulo: angulo);
-  }
-
-  // Condicional = "SI" Condicion "ENTONCES" ":" Instrucciones "FIN" "SI"
-  CondicionalNode _condicional() {
-    _consume(TokenType.si, 'Se esperaba SI');
-    final condicion = _condicion();
-    _consume(TokenType.entonces, 'Se esperaba ENTONCES');
-    _consume(TokenType.dobleComa, 'Se esperaba :');
-    
-    final instrucciones = _instrucciones();
-    
-    _consume(TokenType.fin, 'Se esperaba FIN');
-    _consume(TokenType.si, 'Se esperaba SI');
-    
-    return CondicionalNode(
-      condicion: condicion,
-      instrucciones: instrucciones,
-    );
-  }
-
-  // Ciclo = "REPETIR" "[" Variable "]" "VECES" ":" Instrucciones "FIN" "REPETIR"
-  CicloNode _ciclo() {
-    _consume(TokenType.repetir, 'Se esperaba REPETIR');
-    _consume(TokenType.corcheteAbre, 'Se esperaba [');
-    final variable = _consume(TokenType.identificador, 'Se esperaba nombre de variable');
-    _consume(TokenType.corcheteCierra, 'Se esperaba ]');
-    _consume(TokenType.veces, 'Se esperaba VECES');
-    _consume(TokenType.dobleComa, 'Se esperaba :');
-    
-    final instrucciones = _instrucciones();
-    
-    _consume(TokenType.fin, 'Se esperaba FIN');
-    _consume(TokenType.repetir, 'Se esperaba REPETIR');
-    
-    return CicloNode(
-      variable: variable.lexeme,
-      instrucciones: instrucciones,
-    );
-  }
-
-  // Condicion = Variable Comparador Valor
-  CondicionNode _condicion() {
-    final variable = _consume(TokenType.identificador, 'Se esperaba variable');
-    
-    String comparador;
-    if (_check(TokenType.igualIgual)) {
-      comparador = '==';
-      _advance();
-    } else if (_check(TokenType.menorQue)) {
-      comparador = '<';
-      _advance();
-    } else if (_check(TokenType.mayorQue)) {
-      comparador = '>';
-      _advance();
-    } else {
-      throw Exception('Se esperaba comparador (==, <, >)');
-    }
-    
-    final valor = _valor();
-    
-    return CondicionNode(
-      variable: variable.lexeme,
-      comparador: comparador,
-      valor: valor,
-    );
-  }
-
-  // Valor = numero | variable
-  ASTNode _valor() {
-    if (_check(TokenType.numero)) {
-      final token = _advance();
-      return NumeroNode(valor: token.literal as int);
-    }
-    
-    if (_check(TokenType.identificador)) {
-      final token = _advance();
-      return VariableNode(nombre: token.lexeme);
-    }
-    
-    throw Exception('Se esperaba número o variable');
-  }
-
-  // === Métodos auxiliares ===
-
-  Token _consume(TokenType type, String message) {
-    if (_check(type)) return _advance();
-    
-    final current = _peek();
-    throw Exception('$message en línea ${current.line}, columna ${current.column}. '
-                   'Se encontró: ${current.lexeme}');
-  }
-
-  bool _check(TokenType type) {
-    if (_isAtEnd()) return false;
-    return _peek().type == type;
-  }
-
-  bool _checkNext(TokenType type) {
-    if (_current + 1 >= tokens.length) return false;
-    return tokens[_current + 1].type == type;
-  }
-
-  Token _advance() {
-    if (!_isAtEnd()) _current++;
-    return _previous();
-  }
-
-  bool _isAtEnd() {
-    return _peek().type == TokenType.finArchivo;
-  }
-
-  Token _peek() {
-    return tokens[_current];
-  }
-
-  Token _previous() {
-    return tokens[_current - 1];
   }
 }
