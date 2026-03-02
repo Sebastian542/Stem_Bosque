@@ -530,14 +530,18 @@ FIN PROGRAMA''';
             if (unsaved) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppTheme.orange,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('Sin guardar',
-                    style: TextStyle(
-                        fontSize: 10, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Sin guardar',
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ],
@@ -546,90 +550,153 @@ FIN PROGRAMA''';
         leading: Builder(
           builder: (ctx) => IconButton(
             icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
+            onPressed: () =>
+                Scaffold.of(ctx).openDrawer(),
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ElevatedButton.icon(
-              onPressed:
-              (_codeIsValid && !_isRunning) ? _executeProgram : null,
-              icon: _isRunning
-                  ? const SizedBox(
-                  width: 16, height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                    AlwaysStoppedAnimation<Color>(Colors.white),
-                  ))
-                  : const Icon(Icons.play_arrow, size: 20),
-              label: Text(_isRunning ? 'Ejecutando...' : 'Ejecutar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: (_codeIsValid && !_isRunning)
-                    ? AppTheme.green
-                    : AppTheme.comment,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-              ),
-            ),
-          ),
-        ],
       ),
+
       drawer: IDEDrawer(
         hasUnsavedChanges: unsaved,
-        isRunning:         _isRunning,
-        bluetoothEnabled:  _bluetoothEnabled,
-        currentFilePath:   _fm.currentFilePath,
-        onOpenFile:        _openFile,
-        onSaveFile:        _saveWithName,
-        onClearCode:       _clearCode,
-        onShareFile:       _shareFile,
+        isRunning: _isRunning,
+        bluetoothEnabled: _bluetoothEnabled,
+        currentFilePath: _fm.currentFilePath,
+        onOpenFile: _openFile,
+        onSaveFile: _saveWithName,
+        onClearCode: _clearCode,
+        onShareFile: _shareFile,
         onToggleBluetooth: () => _bt.toggleBluetooth(),
       ),
+
       body: Column(
         children: [
+
           if (_showBluetoothPanel)
             BluetoothPanel(
               bluetoothEnabled: _bluetoothEnabled,
-              isScanning:       _isScanning,
-              isConnecting:     _isConnecting,
-              devices:          _discoveredDevices,
-              connectedDevice:  _connectedDevice,
-              onToggle:         _toggleBluetoothPanel,
-              onToggleBluetooth: () => _bt.toggleBluetooth(),
-              onStartScan:      _startScan,
-              onStopScan:       _stopScan,
-              onOpenSettings:   () => _bt.openSettings(),
-              onDisconnect:     () => _bt.disconnect(_btCallbacks),
-              onConnect:        (d) => _bt.connect(d, _btCallbacks),
+              isScanning: _isScanning,
+              isConnecting: _isConnecting,
+              devices: _discoveredDevices,
+              connectedDevice: _connectedDevice,
+              onToggle: _toggleBluetoothPanel,
+              onToggleBluetooth: () =>
+                  _bt.toggleBluetooth(),
+              onStartScan: _startScan,
+              onStopScan: _stopScan,
+              onOpenSettings: () =>
+                  _bt.openSettings(),
+              onDisconnect: () =>
+                  _bt.disconnect(_btCallbacks),
+              onConnect: (d) =>
+                  _bt.connect(d, _btCallbacks),
             ),
+
           Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, anim) => SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1, 0),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
-              ),
-              child: _showConsole
-                  ? ExecutionConsole(
-                key: const ValueKey('console'),
-                lines:        _execLines,
-                isSuccess:    _execSuccess,
-                errorMessage: _execError,
-                onSend:       _sendProgram,
-                onClose: () => setState(() => _showConsole = false),
-              )
-                  : ValidatedCodeEditor(
-                key: const ValueKey('editor'),
-                controller: _codeController,
-                onValidityChanged: (v) =>
-                    setState(() => _codeIsValid = v),
-              ),
+            child: Column(
+              children: [
+
+                // Editor o consola
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration:
+                    const Duration(milliseconds: 300),
+                    transitionBuilder:
+                        (child, anim) =>
+                        SlideTransition(
+                          position:
+                          Tween<Offset>(
+                            begin:
+                            const Offset(1, 0),
+                            end: Offset.zero,
+                          ).animate(anim),
+                          child: child,
+                        ),
+                    child: _showConsole
+                        ? ExecutionConsole(
+                      key:
+                      const ValueKey(
+                          'console'),
+                      lines: _execLines,
+                      isSuccess:
+                      _execSuccess,
+                      errorMessage:
+                      _execError,
+                      onSend:
+                      _sendProgram,
+                      onClose: () =>
+                          setState(() =>
+                          _showConsole =
+                          false),
+                    )
+                        : ValidatedCodeEditor(
+                      key:
+                      const ValueKey(
+                          'editor'),
+                      controller:
+                      _codeController,
+                      onValidityChanged:
+                          (v) => setState(
+                              () => _codeIsValid =
+                              v),
+                    ),
+                  ),
+                ),
+
+                // 🔥 BOTÓN EJECUTAR ABAJO
+                Padding(
+                  padding:
+                  const EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed:
+                      (_codeIsValid &&
+                          !_isRunning)
+                          ? _executeProgram
+                          : null,
+                      icon: _isRunning
+                          ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child:
+                        CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                          AlwaysStoppedAnimation<
+                              Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                          : const Icon(
+                          Icons.play_arrow),
+                      label: Text(
+                        _isRunning
+                            ? 'Ejecutando...'
+                            : 'Ejecutar',
+                      ),
+                      style:
+                      ElevatedButton
+                          .styleFrom(
+                        backgroundColor:
+                        (_codeIsValid &&
+                            !_isRunning)
+                            ? AppTheme
+                            .green
+                            : AppTheme
+                            .comment,
+                        foregroundColor:
+                        Colors.white,
+                        padding:
+                        const EdgeInsets
+                            .symmetric(
+                            vertical:
+                            16),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
