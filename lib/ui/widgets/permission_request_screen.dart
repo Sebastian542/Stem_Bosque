@@ -6,9 +6,9 @@ class PermissionRequestScreen extends StatefulWidget {
   final Widget child;
 
   const PermissionRequestScreen({
-    Key? key,
+    super.key,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   State<PermissionRequestScreen> createState() => _PermissionRequestScreenState();

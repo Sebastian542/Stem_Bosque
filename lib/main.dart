@@ -9,7 +9,7 @@ void main() {
 
 /// Aplicación principal de StemBosque
 class StemBosqueApp extends StatelessWidget {
-  const StemBosqueApp({Key? key}) : super(key: key);
+  const StemBosqueApp({super.key});
 
   @override
   Widget build(BuildContext context) {

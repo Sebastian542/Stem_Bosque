@@ -12,7 +12,7 @@ class Toolbar extends StatelessWidget {
   final bool isBluetoothOpen;
 
   const Toolbar({
-    Key? key,
+    super.key,
     this.onRun,
     this.onClear,
     this.onOpen,
@@ -20,14 +20,14 @@ class Toolbar extends StatelessWidget {
     this.onBluetooth,
     this.isRunning = false,
     this.isBluetoothOpen = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1e1f29),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1e1f29),
         border: Border(
           bottom: BorderSide(
             color: AppTheme.currentLine,

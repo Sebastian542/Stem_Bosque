@@ -15,7 +15,7 @@ class IDEDrawer extends StatelessWidget {
   final VoidCallback onToggleBluetooth;
 
   const IDEDrawer({
-    Key? key,
+    super.key,
     required this.hasUnsavedChanges,
     required this.isRunning,
     required this.bluetoothEnabled,
@@ -26,7 +26,7 @@ class IDEDrawer extends StatelessWidget {
     required this.onClearCode,
     required this.onShareFile,
     required this.onToggleBluetooth,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -74,25 +74,6 @@ class IDEDrawer extends StatelessWidget {
                   onTap: onShareFile,
                 ),
                 const Divider(color: AppTheme.currentLine, height: 1),
-                // ANTES: el item tenía un Switch que mostraba/ocultaba el panel
-                // y el valor era showBluetoothPanel
-                // _buildItem(
-                //   context,
-                //   icon: bluetoothEnabled
-                //       ? Icons.bluetooth
-                //       : Icons.bluetooth_disabled,
-                //   title: 'Bluetooth',
-                //   subtitle: bluetoothEnabled ? 'Disponible' : 'Desactivado',
-                //   color: bluetoothEnabled ? AppTheme.green : AppTheme.red,
-                //   onTap: onToggleBluetooth,
-                //   trailing: Switch(
-                //     value: showBluetoothPanel,
-                //     onChanged: (_) => onToggleBluetooth(),
-                //     activeColor: AppTheme.green,
-                //   ),
-                // ),
-                // AHORA: el Switch refleja si el bluetooth del celular
-                // está encendido o apagado, y al tocarlo lo enciende/apaga
                 _buildItem(
                   context,
                   icon: bluetoothEnabled
@@ -105,9 +86,9 @@ class IDEDrawer extends StatelessWidget {
                   color: bluetoothEnabled ? AppTheme.green : AppTheme.comment,
                   onTap: onToggleBluetooth,
                   trailing: Switch(
-                    value: bluetoothEnabled,  // ANTES: showBluetoothPanel
+                    value: bluetoothEnabled,
                     onChanged: (_) => onToggleBluetooth(),
-                    activeColor: AppTheme.green,
+                    activeThumbColor: AppTheme.green,
                   ),
                 ),
               ],
@@ -123,22 +104,22 @@ class IDEDrawer extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 50, 16, 20),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.currentLine,
         border: Border(bottom: BorderSide(color: AppTheme.comment, width: 1)),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.code, size: 40, color: AppTheme.cyan),
-          const SizedBox(height: 12),
-          const Text('StemBosque IDE',
+          Icon(Icons.code, size: 40, color: AppTheme.cyan),
+          SizedBox(height: 12),
+          Text('StemBosque IDE',
               style: TextStyle(
                 color: AppTheme.foreground,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               )),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text('Opciones del editor',
               style: TextStyle(color: AppTheme.comment, fontSize: 13)),
         ],
@@ -149,7 +130,7 @@ class IDEDrawer extends StatelessWidget {
   Widget _buildFooter() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AppTheme.currentLine, width: 1)),
       ),
       child: Column(
@@ -165,7 +146,7 @@ class IDEDrawer extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 isRunning ? 'Ejecutando...' : 'Listo',
-                style: TextStyle(color: AppTheme.comment, fontSize: 12),
+                style: const TextStyle(color: AppTheme.comment, fontSize: 12),
               ),
             ],
           ),
@@ -199,7 +180,7 @@ class IDEDrawer extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: color, size: 24),
@@ -211,7 +192,7 @@ class IDEDrawer extends StatelessWidget {
             fontWeight: FontWeight.w600,
           )),
       subtitle: Text(subtitle,
-          style: TextStyle(color: AppTheme.comment, fontSize: 12)),
+          style: const TextStyle(color: AppTheme.comment, fontSize: 12)),
       trailing: trailing,
       onTap: () {
         Navigator.pop(context);

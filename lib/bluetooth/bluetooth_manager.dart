@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -107,10 +106,11 @@ class BluetoothManager {
 
   Future<void> toggleBluetooth() async {
     if (_bluetoothEnabled) {
-      await FlutterBluePlus.turnOff();
+      // turnOff is deprecated on Android 13+ with no replacement. 
+      // We rely on requestDisable() which may show a dialog or work on older versions.
       await classic.FlutterBluetoothSerial.instance.requestDisable();
     } else {
-      await FlutterBluePlus.turnOn();
+      // turnOn is also deprecated, requestEnable() is preferred as it shows a system dialog.
       await classic.FlutterBluetoothSerial.instance.requestEnable();
     }
   }

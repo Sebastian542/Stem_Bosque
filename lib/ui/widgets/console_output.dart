@@ -47,10 +47,10 @@ class ConsoleOutput extends StatefulWidget {
   final VoidCallback? onClear;
 
   const ConsoleOutput({
-    Key? key,
+    super.key,
     required this.messages,
     this.onClear,
-  }) : super(key: key);
+  });
 
   @override
   State<ConsoleOutput> createState() => _ConsoleOutputState();
@@ -95,7 +95,7 @@ class _ConsoleOutputState extends State<ConsoleOutput> {
             decoration: BoxDecoration(
               color: AppTheme.currentLine,
               border: Border(
-                bottom: BorderSide(color: Colors.black.withOpacity(0.3)),
+                bottom: BorderSide(color: Colors.black.withValues(alpha: 0.3)),
               ),
             ),
             child: Row(
