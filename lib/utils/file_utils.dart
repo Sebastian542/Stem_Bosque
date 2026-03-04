@@ -1,4 +1,5 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
@@ -31,13 +32,13 @@ class FileUtils {
 
       return null;
     } catch (e) {
-      print('Error en FileUtils.openFile: $e');
+      debugPrint('Error en FileUtils.openFile: $e');
 
       // FALLBACK: Si falla, intentar con método alternativo
       try {
         return await _openFileAlternative();
       } catch (e2) {
-        print('Error en método alternativo: $e2');
+        debugPrint('Error en método alternativo: $e2');
         return null;
       }
     }
@@ -74,7 +75,7 @@ class FileUtils {
       return await txtFiles.first.readAsString();
 
     } catch (e) {
-      print('Error en _openFileAlternative: $e');
+      debugPrint('Error en _openFileAlternative: $e');
       return null;
     }
   }
@@ -100,7 +101,7 @@ class FileUtils {
 
       return await file.exists();
     } catch (e) {
-      print('Error en FileUtils.saveFile: $e');
+      debugPrint('Error en FileUtils.saveFile: $e');
       return false;
     }
   }

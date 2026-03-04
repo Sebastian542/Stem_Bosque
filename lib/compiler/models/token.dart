@@ -8,19 +8,36 @@ enum TipoToken {
   ENTONCES,
   REPETIR,
   VECES,
+  // Operadores booleanos
+  AND,
+  OR,
+  NOT,
+  // Funciones trigonométricas
+  SEN,
+  COS,
+  TANG,
   // Literales
   IDENTIFICADOR,
   NUMERO,
   TEXTO,
-  // Operadores
-  ASIGNACION,   // =
-  IGUAL,        // ==
-  MAYOR,        // >
-  MENOR,        //
+  // Operadores aritméticos
+  SUMA,       // +
+  RESTA,      // -
+  MULT,       // *
+  DIV,        // /
+  MODULO,     // %
+  POTENCIA,   // ^
+  // Operadores relacionales
+  ASIGNACION, // =
+  IGUAL,      // ==
+  MAYOR,      // >
+  MENOR,      // <
   // Puntuación
   DOS_PUNTOS,
   CORCHETE_IZQ,
   CORCHETE_DER,
+  PAREN_IZQ,
+  PAREN_DER,
   // Fin de archivo
   FIN_ARCHIVO,
 }

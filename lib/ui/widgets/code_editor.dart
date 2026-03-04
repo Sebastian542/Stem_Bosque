@@ -7,10 +7,10 @@ class CodeEditor extends StatefulWidget {
   final String? initialCode;
 
   const CodeEditor({
-    Key? key,
+    super.key,
     required this.controller,
     this.initialCode,
-  }) : super(key: key);
+  });
 
   @override
   State<CodeEditor> createState() => _CodeEditorState();
@@ -57,10 +57,10 @@ class AdvancedCodeEditor extends StatefulWidget {
   final String? initialCode;
 
   const AdvancedCodeEditor({
-    Key? key,
+    super.key,
     required this.controller,
     this.initialCode,
-  }) : super(key: key);
+  });
 
   @override
   State<AdvancedCodeEditor> createState() => _AdvancedCodeEditorState();

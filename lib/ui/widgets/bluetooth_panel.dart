@@ -18,7 +18,7 @@ class BluetoothPanel extends StatelessWidget {
   final void Function(UnifiedBluetoothDevice) onConnect;
 
   const BluetoothPanel({
-    Key? key,
+    super.key,
     required this.bluetoothEnabled,
     required this.isScanning,
     required this.isConnecting,
@@ -31,13 +31,13 @@ class BluetoothPanel extends StatelessWidget {
     required this.onOpenSettings,
     required this.onDisconnect,
     required this.onConnect,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 300,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.background,
         border: Border(
             bottom: BorderSide(color: AppTheme.currentLine, width: 2)),
@@ -55,7 +55,7 @@ class BluetoothPanel extends StatelessWidget {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.currentLine,
         border: Border(bottom: BorderSide(color: AppTheme.comment, width: 1)),
       ),
@@ -199,13 +199,13 @@ class BluetoothPanel extends StatelessWidget {
 
   Widget _buildDeviceList() {
     if (!bluetoothEnabled) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.bluetooth_disabled,
+            Icon(Icons.bluetooth_disabled,
                 size: 48, color: AppTheme.comment),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text('Active el Bluetooth',
                 style: TextStyle(color: AppTheme.comment)),
           ],
@@ -228,12 +228,12 @@ class BluetoothPanel extends StatelessWidget {
     }
 
     if (devices.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.devices, size: 48, color: AppTheme.comment),
-            const SizedBox(height: 12),
+            Icon(Icons.devices, size: 48, color: AppTheme.comment),
+            SizedBox(height: 12),
             Text('No se encontraron dispositivos',
                 style: TextStyle(color: AppTheme.comment)),
           ],

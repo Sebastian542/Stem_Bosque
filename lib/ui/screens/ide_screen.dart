@@ -1,8 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
-
-import 'package:android_intent_plus/android_intent.dart';
 
 import '../../bluetooth/bluetooth_manager.dart';
 import '../../compiler/compiler.dart';
@@ -14,7 +11,7 @@ import '../widgets/ide_drawer.dart';
 import '../theme/app_theme.dart';
 
 class IDEScreen extends StatefulWidget {
-  const IDEScreen({Key? key}) : super(key: key);
+  const IDEScreen({super.key});
 
   @override
   State<IDEScreen> createState() => _IDEScreenState();
@@ -41,7 +38,7 @@ class _IDEScreenState extends State<IDEScreen> {
   // ── Bluetooth UI ─────────────────────────────────────────────
   bool _bluetoothEnabled   = false;
   bool _showBluetoothPanel = false;
-  List<UnifiedBluetoothDevice> _discoveredDevices = [];
+  final List<UnifiedBluetoothDevice> _discoveredDevices = [];
 
   bool get _isScanning    => _bt.isScanning;
   bool get _isConnecting  => _bt.isConnecting;
@@ -291,7 +288,7 @@ FIN PROGRAMA''';
                     color: AppTheme.background,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: AppTheme.comment.withOpacity(0.3)),
+                        color: AppTheme.comment.withAlpha(77)),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
