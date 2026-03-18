@@ -610,20 +610,13 @@ FIN PROGRAMA''';
                         ),
                     child: _showConsole
                         ? ExecutionConsole(
-                      key:
-                      const ValueKey(
-                          'console'),
-                      lines: _execLines,
-                      isSuccess:
-                      _execSuccess,
-                      errorMessage:
-                      _execError,
-                      onSend:
-                      _sendProgram,
-                      onClose: () =>
-                          setState(() =>
-                          _showConsole =
-                          false),
+                      key:           const ValueKey('console'),
+                      lines:         _execLines,
+                      isSuccess:     _execSuccess,
+                      errorMessage:  _execError,
+                      compiledLines: _compiledLines,  // ← AGREGA ESTA LÍNEA
+                      onSend:        _sendProgram,
+                      onClose: () => setState(() => _showConsole = false),
                     )
                         : ValidatedCodeEditor(
                       key:
