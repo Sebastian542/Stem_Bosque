@@ -93,6 +93,8 @@ class BluetoothManager {
   // ── Permisos ────────────────────────────────────────────────
 
   Future<void> _requestPermissions() async {
+    if (kIsWeb) return;
+
     await [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
