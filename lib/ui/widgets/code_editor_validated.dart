@@ -530,24 +530,42 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
     String display = message
         .replaceAll('❌ Error Léxico: ', '')
         .replaceAll('❌ Error Sintáctico: ', '');
-    if (display.length > 220) display = '${display.substring(0, 220)}...';
+
+    if (display.length > 220) {
+      display = '${display.substring(0, 220)}...';
+    }
 
     return Container(
-      color:   AppTheme.red.withValues(alpha: 0.10),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.red.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            color: AppTheme.red,
+            width: 4,
+          ),
+        ),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline, color: AppTheme.red, size: 16),
+          const Icon(
+            Icons.error_outline,
+            color: AppTheme.red,
+            size: 18,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               display,
               style: const TextStyle(
-                color: AppTheme.red, fontSize: 12, fontFamily: _fontFamily,
+                color: AppTheme.red,
+                fontSize: 13,
+                fontFamily: _fontFamily,
+                fontWeight: FontWeight.w500,
               ),
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

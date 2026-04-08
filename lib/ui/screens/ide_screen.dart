@@ -6,9 +6,11 @@ import '../../compiler/compiler.dart';
 import '../../services/file_manager.dart';
 import '../widgets/bluetooth_panel.dart';
 import '../widgets/code_editor_validated.dart';
-import '../widgets/execution_console.dart';
 import '../widgets/ide_drawer.dart';
 import '../theme/app_theme.dart';
+import '../widgets/confetti_widget.dart';
+import 'simulation_screen.dart';
+
 
 class IDEScreen extends StatefulWidget {
   const IDEScreen({super.key});
@@ -28,10 +30,8 @@ class _IDEScreenState extends State<IDEScreen> {
   final _codeController = TextEditingController();
   bool         _isRunning     = false;
   bool         _codeIsValid   = false;
-  bool         _showConsole   = false;
-  bool         _execSuccess   = false;
-  String?      _execError;
-  List<String> _execLines     = [];
+  bool         _compiledSuccess  = false;
+  OverlayEntry? _confettiOverlay;
   List<String> _compiledLines  = []; // comandos expandidos post-compilación
   String?      _compiledFilePath;          // ruta del compilado.txt guardado
 
@@ -83,6 +83,7 @@ FIN PROGRAMA''';
   void dispose() {
     _codeController.dispose();
     _bt.dispose();
+    _confettiOverlay?.remove();
     super.dispose();
   }
 
@@ -450,41 +451,60 @@ FIN PROGRAMA''';
     setState(() => _isRunning = true);
     try {
       final r = Compilador().compilar(_codeController.text);
+      final compiled = r.exito
+          ? (r.salidaEjecucion ?? [])
+          .where((l) {
+        final t = l.trim();
+        return t.startsWith('GIRAR') || t.startsWith('AVANZAR');
+      })
+          .toList()
+          : [];
+
       setState(() {
-        _showConsole   = true;
-        _execSuccess   = r.exito;
-        _execError     = r.error;
-        _execLines     = r.salidaEjecucion ?? [];
-        // Guardar solo GIRAR/AVANZAR expandidos para el envío
-        _compiledLines = r.exito
-            ? (r.salidaEjecucion ?? [])
-            .where((l) {
-          final t = l.trim();
-          return t.startsWith('GIRAR') || t.startsWith('AVANZAR');
-        })
-            .toList()
-            : [];
+        _compiledSuccess = r.exito;
+        _compiledLines   = r.exito ? List<String>.from(compiled) : [];
       });
-      // Guardar compilado en archivo (reemplaza el anterior)
+
       if (r.exito && _compiledLines.isNotEmpty) {
         await _fm.deleteCompiled();
         _compiledFilePath = await _fm.saveCompiled(_compiledLines.join('\n'));
+        _launchConfetti();
       } else {
         _compiledFilePath = null;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Row(children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Flexible(child: Text(r.error ?? 'Error al compilar')),
+            ]),
+            backgroundColor: AppTheme.red,
+            duration: const Duration(seconds: 3),
+          ));
+        }
       }
     } catch (e) {
       setState(() {
-        _showConsole   = true;
-        _execSuccess   = false;
-        _execError     = e.toString();
-        _execLines     = [];
+        _compiledSuccess  = false;
         _compiledLines    = [];
         _compiledFilePath = null;
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Row(children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Flexible(child: Text(e.toString())),
+          ]),
+          backgroundColor: AppTheme.red,
+          duration: const Duration(seconds: 3),
+        ));
+      }
     } finally {
       setState(() => _isRunning = false);
     }
   }
+
 
   // _sendProgram: comparte compilado.txt (Bluetooth aparece en el share sheet)
   Future<void> _sendProgram() async {
@@ -515,6 +535,7 @@ FIN PROGRAMA''';
   // BUILD
   // ─────────────────────────────────────────────────────────────
 
+
   @override
   Widget build(BuildContext context) {
     final unsaved = _fm.hasUnsavedChanges(_codeController.text);
@@ -527,17 +548,14 @@ FIN PROGRAMA''';
             if (unsaved) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppTheme.orange,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
                   'Sin guardar',
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -547,8 +565,7 @@ FIN PROGRAMA''';
         leading: Builder(
           builder: (ctx) => IconButton(
             icon: const Icon(Icons.menu),
-            onPressed: () =>
-                Scaffold.of(ctx).openDrawer(),
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
       ),
@@ -576,121 +593,116 @@ FIN PROGRAMA''';
               devices: _discoveredDevices,
               connectedDevice: _connectedDevice,
               onToggle: _toggleBluetoothPanel,
-              onToggleBluetooth: () =>
-                  _bt.toggleBluetooth(),
+              onToggleBluetooth: () => _bt.toggleBluetooth(),
               onStartScan: _startScan,
               onStopScan: _stopScan,
-              onOpenSettings: () =>
-                  _bt.openSettings(),
-              onDisconnect: () =>
-                  _bt.disconnect(_btCallbacks),
-              onConnect: (d) =>
-                  _bt.connect(d, _btCallbacks),
+              onOpenSettings: () => _bt.openSettings(),
+              onDisconnect: () => _bt.disconnect(_btCallbacks),
+              onConnect: (d) => _bt.connect(d, _btCallbacks),
             ),
 
           Expanded(
             child: Column(
               children: [
 
-                // Editor o consola
+                // Editor (siempre visible)
                 Expanded(
-                  child: AnimatedSwitcher(
-                    duration:
-                    const Duration(milliseconds: 300),
-                    transitionBuilder:
-                        (child, anim) =>
-                        SlideTransition(
-                          position:
-                          Tween<Offset>(
-                            begin:
-                            const Offset(1, 0),
-                            end: Offset.zero,
-                          ).animate(anim),
-                          child: child,
-                        ),
-                    child: _showConsole
-                        ? ExecutionConsole(
-                      key:
-                      const ValueKey(
-                          'console'),
-                      lines: _execLines,
-                      isSuccess:
-                      _execSuccess,
-                      errorMessage:
-                      _execError,
-                      onSend:
-                      _sendProgram,
-                      onClose: () =>
-                          setState(() =>
-                          _showConsole =
-                          false),
-                    )
-                        : ValidatedCodeEditor(
-                      key:
-                      const ValueKey(
-                          'editor'),
-                      controller:
-                      _codeController,
-                      onValidityChanged:
-                          (v) => setState(
-                              () => _codeIsValid =
-                              v),
-                    ),
+                  child: ValidatedCodeEditor(
+                    key: const ValueKey('editor'),
+                    controller: _codeController,
+                    onValidityChanged: (v) => setState(() => _codeIsValid = v),
                   ),
                 ),
 
-                // 🔥 BOTÓN EJECUTAR ABAJO
+                // Botones
                 Padding(
-                  padding:
-                  const EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed:
-                      (_codeIsValid &&
-                          !_isRunning)
-                          ? _executeProgram
-                          : null,
-                      icon: _isRunning
-                          ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child:
-                        CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                          AlwaysStoppedAnimation<
-                              Color>(
-                            Colors.white,
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+
+                      // Botón ENVIAR
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        child: _compiledSuccess
+                            ? Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _sendProgram,
+                              icon: const Icon(Icons.send),
+                              label: const Text('Enviar por Bluetooth'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.cyan,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                        )
+                            : const SizedBox.shrink(),
+                      ),
+
+                      // Botón SIMULAR
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        child: _compiledSuccess
+                            ? Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => SimulationScreen(
+                                    commands: _compiledLines,
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(Icons.play_circle_outline),
+                              label: const Text('Simular'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.purple,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                        )
+                            : const SizedBox.shrink(),
+                      ),
+
+                      // Botón EJECUTAR
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: (_codeIsValid && !_isRunning)
+                              ? _executeProgram
+                              : null,
+                          icon: _isRunning
+                              ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                              : const Icon(Icons.play_arrow),
+                          label: Text(_isRunning ? 'Ejecutando...' : 'Ejecutar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: (_codeIsValid && !_isRunning)
+                                ? AppTheme.green
+                                : AppTheme.comment,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                         ),
-                      )
-                          : const Icon(
-                          Icons.play_arrow),
-                      label: Text(
-                        _isRunning
-                            ? 'Ejecutando...'
-                            : 'Ejecutar',
                       ),
-                      style:
-                      ElevatedButton
-                          .styleFrom(
-                        backgroundColor:
-                        (_codeIsValid &&
-                            !_isRunning)
-                            ? AppTheme
-                            .green
-                            : AppTheme
-                            .comment,
-                        foregroundColor:
-                        Colors.white,
-                        padding:
-                        const EdgeInsets
-                            .symmetric(
-                            vertical:
-                            16),
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -710,4 +722,21 @@ FIN PROGRAMA''';
     _bt.stopScan();
     setState(() {});
   }
+
+  void _launchConfetti() {
+    _confettiOverlay?.remove();
+    _confettiOverlay = null;
+
+    final overlay = Overlay.of(context);
+    final entry = OverlayEntry(builder: (_) => ConfettiWidget());
+    _confettiOverlay = entry;
+    overlay.insert(entry);
+
+    Future.delayed(const Duration(milliseconds: 3500), () {
+      entry.remove();
+      if (_confettiOverlay == entry) _confettiOverlay = null;
+    });
+  }
+
+
 }

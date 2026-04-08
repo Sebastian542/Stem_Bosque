@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../screens/simulation_screen.dart';
 
 class ExecutionConsole extends StatefulWidget {
   final List<String> lines;
+  final List<String> compiledLines;
   final bool         isSuccess;
   final String?      errorMessage;
   final VoidCallback onSend;
@@ -11,10 +13,12 @@ class ExecutionConsole extends StatefulWidget {
   const ExecutionConsole({
     super.key,
     required this.lines,
+    required this.compiledLines,
     required this.isSuccess,
     this.errorMessage,
     required this.onSend,
-    required this.onClose,
+    required this.onClose
+
   });
 
   @override
@@ -176,11 +180,29 @@ class _ExecutionConsoleState extends State<ExecutionConsole>
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
-              'Programa ejecutado exitosamente. ¿Desea enviarlo?',
+              'Programa ejecutado exitosamente.',
               style: TextStyle(color: AppTheme.green, fontSize: 13),
             ),
           ),
           const SizedBox(width: 12),
+          // ── NUEVO: Botón Simulación ──
+          ElevatedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SimulationScreen(commands: widget.compiledLines),
+              ),
+            ),
+            icon:  const Icon(Icons.play_circle_outline, size: 18),
+            label: const Text('Simulación'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.cyan,
+              foregroundColor: AppTheme.background,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // ── Sin cambios: Botón Enviar ──
           ElevatedButton.icon(
             onPressed: widget.onSend,
             icon:  const Icon(Icons.send, size: 18),
@@ -188,8 +210,7 @@ class _ExecutionConsoleState extends State<ExecutionConsole>
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.purple,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
           ),
         ],
