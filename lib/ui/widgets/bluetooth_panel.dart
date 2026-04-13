@@ -36,17 +36,21 @@ class BluetoothPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 300,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.4,
+        minHeight: 150,
+      ),
       decoration: const BoxDecoration(
         color: AppTheme.background,
         border: Border(
             bottom: BorderSide(color: AppTheme.currentLine, width: 2)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           _buildHeader(),
           if (connectedDevice != null) _buildConnectedBanner(),
-          Expanded(child: _buildDeviceList()),
+          Flexible(child: _buildDeviceList()),
         ],
       ),
     );
@@ -60,56 +64,72 @@ class BluetoothPanel extends StatelessWidget {
         border: Border(bottom: BorderSide(color: AppTheme.comment, width: 1)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
             children: [
-              Icon(
-                bluetoothEnabled ? Icons.bluetooth : Icons.bluetooth_disabled,
-                color: bluetoothEnabled ? AppTheme.cyan : AppTheme.red,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                bluetoothEnabled ? 'Bluetooth' : 'Bluetooth Desactivado',
-                style: TextStyle(
-                  color: bluetoothEnabled ? AppTheme.cyan : AppTheme.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: onToggleBluetooth,
-                icon: Icon(
-                  bluetoothEnabled
-                      ? Icons.bluetooth_disabled
-                      : Icons.bluetooth,
-                  size: 18,
-                ),
-                label: Text(bluetoothEnabled ? 'Apagar' : 'Encender'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                  bluetoothEnabled ? AppTheme.red : AppTheme.green,
-                  foregroundColor: AppTheme.background,
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (bluetoothEnabled)
-                ElevatedButton.icon(
-                  onPressed: isScanning ? onStopScan : onStartScan,
-                  icon: Icon(isScanning ? Icons.stop : Icons.search, size: 18),
-                  label: Text(isScanning ? 'Detener' : 'Escanear'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                    isScanning ? AppTheme.orange : AppTheme.purple,
-                    foregroundColor: AppTheme.background,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    bluetoothEnabled ? Icons.bluetooth : Icons.bluetooth_disabled,
+                    color: bluetoothEnabled ? AppTheme.cyan : AppTheme.red,
+                    size: 24,
                   ),
-                ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: onToggle,
-                icon: const Icon(Icons.close),
-                color: AppTheme.comment,
+                  const SizedBox(width: 12),
+                  Text(
+                    bluetoothEnabled ? 'Bluetooth' : 'Bluetooth Desactivado',
+                    style: TextStyle(
+                      color: bluetoothEnabled ? AppTheme.cyan : AppTheme.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: onToggleBluetooth,
+                    icon: Icon(
+                      bluetoothEnabled
+                          ? Icons.bluetooth_disabled
+                          : Icons.bluetooth,
+                      size: 18,
+                    ),
+                    label: Text(bluetoothEnabled ? 'Apagar' : 'Encender'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                      bluetoothEnabled ? AppTheme.red : AppTheme.green,
+                      foregroundColor: AppTheme.background,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (bluetoothEnabled)
+                    ElevatedButton.icon(
+                      onPressed: isScanning ? onStopScan : onStartScan,
+                      icon: Icon(isScanning ? Icons.stop : Icons.search, size: 18),
+                      label: Text(isScanning ? 'Detener' : 'Escanear'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        isScanning ? AppTheme.orange : AppTheme.purple,
+                        foregroundColor: AppTheme.background,
+                      ),
+                    ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: onToggle,
+                    icon: const Icon(Icons.close),
+                    color: AppTheme.comment,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -122,19 +142,26 @@ class BluetoothPanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: AppTheme.orange, width: 1),
               ),
-              child: Row(
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const Icon(Icons.info_outline,
-                      color: AppTheme.orange, size: 20),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      '¿No ves tu dispositivo? Vincúlalo primero desde la configuración',
-                      style:
-                      TextStyle(color: AppTheme.foreground, fontSize: 12),
-                    ),
+                  const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: AppTheme.orange, size: 20),
+                      SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          '¿No ves tu dispositivo? Vincúlalo primero desde la configuración',
+                          style:
+                          TextStyle(color: AppTheme.foreground, fontSize: 12),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: onOpenSettings,
                     icon: const Icon(Icons.settings_bluetooth, size: 16),

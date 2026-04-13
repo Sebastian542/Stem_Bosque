@@ -442,59 +442,68 @@ FIN PROGRAMA
 
 ---
 
-## 🏗️ Arquitectura del proyecto
+## 🏗️ Estructura del Proyecto
 
-### Versión web
-
+### Directorios Principales
+```text
+.
+├── android/                # Configuración nativa Android
+├── ios/                    # Configuración nativa iOS
+├── lib/                    # Código fuente Flutter (Dart)
+│   ├── bluetooth/          # Gestión de conexiones Bluetooth
+│   ├── compiler/           # Lexer, Parser, Intérprete y Generador
+│   ├── services/           # Servicios (Archivos, etc.)
+│   ├── ui/                 # Pantallas, Temas y Widgets
+│   └── utils/              # Utilidades generales
+├── test/                   # Pruebas unitarias y de widgets
+├── web/                    # Archivos para despliegue web
+├── pubspec.yaml            # Dependencias y recursos
+└── README.md               # Documentación del proyecto
 ```
-STEMBosqueDSL_v5.html
-├── 🎨 Capa de Presentación
-│   ├── IDE (CodeMirror 5 + tema Dracula)
-│   └── Canvas del robot (HTML5 Canvas 2D)
-│
-├── ⚙️ Capa del Compilador (Ohm.js)
-│   ├── Gramática formal (BNF extendida)
-│   ├── Semántica de evaluación
-│   └── Tabla de Símbolos (TablaSimbolos)
-│
-└── 🤖 Capa de Ejecución
-    ├── Clase Robot (movimiento, dibujo, bordes)
-    └── Motor de animación (requestAnimationFrame)
-```
 
-### App móvil (Flutter)
+### Detalle de lib/ (App móvil Flutter)
 
 ```
 lib/
+├── bluetooth/
+│   ├── bluetooth_device.dart       — Modelo de dispositivo Bluetooth
+│   └── bluetooth_manager.dart      — Lógica de escaneo y conexión
 ├── compiler/
-│   ├── models/
-│   │   └── token.dart              — Definición de TipoToken y Token
-│   ├── lexer/
-│   │   └── lexer.dart              — Analizador léxico (tokenizador)
 │   ├── ast/
 │   │   └── nodes.dart              — Nodos del AST
-│   ├── parser/
-│   │   └── parser.dart             — Parser recursivo descendente
-│   ├── interpreter/
-│   │   └── interpreter.dart        — Intérprete del AST
 │   ├── codegen/
 │   │   └── code_generator.dart     — Generador de código Dart
-│   ├── syntax_validator.dart       — Validación en tiempo real
-│   └── compiler.dart               — Fachada: léxico → parser → intérprete → codegen
-└── ui/
-    ├── screens/
-    │   └── ide_screen.dart
-    ├── theme/
-    │   └── app_theme.dart          — Tema Dracula + colores de sintaxis
-    └── widgets/
-        ├── code_editor_validated.dart  — Editor con syntax highlighting
-        ├── code_editor.dart
-        ├── execution_console.dart
-        ├── console_output.dart
-        ├── bluetooth_panel.dart
-        ├── ide_drawer.dart
-        ├── toolbar.dart
-        └── permission_request_screen.dart
+│   ├── interpreter/
+│   │   └── interpreter.dart        — Intérprete del AST
+│   ├── lexer/
+│   │   └── lexer.dart              — Analizador léxico (tokenizador)
+│   ├── models/
+│   │   └── token.dart              — Definición de TipoToken y Token
+│   ├── parser/
+│   │   └── parser.dart             — Parser recursivo descendente
+│   ├── compiler.dart               — Fachada: léxico → parser → intérprete → codegen
+│   └── syntax_validator.dart       — Validación en tiempo real
+├── services/
+│   └── file_manager.dart           — Gestión de persistencia de archivos
+├── ui/
+│   ├── screens/
+│   │   ├── ide_screen.dart         — Pantalla principal del editor
+│   │   └── simulation_screen.dart  — Pantalla de simulación del robot
+│   ├── theme/
+│   │   └── app_theme.dart          — Tema Dracula + colores de sintaxis
+│   └── widgets/
+│       ├── bluetooth_panel.dart    — Panel de conexión Bluetooth
+│       ├── code_editor.dart        — Base del editor de código
+│       ├── code_editor_validated.dart — Editor con resaltado y validación
+│       ├── confetti_widget.dart    — Efectos visuales de éxito
+│       ├── console_output.dart     — Salida de texto de ejecución
+│       ├── execution_console.dart  — Consola interactiva
+│       ├── ide_drawer.dart         — Menú lateral de navegación
+│       ├── permission_request_screen.dart — Gestión de permisos
+│       └── toolbar.dart            — Barra de herramientas superior
+├── utils/
+│   └── file_utils.dart             — Utilidades de sistema de archivos
+└── main.dart                       — Punto de entrada de la aplicación
 ```
 
 ---
@@ -713,7 +722,7 @@ dependencies:
 
 ## 📄 Licencia
 
-Este proyecto es de carácter **educativo**, desarrollado en el marco de la iniciativa **STEMBosque** — Universidad del Bosque. Para uso, estudio y adaptación con fines pedagógicos.
+Este proyecto es de carácter **educativo**, desarrollado en el marco de la iniciativa **STEMBosque** — Universidad El Bosque. Para uso, estudio y adaptación con fines pedagógicos.
 
 ---
 

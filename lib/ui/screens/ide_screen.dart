@@ -616,93 +616,90 @@ FIN PROGRAMA''';
 
                 // Botones
                 Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    children: [
-
-                      // Botón ENVIAR
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                        child: _compiledSuccess
-                            ? Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _sendProgram,
-                              icon: const Icon(Icons.send),
-                              label: const Text('Enviar por Bluetooth'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.cyan,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                            ),
-                          ),
-                        )
-                            : const SizedBox.shrink(),
-                      ),
-
-                      // Botón SIMULAR
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                        child: _compiledSuccess
-                            ? Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => SimulationScreen(
-                                    commands: _compiledLines,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.25,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Botón ENVIAR
+                          if (_compiledSuccess)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _sendProgram,
+                                  icon: const Icon(Icons.send),
+                                  label: const Text('Enviar por Bluetooth'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.cyan,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
                               ),
-                              icon: const Icon(Icons.play_circle_outline),
-                              label: const Text('Simular'),
+                            ),
+
+                          // Botón SIMULAR
+                          if (_compiledSuccess)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => SimulationScreen(
+                                        commands: _compiledLines,
+                                      ),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.play_circle_outline),
+                                  label: const Text('Simular'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.purple,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // Botón EJECUTAR
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: (_codeIsValid && !_isRunning)
+                                  ? _executeProgram
+                                  : null,
+                              icon: _isRunning
+                                  ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                                  : const Icon(Icons.play_arrow),
+                              label: Text(_isRunning ? 'Ejecutando...' : 'Ejecutar'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.purple,
+                                backgroundColor: (_codeIsValid && !_isRunning)
+                                    ? AppTheme.green
+                                    : AppTheme.comment,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                           ),
-                        )
-                            : const SizedBox.shrink(),
+                        ],
                       ),
-
-                      // Botón EJECUTAR
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: (_codeIsValid && !_isRunning)
-                              ? _executeProgram
-                              : null,
-                          icon: _isRunning
-                              ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                              : const Icon(Icons.play_arrow),
-                          label: Text(_isRunning ? 'Ejecutando...' : 'Ejecutar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: (_codeIsValid && !_isRunning)
-                                ? AppTheme.green
-                                : AppTheme.comment,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],

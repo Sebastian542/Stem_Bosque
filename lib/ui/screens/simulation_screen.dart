@@ -312,7 +312,7 @@ class _RobotPainter extends CustomPainter {
     _drawTrail(canvas);
 
     // Robot
-    _drawRobot(canvas);
+    _drawRobot(canvas, size);
   }
 
   void _drawGrid(Canvas canvas, Size size) {
@@ -342,9 +342,14 @@ class _RobotPainter extends CustomPainter {
     canvas.drawPath(path, paint);
   }
 
-  void _drawRobot(Canvas canvas) {
+  void _drawRobot(Canvas canvas, Size size) {
+    // Escalar robot según el tamaño de la pantalla
+    // Base: 400x800 -> scale 1.0
+    final double scale = min(size.width / 400.0, size.height / 800.0).clamp(0.5, 2.0);
+
     canvas.save();
     canvas.translate(robotX, robotY);
+    canvas.scale(scale);
     canvas.rotate(angle);
 
     // Cuerpo (rectángulo gris)
