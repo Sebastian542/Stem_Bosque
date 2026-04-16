@@ -36,178 +36,148 @@ class BluetoothPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 300,
-      decoration: const BoxDecoration(
-        color: AppTheme.background,
-        border: Border(
-            bottom: BorderSide(color: AppTheme.currentLine, width: 2)),
-      ),
-      child: Column(
-        children: [
-          _buildHeader(),
-          if (connectedDevice != null) _buildConnectedBanner(),
-          Expanded(child: _buildDeviceList()),
+      height: 350,
+      decoration: BoxDecoration(
+        color: AppTheme.background.withAlpha(245),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+        border: const Border(
+          bottom: BorderSide(color: AppTheme.purple, width: 2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(100),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+        child: Column(
+          children: [
+            _buildHeader(),
+            if (connectedDevice != null) _buildConnectedBanner(),
+            Expanded(child: _buildDeviceList(context)),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        color: AppTheme.currentLine,
-        border: Border(bottom: BorderSide(color: AppTheme.comment, width: 1)),
-      ),
-      child: Column(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: AppTheme.currentLine.withAlpha(150),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(
-                bluetoothEnabled ? Icons.bluetooth : Icons.bluetooth_disabled,
-                color: bluetoothEnabled ? AppTheme.cyan : AppTheme.red,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                bluetoothEnabled ? 'Bluetooth' : 'Bluetooth Desactivado',
-                style: TextStyle(
-                  color: bluetoothEnabled ? AppTheme.cyan : AppTheme.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: onToggleBluetooth,
-                icon: Icon(
-                  bluetoothEnabled
-                      ? Icons.bluetooth_disabled
-                      : Icons.bluetooth,
-                  size: 18,
-                ),
-                label: Text(bluetoothEnabled ? 'Apagar' : 'Encender'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                  bluetoothEnabled ? AppTheme.red : AppTheme.green,
-                  foregroundColor: AppTheme.background,
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (bluetoothEnabled)
-                ElevatedButton.icon(
-                  onPressed: isScanning ? onStopScan : onStartScan,
-                  icon: Icon(isScanning ? Icons.stop : Icons.search, size: 18),
-                  label: Text(isScanning ? 'Detener' : 'Escanear'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                    isScanning ? AppTheme.orange : AppTheme.purple,
-                    foregroundColor: AppTheme.background,
-                  ),
-                ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: onToggle,
-                icon: const Icon(Icons.close),
-                color: AppTheme.comment,
-              ),
-            ],
+          Icon(
+            bluetoothEnabled ? Icons.bluetooth_audio_rounded : Icons.bluetooth_disabled_rounded,
+            color: bluetoothEnabled ? AppTheme.cyan : AppTheme.red,
+            size: 28,
           ),
-          if (bluetoothEnabled && devices.isEmpty && !isScanning)
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.background,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppTheme.orange, width: 1),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline,
-                      color: AppTheme.orange, size: 20),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      '¿No ves tu dispositivo? Vincúlalo primero desde la configuración',
-                      style:
-                      TextStyle(color: AppTheme.foreground, fontSize: 12),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: onOpenSettings,
-                    icon: const Icon(Icons.settings_bluetooth, size: 16),
-                    label: const Text('Vincular'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.cyan,
-                      foregroundColor: AppTheme.background,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                ],
-              ),
+          const SizedBox(width: 12),
+          Text(
+            'Panel de Control',
+            style: TextStyle(
+              color: bluetoothEnabled ? AppTheme.foreground : AppTheme.comment,
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+              letterSpacing: 0.5,
             ),
+          ),
+          const Spacer(),
+          
+          if (bluetoothEnabled) 
+            _buildActionChip(
+              onPressed: isScanning ? onStopScan : onStartScan,
+              label: isScanning ? 'DETENER' : 'BUSCAR',
+              color: isScanning ? AppTheme.orange : AppTheme.purple,
+              icon: isScanning ? Icons.stop_circle : Icons.radar,
+            ),
+            
+          const SizedBox(width: 8),
+          
+          IconButton(
+            onPressed: onToggle,
+            icon: const Icon(Icons.keyboard_arrow_up_rounded),
+            style: IconButton.styleFrom(
+              backgroundColor: AppTheme.background,
+              hoverColor: AppTheme.red.withAlpha(50),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionChip({required VoidCallback onPressed, required String label, required Color color, required IconData icon}) {
+    return ActionChip(
+      onPressed: onPressed,
+      avatar: Icon(icon, size: 16, color: AppTheme.background),
+      label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+      backgroundColor: color,
+      labelStyle: const TextStyle(color: AppTheme.background),
+      side: BorderSide.none,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 
   Widget _buildConnectedBanner() {
     return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.currentLine,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppTheme.green, width: 2),
+        gradient: LinearGradient(
+          colors: [AppTheme.green.withAlpha(40), AppTheme.green.withAlpha(10)],
+        ),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppTheme.green.withAlpha(100), width: 1.5),
       ),
       child: Row(
         children: [
-          const Icon(Icons.bluetooth_connected,
-              color: AppTheme.green, size: 28),
-          const SizedBox(width: 12),
+          const CircleAvatar(
+            backgroundColor: AppTheme.green,
+            child: Icon(Icons.check_rounded, color: AppTheme.background),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('CONECTADO',
-                    style: TextStyle(
-                        color: AppTheme.green,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold)),
-                Text(
-                  connectedDevice!.displayName,
-                  style: const TextStyle(
-                      color: AppTheme.foreground,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold),
-                ),
+                const Text('ROBOT CONECTADO', style: TextStyle(color: AppTheme.green, fontWeight: FontWeight.w900, fontSize: 10)),
+                Text(connectedDevice!.displayName, style: const TextStyle(color: AppTheme.foreground, fontSize: 16, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
-          IconButton(
+          OutlinedButton(
             onPressed: onDisconnect,
-            icon: const Icon(Icons.close),
-            color: AppTheme.red,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.red,
+              side: const BorderSide(color: AppTheme.red),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('DESCONECTAR'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDeviceList() {
+  Widget _buildDeviceList(BuildContext context) {
     if (!bluetoothEnabled) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.bluetooth_disabled,
-                size: 48, color: AppTheme.comment),
-            SizedBox(height: 12),
-            Text('Active el Bluetooth',
-                style: TextStyle(color: AppTheme.comment)),
+            Icon(Icons.bluetooth_disabled_rounded, size: 60, color: AppTheme.red.withAlpha(100)),
+            const SizedBox(height: 16),
+            const Text('Bluetooth Desactivado', style: TextStyle(color: AppTheme.comment, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: onToggleBluetooth,
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.green),
+              child: const Text('ACTIVAR AHORA'),
+            ),
           ],
         ),
       );
@@ -218,76 +188,55 @@ class BluetoothPanel extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: AppTheme.cyan),
-            SizedBox(height: 12),
-            Text('Buscando...',
-                style: TextStyle(color: AppTheme.foreground)),
-          ],
-        ),
-      );
-    }
-
-    if (devices.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.devices, size: 48, color: AppTheme.comment),
-            SizedBox(height: 12),
-            Text('No se encontraron dispositivos',
-                style: TextStyle(color: AppTheme.comment)),
+            SizedBox(
+              width: 40, height: 40,
+              child: CircularProgressIndicator(strokeWidth: 3, color: AppTheme.cyan),
+            ),
+            SizedBox(height: 20),
+            Text('BUSCANDO DISPOSITIVOS...', style: TextStyle(color: AppTheme.cyan, letterSpacing: 2, fontSize: 12, fontWeight: FontWeight.bold)),
           ],
         ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemCount: devices.length,
       itemBuilder: (context, index) {
-        final device      = devices[index];
+        final device = devices[index];
         final isConnected = connectedDevice?.address == device.address;
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 6),
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: AppTheme.currentLine,
-            borderRadius: BorderRadius.circular(6),
-            border: isConnected
-                ? Border.all(color: AppTheme.green, width: 2)
-                : null,
+            color: isConnected ? AppTheme.green.withAlpha(20) : AppTheme.currentLine.withAlpha(100),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isConnected ? AppTheme.green : AppTheme.comment.withAlpha(50),
+              width: 1,
+            ),
           ),
           child: ListTile(
-            dense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             leading: Icon(
-              device.type == BluetoothDeviceType.ble
-                  ? Icons.bluetooth
-                  : Icons.bluetooth_connected,
+              device.type == BluetoothDeviceType.ble ? Icons.bolt_rounded : Icons.settings_input_antenna_rounded,
               color: isConnected ? AppTheme.green : AppTheme.cyan,
-              size: 24,
             ),
-            title: Text(device.displayName,
-                style: const TextStyle(
-                    color: AppTheme.foreground,
-                    fontWeight: FontWeight.bold)),
-            subtitle: Text(device.address,
-                style: const TextStyle(
-                    color: AppTheme.comment, fontSize: 11)),
-            trailing: isConnected
-                ? const Chip(
-              label: Text('Conectado',
-                  style: TextStyle(fontSize: 10)),
-              backgroundColor: AppTheme.green,
-            )
-                : ElevatedButton(
-              onPressed:
-              isConnecting ? null : () => onConnect(device),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.purple,
-                foregroundColor: AppTheme.foreground,
-              ),
-              child: Text(isConnecting ? 'Conectando...' : 'Conectar'),
-            ),
+            title: Text(device.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(device.address, style: const TextStyle(color: AppTheme.comment, fontSize: 10)),
+            trailing: isConnected 
+              ? Icon(Icons.check_circle_rounded, color: AppTheme.green)
+              : ElevatedButton(
+                  onPressed: isConnecting ? null : () => onConnect(device),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.background,
+                    foregroundColor: AppTheme.purple,
+                    side: const BorderSide(color: AppTheme.purple),
+                    elevation: 0,
+                  ),
+                  child: Text(isConnecting ? '...' : 'UNIR'),
+                ),
           ),
         );
       },
