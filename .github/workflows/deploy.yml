@@ -65,7 +65,7 @@ jobs:
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
 
       - name: 10. Publicar APK en Release "latest"
-        uses: softprops/action-gh-release@c062e08bd5704b52477f081b7a09c27320f9ddcd # v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: build/app/outputs/flutter-apk/app-release.apk
           tag_name: latest
