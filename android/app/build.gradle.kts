@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "co.edu.unbosque.stem_bosque"
-    compileSdk = 34
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
