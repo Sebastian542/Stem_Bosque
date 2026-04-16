@@ -18,13 +18,13 @@ jobs:
         with:
           fetch-depth: 0 # Necesario para poder hacer el merge entre ramas
 
-      - name: 2. Sincronizar aleja con master
+      - name: 2. Sincronizar aleja con main
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout master
+          git checkout main
           git merge aleja
-          git push origin master
+          git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
