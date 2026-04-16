@@ -21,12 +21,14 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
 
-    // Forzado de SDK para plugins sin usar afterEvaluate
-    project.plugins.withType<com.android.build.gradle.api.AndroidBasePlugin> {
-        project.extensions.configure<com.android.build.gradle.BaseExtension> {
-            compileSdkVersion(36)
-            defaultConfig {
-                targetSdkVersion(34)
+    // FORZAMOS LA VERSIÓN DE CORE PARA ARREGLAR lStar SIN TOCAR compileSdk
+    configurations.all {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "androidx.core" && requested.name == "core") {
+                useVersion("1.13.1")
+            }
+            if (requested.group == "androidx.core" && requested.name == "core-ktx") {
+                useVersion("1.13.1")
             }
         }
     }
