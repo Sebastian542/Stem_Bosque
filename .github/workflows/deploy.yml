@@ -1,4 +1,4 @@
-name: CI/CD Flutter Web
+name: CI/CD Flutter Web & Android
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # JOB 1: Sincroniza aleja -> main (Solo se ejecuta si el push es en aleja)
+  # JOB 1: Sincroniza aleja -> main
   sync-to-main:
     if: github.ref == 'refs/heads/aleja'
     runs-on: ubuntu-latest
@@ -36,7 +36,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # JOB 2: Construir y Desplegar (Solo se ejecuta si el push es en main)
+  # JOB 2: Construir y Desplegar Web + APK
   build-and-deploy:
     if: github.ref == 'refs/heads/main'
     environment:
@@ -47,23 +47,43 @@ jobs:
       - name: 1. Checkout del código
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: 2. Configurar Flutter
+      - name: 2. Configurar Java (Requerido para Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 3. Configurar Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: 'stable'
-          flutter-version: '3.x'
 
-      - name: 3. Instalar dependencias
+      - name: 4. Instalar dependencias
         run: flutter pub get
 
-      - name: 4. Construir Flutter Web
+      - name: 5. Construir Flutter Web
         run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
 
-      - name: 5. Subir Artefacto
+      - name: 6. Construir APK de Android
+        run: flutter build apk --release
+
+      - name: 7. Subir Artefacto Web
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: ./build/web
 
-      - name: 6. Desplegar a GitHub Pages
+      - name: 8. Desplegar a GitHub Pages
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
+      - name: 9. Publicar APK en Release "latest"
+        uses: softprops/action-gh-release@c062e08bd5704b52477f081b7a09c27320f9ddcd # v2
+        with:
+          files: build/app/outputs/flutter-apk/app-release.apk
+          tag_name: latest
+          name: "StemBosque APK (Última Versión)"
+          body: "Esta es la versión más reciente de StemBosque compilada automáticamente desde la rama main."
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

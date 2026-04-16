@@ -2,8 +2,10 @@
 
 > **Un lenguaje de programación educativo para robótica**, diseñado para que niños y jóvenes aprendan lógica computacional controlando un robot virtual en español.
 
-🚀 **¡Pruébalo ahora en la Web!**  
-👉 [https://sebastian542.github.io/Stem_Bosque/](https://sebastian542.github.io/Stem_Bosque/)
+🚀 **¡Pruébalo ahora!**  
+| Web | Android |
+| :---: | :---: |
+| [🌐 Abrir en el Navegador](https://sebastian542.github.io/Stem_Bosque/) | [🤖 Descargar APK (Actualizado)](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk) |
 
 ---
 
