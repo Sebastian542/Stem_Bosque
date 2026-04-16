@@ -20,33 +20,21 @@ subprojects {
 
 subprojects {
     project.evaluationDependsOn(":app")
-}
 
-// Forzar versiones de SDK para evitar errores como "lStar not found"
-// Usamos una sintaxis más compatible con Kotlin DSL para Gradle
-subprojects {
-    afterEvaluate {
-        if (project.extensions.findByName("android") != null) {
-            configure<com.android.build.gradle.BaseExtension> {
-                compileSdkVersion(34)
-                defaultConfig {
-                    targetSdkVersion(34)
-                }
-            }
+    fun applyAndroidConfig() {
+        val android = project.extensions.findByName("android")
+        if (android is com.android.build.gradle.BaseExtension) {
+            android.compileSdkVersion(34)
+            android.defaultConfig.targetSdkVersion(34)
         }
-    }
-}
 
-// Solución final para compatibilidad de flutter_bluetooth_serial con AGP 8.0+
-subprojects {
-    if (project.name == "flutter_bluetooth_serial") {
-        project.afterEvaluate {
-            val android = project.extensions.findByName("android")
-            if (android != null) {
+        if (project.name == "flutter_bluetooth_serial") {
+            val androidExt = project.extensions.findByName("android")
+            if (androidExt != null) {
                 // 1. Forzamos el namespace
                 try {
-                    val setNamespace = android.javaClass.getMethod("setNamespace", String::class.java)
-                    setNamespace.invoke(android, "io.github.edufolly.flutter_bluetooth_serial")
+                    val setNamespace = androidExt.javaClass.getMethod("setNamespace", String::class.java)
+                    setNamespace.invoke(androidExt, "io.github.edufolly.flutter_bluetooth_serial")
                 } catch (e: Exception) {
                     // Ignorar
                 }
@@ -56,12 +44,19 @@ subprojects {
                 if (manifestFile.exists()) {
                     val content = manifestFile.readText()
                     if (content.contains("package=")) {
-                        // Eliminamos el atributo package usando una sustitución simple de String
                         val updatedContent = content.replace(Regex("package=\"[^\"]*\""), "")
                         manifestFile.writeText(updatedContent)
                     }
                 }
             }
+        }
+    }
+
+    if (project.state.executed) {
+        applyAndroidConfig()
+    } else {
+        project.afterEvaluate {
+            applyAndroidConfig()
         }
     }
 }
