@@ -17,15 +17,15 @@ La versión web se actualiza automáticamente desde la rama `aleja` y corre **10
 
 ## ✨ Características
 
-| Característica | Descripción |
-|---|---|
-| 🧠 **Compilador integrado** | Analizador léxico, sintáctico e intérprete desarrollado íntegramente en Dart |
-| 🎨 **IDE moderno** | Editor con resaltado de sintaxis, números de línea y detección de errores en tiempo real |
-| 🤖 **Robot animado** | Visualización 2D donde el robot reacciona instantáneamente a tus instrucciones |
-| ⚙️ **CI/CD Automatizado** | Despliegue continuo: los cambios en `aleja` se sincronizan con `main` y se publican en la web |
-| 🔵 **Bluetooth Dual** | Soporte para Bluetooth Clásico (SPP) y BLE para conexión con robots físicos (App móvil) |
-| 📂 **Gestión de archivos** | Guarda y carga tus programas en formato `.txt` o `.sb` |
-| 💻 **Multiplataforma** | Disponible para Web (GitHub Pages) y Android |
+| Característica              | Descripción                                                                                   |
+|-----------------------------|-----------------------------------------------------------------------------------------------|
+| 🧠 **Compilador integrado** | Analizador léxico, sintáctico e intérprete desarrollado íntegramente en Dart                  |
+| 🎨 **IDE moderno**          | Editor con resaltado de sintaxis, números de línea y detección de errores en tiempo real      |
+| 🤖 **Robot animado**        | Visualización 2D donde el robot reacciona instantáneamente a tus instrucciones                |
+| ⚙️ **CI/CD Automatizado**   | Despliegue continuo: los cambios en `aleja` se sincronizan con `main` y se publican en la web |
+| 🔵 **Bluetooth Dual**       | Soporte para Bluetooth Clásico (SPP) y BLE para conexión con robots físicos (App móvil)       |
+| 📂 **Gestión de archivos**  | Guarda y carga tus programas en formato `.txt` o `.sb`                                        |
+| 💻 **Multiplataforma**      | Disponible para Web (GitHub Pages) y Android                                                  |
 
 ---
 
