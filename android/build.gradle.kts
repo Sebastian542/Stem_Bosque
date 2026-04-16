@@ -21,12 +21,13 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
 
-    // FORZADO DE SDK PARA PLUGINS (Resuelve el error lStar)
-    project.afterEvaluate {
-        val android = project.extensions.findByName("android")
-        if (android is com.android.build.gradle.BaseExtension) {
-            android.compileSdkVersion(36)
-            android.defaultConfig.targetSdkVersion(34)
+    // Forzado de SDK para plugins sin usar afterEvaluate
+    project.plugins.withType<com.android.build.gradle.api.AndroidBasePlugin> {
+        project.extensions.configure<com.android.build.gradle.BaseExtension> {
+            compileSdkVersion(36)
+            defaultConfig {
+                targetSdkVersion(34)
+            }
         }
     }
 
@@ -35,15 +36,11 @@ subprojects {
         project.afterEvaluate {
             val android = project.extensions.findByName("android")
             if (android != null) {
-                // 1. Forzamos el namespace
                 try {
                     val setNamespace = android.javaClass.getMethod("setNamespace", String::class.java)
                     setNamespace.invoke(android, "io.github.edufolly.flutter_bluetooth_serial")
-                } catch (e: Exception) {
-                    // Ignorar
-                }
+                } catch (e: Exception) { }
 
-                // 2. Limpiamos el AndroidManifest.xml del plugin
                 val manifestFile = project.file("src/main/AndroidManifest.xml")
                 if (manifestFile.exists()) {
                     val content = manifestFile.readText()
