@@ -16,17 +16,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # JOB 1: Sincroniza aleja -> main
-  sync-to-main:
-    if: github.ref == 'refs/heads/aleja'
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: 1. Checkout del código
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
-      - name: Mergear aleja a main y pushear
+      - name: 2. Sincronizar aleja con main (Solo si el push fue en aleja)
+        if: github.ref == 'refs/heads/aleja'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -36,54 +35,44 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # JOB 2: Construir y Desplegar Web + APK
-  build-and-deploy:
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: 1. Checkout del código
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: 2. Configurar Java (Requerido para Android)
+      - name: 3. Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: 3. Configurar Flutter
+      - name: 4. Configurar Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: 'stable'
 
-      - name: 4. Instalar dependencias
+      - name: 5. Instalar dependencias
         run: flutter pub get
 
-      - name: 5. Construir Flutter Web
+      - name: 6. Construir Flutter Web
         run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
 
-      - name: 6. Construir APK de Android
+      - name: 7. Construir APK de Android
         run: flutter build apk --release
 
-      - name: 7. Subir Artefacto Web
+      - name: 8. Subir Artefacto Web
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: ./build/web
 
-      - name: 8. Desplegar a GitHub Pages
+      - name: 9. Desplegar a GitHub Pages
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
 
-      - name: 9. Publicar APK en Release "latest"
-        uses: softprops/action-gh-release@c062e08bd5704b52477f081b7a09c27320f9ddcd # v2
+      - name: 10. Publicar APK en Release "latest"
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: build/app/outputs/flutter-apk/app-release.apk
           tag_name: latest
           name: "StemBosque APK (Última Versión)"
-          body: "Esta es la versión más reciente de StemBosque compilada automáticamente desde la rama main."
+          body: "Esta versión se compila automáticamente con cada cambio en la rama main."
           draft: false
           prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
