@@ -22,6 +22,21 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// Forzar versiones de SDK para evitar errores como "lStar not found"
+// Usamos una sintaxis más compatible con Kotlin DSL para Gradle
+subprojects {
+    afterEvaluate {
+        if (project.extensions.findByName("android") != null) {
+            configure<com.android.build.gradle.BaseExtension> {
+                compileSdkVersion(34)
+                defaultConfig {
+                    targetSdkVersion(34)
+                }
+            }
+        }
+    }
+}
+
 // Solución final para compatibilidad de flutter_bluetooth_serial con AGP 8.0+
 subprojects {
     if (project.name == "flutter_bluetooth_serial") {
