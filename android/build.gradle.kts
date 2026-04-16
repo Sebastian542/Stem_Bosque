@@ -21,18 +21,16 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
 
-    // Forzamos la versión de androidx.core para evitar el error de lStar
-    configurations.all {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "androidx.core" && requested.name == "core") {
-                useVersion("1.13.1")
-            }
-            if (requested.group == "androidx.core" && requested.name == "core-ktx") {
-                useVersion("1.13.1")
-            }
+    // FORZADO DE SDK PARA PLUGINS (Resuelve el error lStar)
+    project.afterEvaluate {
+        val android = project.extensions.findByName("android")
+        if (android is com.android.build.gradle.BaseExtension) {
+            android.compileSdkVersion(36)
+            android.defaultConfig.targetSdkVersion(34)
         }
     }
 
+    // Parche específico para flutter_bluetooth_serial
     if (project.name == "flutter_bluetooth_serial") {
         project.afterEvaluate {
             val android = project.extensions.findByName("android")
