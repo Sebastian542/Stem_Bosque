@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
-import 'web_downloader.dart' if (dart.library.io) 'file_manager.dart';
+import 'file_manager_stub.dart'
+    if (dart.library.html) 'web_downloader.dart';
 
 class FileManager {
   static const String _autoSaveFileName = 'stembosque_current_program.sb';
