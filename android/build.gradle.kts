@@ -5,6 +5,15 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    // Estrategia de resolución global para evitar el error lStar
+    configurations.all {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "androidx.core") {
+                useVersion("1.13.1")
+            }
+        }
+    }
 }
 
 val newBuildDir: Directory =
@@ -19,21 +28,19 @@ subprojects {
 }
 
 subprojects {
-    project.evaluationDependsOn(":app")
-
-    // FORZAMOS LA VERSIÓN DE CORE PARA ARREGLAR lStar SIN TOCAR compileSdk
-    configurations.all {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "androidx.core" && requested.name == "core") {
-                useVersion("1.13.1")
-            }
-            if (requested.group == "androidx.core" && requested.name == "core-ktx") {
-                useVersion("1.13.1")
+    // Forzamos compileSdkVersion en plugins problemáticos
+    afterEvaluate {
+        val android = project.extensions.findByName("android")
+        if (android is com.android.build.gradle.BaseExtension) {
+            // Si el SDK es menor a 33, lo subimos a 34 para que reconozca lStar
+            if (android.compileSdkVersion != null && 
+                (android.compileSdkVersion!!.startsWith("android-") && 
+                 android.compileSdkVersion!!.substringAfter("android-").toInt() < 33)) {
+                android.compileSdkVersion(34)
             }
         }
     }
 
-    // Parche específico para flutter_bluetooth_serial
     if (project.name == "flutter_bluetooth_serial") {
         project.afterEvaluate {
             val android = project.extensions.findByName("android")
