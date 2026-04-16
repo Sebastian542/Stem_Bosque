@@ -54,11 +54,11 @@ class FileUtils {
         return null;
       }
 
-      // Listar todos los archivos .txt en el directorio
+      // Listar todos los archivos .sb en el directorio
       List<FileSystemEntity> entities = stemBosqueDir.listSync();
       List<File> txtFiles = entities
           .whereType<File>()
-          .where((file) => file.path.endsWith('.txt') || file.path.endsWith('.sb'))
+          .where((file) => file.path.endsWith('.sb') || file.path.endsWith('.txt'))
           .toList();
 
       if (txtFiles.isEmpty) {
@@ -93,7 +93,7 @@ class FileUtils {
 
       // Guardar con nombre por defecto
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'programa_$timestamp.txt';
+      final fileName = 'programa_$timestamp.sb';
       final filePath = '${stemBosqueDir.path}/$fileName';
 
       final file = File(filePath);
