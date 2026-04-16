@@ -4,29 +4,29 @@ on:
   push:
     branches:
       - aleja
+      - main
 
-# Permisos necesarios para desplegar a GitHub Pages
 permissions:
   contents: write
   pages: write
   id-token: write
 
-# Evita que múltiples despliegues choquen entre sí
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  # JOB 1: Sincroniza aleja -> main (Solo se ejecuta si el push es en aleja)
+  sync-to-main:
+    if: github.ref == 'refs/heads/aleja'
     runs-on: ubuntu-latest
-
     steps:
-      - name: 1. Checkout del código
+      - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
-      - name: 2. Sincronizar aleja con main
+      - name: Mergear aleja a main y pushear
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -36,23 +36,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 3. Configurar Flutter
+  # JOB 2: Construir y Desplegar (Solo se ejecuta si el push es en main)
+  build-and-deploy:
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout del código
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: 2. Configurar Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: 'stable'
           flutter-version: '3.x'
 
-      - name: 4. Instalar dependencias
+      - name: 3. Instalar dependencias
         run: flutter pub get
 
-      - name: 5. Construir Flutter Web
+      - name: 4. Construir Flutter Web
         run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
 
-      - name: 6. Subir Artefacto
+      - name: 5. Subir Artefacto
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: ./build/web
 
-      - name: 7. Desplegar a GitHub Pages
+      - name: 6. Desplegar a GitHub Pages
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
