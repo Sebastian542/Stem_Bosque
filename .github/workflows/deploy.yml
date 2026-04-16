@@ -1,0 +1,49 @@
+name: CI/CD Flutter Web
+
+on:
+  push:
+    branches:
+      - aleja  # Se activa al actualizar la rama aleja
+
+permissions:
+  contents: write  # Permiso para escribir en el repo (para el merge y deploy)
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout del código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necesario para poder hacer el merge entre ramas
+
+      - name: 2. Sincronizar aleja con main
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          git merge aleja
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 3. Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.x'
+
+      - name: 4. Instalar dependencias
+        run: flutter pub get
+
+      - name: 5. Construir Flutter Web
+        # Reemplaza 'nombre-de-tu-repo' con el nombre real si no es el root del dominio
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+
+      - name: 6. Desplegar a GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          publish_branch: gh-pages # Se recomienda usar una rama separada para el HTML
