@@ -3,20 +3,31 @@ name: CI/CD Flutter Web
 on:
   push:
     branches:
-      - aleja  # Se activa al actualizar la rama aleja
+      - aleja
 
+# Permisos necesarios para desplegar a GitHub Pages
 permissions:
-  contents: write  # Permiso para escribir en el repo (para el merge y deploy)
+  contents: write
+  pages: write
+  id-token: write
+
+# Evita que múltiples despliegues choquen entre sí
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
     steps:
       - name: 1. Checkout del código
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Necesario para poder hacer el merge entre ramas
+          fetch-depth: 0
 
       - name: 2. Sincronizar aleja con main
         run: |
@@ -38,12 +49,13 @@ jobs:
         run: flutter pub get
 
       - name: 5. Construir Flutter Web
-        # Reemplaza 'nombre-de-tu-repo' con el nombre real si no es el root del dominio
         run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
 
-      - name: 6. Desplegar a GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: 6. Subir Artefacto
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
-          publish_branch: gh-pages # Se recomienda usar una rama separada para el HTML
+          path: ./build/web
+
+      - name: 7. Desplegar a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
