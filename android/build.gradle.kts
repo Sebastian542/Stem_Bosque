@@ -21,20 +21,26 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
 
-    fun applyAndroidConfig() {
-        val android = project.extensions.findByName("android")
-        if (android is com.android.build.gradle.BaseExtension) {
-            android.compileSdkVersion(34)
-            android.defaultConfig.targetSdkVersion(34)
+    // Forzamos la versión de androidx.core para evitar el error de lStar
+    configurations.all {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "androidx.core" && requested.name == "core") {
+                useVersion("1.13.1")
+            }
+            if (requested.group == "androidx.core" && requested.name == "core-ktx") {
+                useVersion("1.13.1")
+            }
         }
+    }
 
-        if (project.name == "flutter_bluetooth_serial") {
-            val androidExt = project.extensions.findByName("android")
-            if (androidExt != null) {
+    if (project.name == "flutter_bluetooth_serial") {
+        project.afterEvaluate {
+            val android = project.extensions.findByName("android")
+            if (android != null) {
                 // 1. Forzamos el namespace
                 try {
-                    val setNamespace = androidExt.javaClass.getMethod("setNamespace", String::class.java)
-                    setNamespace.invoke(androidExt, "io.github.edufolly.flutter_bluetooth_serial")
+                    val setNamespace = android.javaClass.getMethod("setNamespace", String::class.java)
+                    setNamespace.invoke(android, "io.github.edufolly.flutter_bluetooth_serial")
                 } catch (e: Exception) {
                     // Ignorar
                 }
@@ -49,14 +55,6 @@ subprojects {
                     }
                 }
             }
-        }
-    }
-
-    if (project.state.executed) {
-        applyAndroidConfig()
-    } else {
-        project.afterEvaluate {
-            applyAndroidConfig()
         }
     }
 }
