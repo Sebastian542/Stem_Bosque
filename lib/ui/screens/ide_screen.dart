@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../bluetooth/bluetooth_manager.dart';
@@ -9,6 +10,7 @@ import '../widgets/code_editor_validated.dart';
 import '../widgets/ide_drawer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/confetti_widget.dart';
+import '../widgets/toolbar.dart';
 import 'simulation_screen.dart';
 
 
@@ -33,9 +35,36 @@ class _IDEScreenState extends State<IDEScreen> {
   bool         _compiledSuccess  = false;
   OverlayEntry? _confettiOverlay;
   List<String> _compiledLines  = []; // comandos expandidos post-compilación
-  String?      _compiledFilePath;          // ruta del compilado.txt guardado
+  String?      _compiledFilePath;          // ruta del compilado.sb guardado
 
   // ── Bluetooth UI ─────────────────────────────────────────────
+  
+  void _showUnsupportedPlatformDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.currentLine,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: AppTheme.orange),
+            SizedBox(width: 10),
+            Text('No compatible', style: TextStyle(color: AppTheme.foreground)),
+          ],
+        ),
+        content: const Text(
+          'La conexión Bluetooth directa con el robot actualmente solo está disponible en la aplicación para dispositivos móviles (Android).\n\nEn la versión Web o Desktop puedes simular tu código o descargarlo.',
+          style: TextStyle(color: AppTheme.foreground),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Entendido', style: TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
   bool _bluetoothEnabled   = false;
   bool _showBluetoothPanel = false;
   final List<UnifiedBluetoothDevice> _discoveredDevices = [];
@@ -132,8 +161,22 @@ FIN PROGRAMA''';
   }
 
   Future<void> _saveWithName() async {
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows || 
+                  defaultTargetPlatform == TargetPlatform.linux || 
+                  defaultTargetPlatform == TargetPlatform.macOS) {
+      final saved = await _fm.saveToFile(_codeController.text);
+      if (saved && mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Archivo guardado correctamente'),
+          backgroundColor: AppTheme.green,
+        ));
+      }
+      return;
+    }
+
     final currentName = _fm.currentFilePath != null
-        ? _fm.currentFilePath!.split('/').last.replaceAll('.txt', '')
+        ? _fm.currentFilePath!.split('/').last.replaceAll('.sb', '')
         : 'mi_programa';
 
     final nameCtrl = TextEditingController(text: currentName);
@@ -146,15 +189,13 @@ FIN PROGRAMA''';
         title: const Row(children: [
           Icon(Icons.save, color: AppTheme.purple),
           SizedBox(width: 12),
-          Text('Guardar archivo',
-              style: TextStyle(color: AppTheme.foreground)),
+          Text('Guardar archivo', style: TextStyle(color: AppTheme.foreground)),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Nombre del archivo:',
-                style: TextStyle(color: AppTheme.comment, fontSize: 12)),
+            const Text('Nombre del archivo:', style: TextStyle(color: AppTheme.comment, fontSize: 12)),
             const SizedBox(height: 8),
             TextField(
               controller: nameCtrl,
@@ -162,7 +203,7 @@ FIN PROGRAMA''';
               style: const TextStyle(color: AppTheme.foreground),
               onSubmitted: (_) => Navigator.of(ctx).pop(true),
               decoration: InputDecoration(
-                suffixText: '.txt',
+                suffixText: '.sb',
                 suffixStyle: const TextStyle(color: AppTheme.comment),
                 filled: true,
                 fillColor: AppTheme.background,
@@ -170,225 +211,72 @@ FIN PROGRAMA''';
                   borderRadius: BorderRadius.circular(6),
                   borderSide: const BorderSide(color: AppTheme.comment),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: const BorderSide(color: AppTheme.cyan),
-                ),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppTheme.comment)),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            icon: const Icon(Icons.save, size: 16),
-            label: const Text('Guardar'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.purple,
-              foregroundColor: Colors.white,
-            ),
-          ),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Guardar')),
         ],
       ),
     );
 
-    final name = nameCtrl.text.trim();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      nameCtrl.dispose();
-    });
-
-    if (confirmed == true && name.isNotEmpty && mounted) {
-      final fullName = name.endsWith('.txt') ? name : '$name.txt';
-      final saved = await _fm.saveToFile(
-        _codeController.text,
-        customFileName: fullName,
-      );
-      if (mounted) setState(() {});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Row(children: [
-            Icon(saved ? Icons.check_circle : Icons.error,
-                color: saved ? AppTheme.green : AppTheme.red),
-            const SizedBox(width: 12),
-            Text(saved ? 'Guardado como "$fullName"' : 'Error al guardar'),
-          ]),
-          backgroundColor: AppTheme.currentLine,
-          duration: const Duration(seconds: 2),
-        ));
-      }
+    if (confirmed == true && nameCtrl.text.isNotEmpty && mounted) {
+      final name = nameCtrl.text.trim();
+      final fullName = name.endsWith('.sb') ? name : '$name.sb';
+      await _fm.saveToFile(_codeController.text, customFileName: fullName);
+      setState(() {});
     }
+    nameCtrl.dispose();
   }
 
   Future<void> _openFile() async {
-    final files = await _fm.listFiles();
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows || 
+                  defaultTargetPlatform == TargetPlatform.linux || 
+                  defaultTargetPlatform == TargetPlatform.macOS) {
+      final content = await _fm.pickAndReadFile();
+      if (content != null && mounted) {
+        setState(() => _codeController.text = content);
+      }
+      return;
+    }
 
+    final files = await _fm.listFiles();
     if (files.isEmpty) {
       if (!mounted) return;
-      await showDialog(
+      showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: AppTheme.currentLine,
-          title: const Row(children: [
-            Icon(Icons.folder_open, color: AppTheme.orange),
-            SizedBox(width: 12),
-            Text('Sin archivos',
-                style: TextStyle(color: AppTheme.foreground)),
-          ]),
-          content: const Text(
-            'No hay archivos guardados todavía.\nUsa "Guardar archivo" para crear uno.',
-            style: TextStyle(color: AppTheme.foreground),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Entendido',
-                  style: TextStyle(color: AppTheme.cyan)),
-            ),
-          ],
+          title: const Text('Sin archivos', style: TextStyle(color: AppTheme.foreground)),
+          content: const Text('No hay archivos guardados todavía.', style: TextStyle(color: AppTheme.foreground)),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Entendido'))],
         ),
       );
       return;
     }
 
-    final mutableFiles = List<File>.from(files);
-
     if (!mounted) return;
     final selected = await showDialog<File>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialog) => AlertDialog(
-          backgroundColor: AppTheme.currentLine,
-          title: const Row(children: [
-            Icon(Icons.folder_open, color: AppTheme.cyan),
-            SizedBox(width: 12),
-            Text('Abrir archivo',
-                style: TextStyle(color: AppTheme.foreground)),
-          ]),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 350,
-            child: mutableFiles.isEmpty
-                ? const Center(
-                child: Text('No hay archivos',
-                    style: TextStyle(color: AppTheme.comment)))
-                : ListView.builder(
-              itemCount: mutableFiles.length,
-              itemBuilder: (_, i) {
-                final file     = mutableFiles[i];
-                final fileName = file.path.split('/').last;
-                final stat     = file.statSync();
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.background,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: AppTheme.comment.withAlpha(77)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 8),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.insert_drive_file,
-                            color: AppTheme.cyan, size: 28),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                            children: [
-                              Text(fileName,
-                                  style: const TextStyle(
-                                    color: AppTheme.foreground,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                              Text(
-                                '${(stat.size / 1024).toStringAsFixed(1)} KB  •  ${_fm.formatDate(stat.modified)}',
-                                style: const TextStyle(
-                                    color: AppTheme.comment,
-                                    fontSize: 10),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Abrir',
-                          icon: const Icon(Icons.folder_open,
-                              color: AppTheme.green, size: 24),
-                          onPressed: () => Navigator.pop(ctx, file),
-                        ),
-                        IconButton(
-                          tooltip: 'Eliminar',
-                          icon: const Icon(Icons.delete,
-                              color: AppTheme.red, size: 24),
-                          onPressed: () async {
-                            final ok = await showDialog<bool>(
-                              context: ctx,
-                              builder: (c) => AlertDialog(
-                                backgroundColor: AppTheme.currentLine,
-                                title: const Text('Eliminar archivo',
-                                    style: TextStyle(
-                                        color: AppTheme.foreground)),
-                                content: Text(
-                                    '¿Eliminar "$fileName"?\nEsta acción no se puede deshacer.',
-                                    style: const TextStyle(
-                                        color: AppTheme.foreground)),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(c, false),
-                                    child: const Text('Cancelar',
-                                        style: TextStyle(
-                                            color: AppTheme.comment)),
-                                  ),
-                                  ElevatedButton.icon(
-                                    onPressed: () =>
-                                        Navigator.pop(c, true),
-                                    icon: const Icon(Icons.delete,
-                                        size: 16),
-                                    label: const Text('Eliminar'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.red,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (ok == true) {
-                              await file.delete();
-                              if (_fm.currentFilePath == file.path) {
-                                _fm.clear();
-                                if (mounted) setState(() {});
-                              }
-                              setDialog(() => mutableFiles.removeAt(i));
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.currentLine,
+        title: const Text('Abrir archivo', style: TextStyle(color: AppTheme.foreground)),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 300,
+          child: ListView.builder(
+            itemCount: files.length,
+            itemBuilder: (_, i) {
+              final file = files[i];
+              return ListTile(
+                leading: const Icon(Icons.insert_drive_file, color: AppTheme.cyan),
+                title: Text(file.path.split('/').last, style: const TextStyle(color: AppTheme.foreground)),
+                onTap: () => Navigator.pop(ctx, file),
+              );
+            },
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: AppTheme.comment)),
-            ),
-          ],
         ),
       ),
     );
@@ -406,16 +294,10 @@ FIN PROGRAMA''';
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.currentLine,
-        title: const Text('Limpiar código',
-            style: TextStyle(color: AppTheme.foreground)),
-        content: const Text('¿Está seguro de que desea limpiar todo el código?',
-            style: TextStyle(color: AppTheme.foreground)),
+        title: const Text('Limpiar código', style: TextStyle(color: AppTheme.foreground)),
+        content: const Text('¿Está seguro de que desea limpiar todo el código?', style: TextStyle(color: AppTheme.foreground)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppTheme.comment)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           TextButton(
             onPressed: () {
               _codeController.clear();
@@ -423,28 +305,20 @@ FIN PROGRAMA''';
               setState(() {});
               Navigator.pop(ctx);
             },
-            child: const Text('Limpiar',
-                style: TextStyle(color: AppTheme.red)),
+            child: const Text('Limpiar', style: TextStyle(color: AppTheme.red)),
           ),
         ],
       ),
     );
   }
 
-  // _shareFile: sin cambios, comparte el código fuente tal cual
   Future<void> _shareFile() async {
     if (_fm.hasUnsavedChanges(_codeController.text)) {
       await _fm.saveToFile(_codeController.text);
     }
     if (_fm.currentFilePath == null) return;
-    final file = File(_fm.currentFilePath!);
-    if (!await file.exists()) return;
     await _fm.share(_fm.currentFilePath!);
   }
-
-  // ─────────────────────────────────────────────────────────────
-  // EJECUCIÓN
-  // ─────────────────────────────────────────────────────────────
 
   Future<void> _executeProgram() async {
     if (_isRunning || !_codeIsValid) return;
@@ -452,12 +326,7 @@ FIN PROGRAMA''';
     try {
       final r = Compilador().compilar(_codeController.text);
       final compiled = r.exito
-          ? (r.salidaEjecucion ?? [])
-          .where((l) {
-        final t = l.trim();
-        return t.startsWith('GIRAR') || t.startsWith('AVANZAR');
-      })
-          .toList()
+          ? (r.salidaEjecucion ?? []).where((l) => l.trim().startsWith('GIRAR') || l.trim().startsWith('AVANZAR')).toList()
           : [];
 
       setState(() {
@@ -469,72 +338,29 @@ FIN PROGRAMA''';
         await _fm.deleteCompiled();
         _compiledFilePath = await _fm.saveCompiled(_compiledLines.join('\n'));
         _launchConfetti();
-      } else {
-        _compiledFilePath = null;
+      } else if (!r.exito) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Row(children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              Flexible(child: Text(r.error ?? 'Error al compilar')),
-            ]),
+            content: Text(r.error ?? 'Error al compilar'),
             backgroundColor: AppTheme.red,
-            duration: const Duration(seconds: 3),
           ));
         }
       }
     } catch (e) {
-      setState(() {
-        _compiledSuccess  = false;
-        _compiledLines    = [];
-        _compiledFilePath = null;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Row(children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Flexible(child: Text(e.toString())),
-          ]),
-          backgroundColor: AppTheme.red,
-          duration: const Duration(seconds: 3),
-        ));
-      }
+      debugPrint(e.toString());
     } finally {
       setState(() => _isRunning = false);
     }
   }
 
-
-  // _sendProgram: comparte compilado.txt (Bluetooth aparece en el share sheet)
   Future<void> _sendProgram() async {
     if (_compiledLines.isEmpty || _compiledFilePath == null) return;
-
     if (!_bluetoothEnabled) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Row(children: [
-          Icon(Icons.bluetooth_disabled, color: Colors.white),
-          SizedBox(width: 12),
-          Flexible(child: Text('Debes encender el Bluetooth para enviar el programa.')),
-        ]),
-        backgroundColor: Colors.redAccent,
-        duration: Duration(seconds: 3),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enciende el Bluetooth primero')));
       return;
     }
-
-    final file = File(_compiledFilePath!);
-    if (!await file.exists()) return;
-
-    // Compartir el .txt real — Bluetooth lo recibe como archivo, no como HTML
     await _fm.share(_compiledFilePath!);
   }
-
-  // ─────────────────────────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────────────────────────
-
 
   @override
   Widget build(BuildContext context) {
@@ -542,34 +368,25 @@ FIN PROGRAMA''';
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Text('StemBosque IDE'),
-            if (unsaved) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.orange,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'Sin guardar',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+        title: const Text('StemBosque IDE'),
+        actions: [
+          if (unsaved)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.orange.withAlpha(50),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.orange),
+                  ),
+                  child: const Text('SIN GUARDAR', style: TextStyle(color: AppTheme.orange, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
               ),
-            ],
-          ],
-        ),
-        centerTitle: false,
-        leading: Builder(
-          builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
-          ),
-        ),
+            ),
+        ],
       ),
-
       drawer: IDEDrawer(
         hasUnsavedChanges: unsaved,
         isRunning: _isRunning,
@@ -579,133 +396,80 @@ FIN PROGRAMA''';
         onSaveFile: _saveWithName,
         onClearCode: _clearCode,
         onShareFile: _shareFile,
-        onToggleBluetooth: () => _bt.toggleBluetooth(),
+        onToggleBluetooth: () => _bt.toggleBluetooth(
+          onUnsupported: () => _showUnsupportedPlatformDialog(),
+        ),
       ),
-
-      body: Column(
-        children: [
-
-          if (_showBluetoothPanel)
-            BluetoothPanel(
-              bluetoothEnabled: _bluetoothEnabled,
-              isScanning: _isScanning,
-              isConnecting: _isConnecting,
-              devices: _discoveredDevices,
-              connectedDevice: _connectedDevice,
-              onToggle: _toggleBluetoothPanel,
-              onToggleBluetooth: () => _bt.toggleBluetooth(),
-              onStartScan: _startScan,
-              onStopScan: _stopScan,
-              onOpenSettings: () => _bt.openSettings(),
-              onDisconnect: () => _bt.disconnect(_btCallbacks),
-              onConnect: (d) => _bt.connect(d, _btCallbacks),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Toolbar(
+              onRun: _executeProgram,
+              onClear: _clearCode,
+              onOpen: _openFile,
+              onSave: _saveWithName,
+              onBluetooth: _toggleBluetoothPanel,
+              isRunning: _isRunning,
+              isBluetoothOpen: _showBluetoothPanel,
             ),
-
-          Expanded(
-            child: Column(
-              children: [
-
-                // Editor (siempre visible)
-                Expanded(
-                  child: ValidatedCodeEditor(
-                    key: const ValueKey('editor'),
-                    controller: _codeController,
-                    onValidityChanged: (v) => setState(() => _codeIsValid = v),
-                  ),
+            
+            if (_showBluetoothPanel)
+              BluetoothPanel(
+                bluetoothEnabled: _bluetoothEnabled,
+                isScanning: _isScanning,
+                isConnecting: _isConnecting,
+                devices: _discoveredDevices,
+                connectedDevice: _connectedDevice,
+                onToggle: _toggleBluetoothPanel,
+                onToggleBluetooth: () => _bt.toggleBluetooth(
+                  onUnsupported: () => _showUnsupportedPlatformDialog(),
                 ),
+                onStartScan: _startScan,
+                onStopScan: _stopScan,
+                onOpenSettings: () => _bt.openSettings(),
+                onDisconnect: () => _bt.disconnect(_btCallbacks),
+                onConnect: (d) => _bt.connect(d, _btCallbacks),
+              ),
 
-                // Botones
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.25,
-                    ),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Botón ENVIAR
-                          if (_compiledSuccess)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: _sendProgram,
-                                  icon: const Icon(Icons.send),
-                                  label: const Text('Enviar por Bluetooth'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.cyan,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                          // Botón SIMULAR
-                          if (_compiledSuccess)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => SimulationScreen(
-                                        commands: _compiledLines,
-                                      ),
-                                    ),
-                                  ),
-                                  icon: const Icon(Icons.play_circle_outline),
-                                  label: const Text('Simular'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.purple,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                          // Botón EJECUTAR
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: (_codeIsValid && !_isRunning)
-                                  ? _executeProgram
-                                  : null,
-                              icon: _isRunning
-                                  ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                                  : const Icon(Icons.play_arrow),
-                              label: Text(_isRunning ? 'Ejecutando...' : 'Ejecutar'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: (_codeIsValid && !_isRunning)
-                                    ? AppTheme.green
-                                    : AppTheme.comment,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                            ),
-                          ),
-                        ],
+            Expanded(
+              child: ValidatedCodeEditor(
+                controller: _codeController,
+                onValidityChanged: (v) => setState(() => _codeIsValid = v),
+              ),
+            ),
+            
+            if (_compiledSuccess)
+              Container(
+                padding: const EdgeInsets.all(12),
+                color: AppTheme.currentLine.withAlpha(100),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => SimulationScreen(commands: _compiledLines)),
+                        ),
+                        icon: const Icon(Icons.play_circle_fill),
+                        label: const Text('SIMULAR'),
+                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.purple),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    if (_bluetoothEnabled)
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _sendProgram,
+                          icon: const Icon(Icons.send_rounded),
+                          label: const Text('ENVIAR'),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.cyan),
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -734,6 +498,4 @@ FIN PROGRAMA''';
       if (_confettiOverlay == entry) _confettiOverlay = null;
     });
   }
-
-
 }

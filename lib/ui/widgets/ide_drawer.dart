@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'help_dialog.dart';
 
 class IDEDrawer extends StatelessWidget {
   final bool hasUnsavedChanges;
@@ -90,6 +91,20 @@ class IDEDrawer extends StatelessWidget {
                     onChanged: (_) => onToggleBluetooth(),
                     activeThumbColor: AppTheme.green,
                   ),
+                ),
+                const Divider(color: AppTheme.currentLine, height: 1),
+                _buildItem(
+                  context,
+                  icon: Icons.help_outline_rounded,
+                  title: 'Guía de Lenguaje',
+                  subtitle: '¿Qué es kw, cmd, trig...?',
+                  color: AppTheme.yellow,
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const HelpDialog(),
+                    );
+                  },
                 ),
               ],
             ),

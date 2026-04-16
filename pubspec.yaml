@@ -13,9 +13,10 @@ dependencies:
   # Dependencias de UI
   cupertino_icons: ^1.0.6
   
-  # Manejo de archivos
+  # Manejo de archivos y descargas
   file_picker: ^8.0.0+1
   path_provider: ^2.1.2
+  url_launcher: ^6.2.5
   
   # Bluetooth - Soporte para BLE y Clásico
   flutter_bluetooth_serial: ^0.4.0  # Para Bluetooth Clásico
