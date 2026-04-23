@@ -18,9 +18,12 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: 1. Checkout del código
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -42,7 +45,7 @@ jobs:
           java-version: '17'
 
       - name: 4. Configurar Flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
@@ -56,16 +59,17 @@ jobs:
         run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: 8. Subir Artefacto Web
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./build/web
 
       - name: 9. Desplegar a GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        uses: actions/deploy-pages@v4
 
       - name: 10. Publicar APK en Release "latest"
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
         with:
           files: build/app/outputs/flutter-apk/app-release.apk
           tag_name: latest
