@@ -38,7 +38,7 @@ class FileManager {
         defaultTargetPlatform == TargetPlatform.macOS) {
       
       // En PC, si saveFile falla, usamos pickDirectory como el flujo de abrir
-      String? selectedDirectory = await FilePicker.instance.getDirectoryPath(
+      String? selectedDirectory = await FilePicker.platform.getDirectoryPath(
         dialogTitle: 'Selecciona la carpeta para guardar tu programa',
       );
 
@@ -93,7 +93,7 @@ class FileManager {
 
   /// Abre un selector de archivos (Windows Explorer / Web) y devuelve el contenido.
   Future<String?> pickAndReadFile() async {
-    FilePickerResult? result = await FilePicker.instance.pickFiles(
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['sb', 'txt'],
     );
