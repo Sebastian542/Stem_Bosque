@@ -320,12 +320,19 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                 scrollController: _scrollController,
                 maxLines:         null,
                 expands:          true,
+                strutStyle: const StrutStyle(
+                  fontFamily: _fontFamily,
+                  fontSize:   _fontSize,
+                  height:     _lineHeight,
+                  forceStrutHeight: true,
+                ),
                 style: const TextStyle(
                   fontFamily: _fontFamily,
                   fontSize:   _fontSize,
                   height:     _lineHeight,
                   color:      Colors.transparent, // ← texto invisible, solo cursor visible
                 ),
+                cursorHeight: 20, // Fijar altura del cursor para evitar el bug de escalado
                 cursorColor:  AppTheme.cyan,
                 cursorWidth:  2,
                 keyboardType: TextInputType.multiline,
