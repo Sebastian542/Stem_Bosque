@@ -16,17 +16,6 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-subprojects {
-    // Resolución de dependencias mínima para compatibilidad
-    configurations.all {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "androidx.core") {
-                useVersion("1.13.1")
-            }
-        }
-    }
-}
-
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
