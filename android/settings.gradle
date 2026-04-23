@@ -24,15 +24,13 @@ plugins {
 
 include ":app"
 
-// Inyección temprana de Namespace para plugins antiguos
-gradle.getGradle().projectsLoaded { g ->
+// Inyección de Namespace segura sin afterEvaluate
+gradle.projectsLoaded { g ->
     g.rootProject.childProjects.each { name, prj ->
-        if (prj.hasProperty("android") || name == "flutter_bluetooth_serial") {
-            prj.afterEvaluate {
-                if (prj.hasProperty("android")) {
-                    if (prj.android.namespace == null) {
-                        prj.android.namespace = "co.edu.unbosque.stem_bosque.plugin." + name.replaceAll("[^a-zA-Z0-9]", "")
-                    }
+        prj.beforeEvaluate {
+            if (prj.hasProperty("android")) {
+                if (prj.android.namespace == null) {
+                    prj.android.namespace = "co.edu.unbosque.stem_bosque.plugin." + name.replaceAll("[^a-zA-Z0-9]", "")
                 }
             }
         }
