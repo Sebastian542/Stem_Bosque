@@ -10,18 +10,25 @@ rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
     
-    // Parche de Namespace para plugins antiguos
+    // Parche de Namespace y Versiones para plugins antiguos
     afterEvaluate { project ->
         if (project.hasProperty("android")) {
-            if (project.android.namespace == null) {
-                def manifestFile = file("${project.projectDir}/src/main/AndroidManifest.xml")
-                if (manifestFile.exists()) {
-                    def manifestXml = new XmlParser().parse(manifestFile)
-                    def packageName = manifestXml.@package
-                    if (packageName) {
-                        project.android.namespace = packageName
-                    } else {
-                        project.android.namespace = "co.edu.unbosque.stem_bosque.plugin.${project.name.replaceAll(/[^a-zA-Z0-9]/, "")}"
+            // Forzar versiones de compilación para evitar errores como lStar
+            project.android {
+                compileSdkVersion 35 // Suficiente para lStar (API 31+)
+                buildToolsVersion "35.0.0"
+                
+                // Asegurar namespace si falta
+                if (namespace == null) {
+                    def manifestFile = file("${project.projectDir}/src/main/AndroidManifest.xml")
+                    if (manifestFile.exists()) {
+                        def manifestXml = new XmlParser().parse(manifestFile)
+                        def packageName = manifestXml.@package
+                        if (packageName) {
+                            namespace = packageName
+                        } else {
+                            namespace = "co.edu.unbosque.stem_bosque.plugin.${project.name.replaceAll(/[^a-zA-Z0-9]/, "")}"
+                        }
                     }
                 }
             }
