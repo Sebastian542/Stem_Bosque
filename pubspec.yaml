@@ -14,7 +14,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   
   # Manejo de archivos y descargas
-  file_picker: ^11.0.2
+  file_picker: 8.3.7
   path_provider: ^2.1.2
   url_launcher: ^6.2.5
   
@@ -22,17 +22,17 @@ dependencies:
   flutter_bluetooth_serial: ^0.4.0  # Para Bluetooth Clásico
 
   # Bluetooth BLE
-  flutter_blue_plus: 2.2.1
+  flutter_blue_plus: 1.32.12
   permission_handler: ^11.3.1
 
-  android_intent_plus: ^6.0.0
+  android_intent_plus: 4.0.3
 
   share_plus: ^7.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: 3.0.2
 
 flutter:
-  uses-material-design: true 
+  uses-material-design: true
