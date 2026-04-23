@@ -11,30 +11,23 @@ subprojects {
     project.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir(project.name).get())
 }
 
-// Función para inyectar namespace a plugins antiguos
-def fixNamespace(prj) {
-    if (prj.hasProperty("android")) {
-        if (prj.android.namespace == null) {
-            def manifestFile = prj.file("src/main/AndroidManifest.xml")
-            if (manifestFile.exists()) {
-                def manifest = new XmlParser().parse(manifestFile)
-                def packageName = manifest."@package"
-                if (packageName != null) {
-                    prj.android.namespace = packageName
+// Parche agresivo para plugins antiguos (Namespace)
+subprojects {
+    project.afterEvaluate {
+        if (project.hasProperty("android")) {
+            android {
+                if (namespace == null) {
+                    namespace = "co.edu.unbosque.stem_bosque" // Fallback seguro
                 }
             }
         }
     }
 }
 
-// Aplicar la corrección a todos los subproyectos
+// Forzar el namespace específico para el plugin conflictivo
 subprojects {
-    if (project.state.executed) {
-        fixNamespace(project)
-    } else {
-        project.afterEvaluate {
-            fixNamespace(project)
-        }
+    if (project.name == "flutter_bluetooth_serial") {
+        project.android.namespace = "io.github.edufolly.flutter_bluetooth_serial"
     }
 }
 
