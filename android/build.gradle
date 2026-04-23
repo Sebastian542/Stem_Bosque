@@ -15,6 +15,24 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// Inyectar Namespace a plugins antiguos que fallan con AGP 8+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            if (project.android.namespace == null) {
+                def manifestFile = project.file("src/main/AndroidManifest.xml")
+                if (manifestFile.exists()) {
+                    def manifest = new XmlParser().parse(manifestFile)
+                    def packageName = manifest."@package"
+                    if (packageName != null) {
+                        project.android.namespace = packageName
+                    }
+                }
+            }
+        }
+    }
+}
+
 tasks.register("clean", Delete) {
     delete rootProject.layout.buildDirectory
 }
