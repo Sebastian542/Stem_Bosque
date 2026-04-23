@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "co.edu.unbosque.stem_bosque"
-    compileSdk = 34
+    compileSdk = 36
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -19,8 +20,8 @@ android {
 
     defaultConfig {
         applicationId = "co.edu.unbosque.stem_bosque"
-        minSdk = 21
-        targetSdk = 34
+        minSdk = 24
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -28,6 +29,8 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.debug
+            shrinkResources false
+            minifyEnabled false
         }
     }
 }
