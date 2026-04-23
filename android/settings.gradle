@@ -23,3 +23,16 @@ plugins {
 }
 
 include ":app"
+
+// Inyección ultra-temprana de Namespace para plugins antiguos
+gradle.getGradle().projectsLoaded { g ->
+    g.rootProject.childProjects.each { name, prj ->
+        if (name == "flutter_bluetooth_serial") {
+            prj.afterEvaluate {
+                if (prj.hasProperty("android")) {
+                    prj.android.namespace = "io.github.edufolly.flutter_bluetooth_serial"
+                }
+            }
+        }
+    }
+}
