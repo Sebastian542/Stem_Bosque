@@ -5,27 +5,23 @@ allprojects {
     }
 }
 
-rootProject.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir("../../build").get())
+rootProject.buildDir = "../build"
 
 subprojects {
-    project.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir(project.name).get())
-}
-
-// Parche de Namespace con acceso seguro
-subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    
+    // Parche de Namespace para plugins antiguos
     afterEvaluate { project ->
-        def androidExtension = project.extensions.findByName("android")
-        if (androidExtension != null) {
-            if (androidExtension.namespace == null) {
-                // Intentar extraer del Manifest
-                def manifestFile = project.file("src/main/AndroidManifest.xml")
+        if (project.hasProperty("android")) {
+            if (project.android.namespace == null) {
+                def manifestFile = file("${project.projectDir}/src/main/AndroidManifest.xml")
                 if (manifestFile.exists()) {
-                    def manifest = new XmlParser().parse(manifestFile)
-                    def packageName = manifest."@package"
-                    if (packageName != null) {
-                        androidExtension.namespace = packageName
+                    def manifestXml = new XmlParser().parse(manifestFile)
+                    def packageName = manifestXml.@package
+                    if (packageName) {
+                        project.android.namespace = packageName
                     } else {
-                        androidExtension.namespace = "co.edu.unbosque.stem_bosque.fallback"
+                        project.android.namespace = "co.edu.unbosque.stem_bosque.plugin.${project.name.replaceAll(/[^a-zA-Z0-9]/, "")}"
                     }
                 }
             }
@@ -33,6 +29,10 @@ subprojects {
     }
 }
 
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
 tasks.register("clean", Delete) {
-    delete rootProject.layout.buildDirectory
+    delete rootProject.buildDir
 }
