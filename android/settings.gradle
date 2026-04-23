@@ -18,19 +18,21 @@ pluginManagement {
 
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-    id "com.android.application" version "8.6.0" apply false
-    id "org.jetbrains.kotlin.android" version "2.1.0" apply false
+    id "com.android.application" version "8.3.2" apply false
+    id "org.jetbrains.kotlin.android" version "1.9.22" apply false
 }
 
 include ":app"
 
-// Inyección ultra-temprana de Namespace para plugins antiguos
+// Inyección temprana de Namespace para plugins antiguos
 gradle.getGradle().projectsLoaded { g ->
     g.rootProject.childProjects.each { name, prj ->
-        if (name == "flutter_bluetooth_serial") {
+        if (prj.hasProperty("android") || name == "flutter_bluetooth_serial") {
             prj.afterEvaluate {
                 if (prj.hasProperty("android")) {
-                    prj.android.namespace = "io.github.edufolly.flutter_bluetooth_serial"
+                    if (prj.android.namespace == null) {
+                        prj.android.namespace = "co.edu.unbosque.stem_bosque.plugin." + name.replaceAll("[^a-zA-Z0-9]", "")
+                    }
                 }
             }
         }
