@@ -16,11 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: 1. Checkout del código
         uses: actions/checkout@v4
@@ -58,20 +55,38 @@ jobs:
       - name: 7. Construir APK de Android
         run: flutter build apk --release --android-skip-build-dependency-validation
 
-      - name: 8. Subir Artefacto Web
+      - name: 8. Subir Artefacto Web (Pre-despliegue)
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./build/web
 
-      - name: 9. Desplegar a GitHub Pages
+      - name: 9. Guardar APK para Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 1. Desplegar Web a GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: 10. Publicar APK en Release "latest"
-        if: github.ref == 'refs/heads/main'
+      - name: 2. Descargar APK
+        uses: actions/download-artifact@v4
+        with:
+          name: flutter-apk
+
+      - name: 3. Publicar APK en Release "latest"
         uses: softprops/action-gh-release@v2
         with:
-          files: build/app/outputs/flutter-apk/app-release.apk
+          files: app-release.apk
           tag_name: latest
           name: "StemBosque APK (Última Versión)"
           body: "Esta versión se compila automáticamente con cada cambio en la rama main."
