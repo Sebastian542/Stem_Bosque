@@ -9,23 +9,22 @@ rootProject.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir(".
 
 subprojects {
     project.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir(project.name).get())
-}
-
-subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// Inyectar Namespace a plugins antiguos que fallan con AGP 8+
-subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty("android")) {
-            if (project.android.namespace == null) {
-                def manifestFile = project.file("src/main/AndroidManifest.xml")
-                if (manifestFile.exists()) {
-                    def manifest = new XmlParser().parse(manifestFile)
-                    def packageName = manifest."@package"
-                    if (packageName != null) {
-                        project.android.namespace = packageName
+// Inyección de Namespace segura sin afterEvaluate
+gradle.projectsLoaded {
+    rootProject.subprojects { prj ->
+        prj.beforeEvaluate {
+            if (prj.hasProperty("android")) {
+                if (prj.android.namespace == null) {
+                    def manifestFile = prj.file("src/main/AndroidManifest.xml")
+                    if (manifestFile.exists()) {
+                        def manifest = new XmlParser().parse(manifestFile)
+                        def packageName = manifest."@package"
+                        if (packageName != null) {
+                            prj.android.namespace = packageName
+                        }
                     }
                 }
             }
