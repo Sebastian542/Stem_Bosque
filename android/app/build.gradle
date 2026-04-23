@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "co.edu.unbosque.stem_bosque"
-    compileSdk = 36
+    compileSdk = 35
     ndkVersion = "28.2.13676358"
 
     compileOptions {
