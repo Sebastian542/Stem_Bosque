@@ -1,0 +1,97 @@
+name: CI/CD Flutter Web & Android
+
+on:
+  push:
+    branches:
+      - aleja
+      - main
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout del código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 2. Sincronizar aleja con main (Solo si el push fue en aleja)
+        if: github.ref == 'refs/heads/aleja'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          git merge -X theirs aleja
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 3. Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 4. Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: 5. Instalar dependencias
+        run: flutter pub get
+
+      - name: 6. Construir Flutter Web
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+
+      - name: 7. Construir APK de Android
+        run: flutter build apk --release --android-skip-build-dependency-validation
+
+      - name: 8. Subir Artefacto Web (Pre-despliegue)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./build/web
+
+      - name: 9. Guardar APK para Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 1. Desplegar Web a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: 2. Descargar APK
+        uses: actions/download-artifact@v4
+        with:
+          name: flutter-apk
+
+      - name: 3. Publicar APK en Release "latest"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app-release.apk
+          tag_name: latest
+          name: "StemBosque APK (Última Versión)"
+          body: "Esta versión se compila automáticamente con cada cambio en la rama main."
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
