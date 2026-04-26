@@ -44,7 +44,7 @@ class AppTheme {
         ),
       ),
 
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: const Color(0xFF282A36),
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -77,7 +77,7 @@ class AppTheme {
   }
 
   // Estilos de Código Profesionales
-  static TextStyle get codeStyle => GoogleFonts.jetbrainsMono(
+  static TextStyle get codeStyle => GoogleFonts.jetBrainsMono(
     fontSize: 15,
     height: 1.5,
   );
