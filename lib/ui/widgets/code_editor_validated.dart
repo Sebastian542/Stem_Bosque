@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+6import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../compiler/syntax_validator.dart';
 import '../theme/app_theme.dart';
@@ -136,7 +136,6 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
   ValidationResult _result      = const ValidationResult.valid();
   List<String>     _sugerencias = [];
 
-  // ── Zoom ──────────────────────────────────────────────────────────────────
   double _fontSize            = 14.0;
   double _fontSizeOnScaleStart = 14.0;
   static const double _minFontSize  = 9.0;
