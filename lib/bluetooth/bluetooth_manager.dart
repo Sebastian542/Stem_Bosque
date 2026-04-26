@@ -106,13 +106,23 @@ class BluetoothManager {
 
   // ── Toggle Bluetooth ────────────────────────────────────────
 
-  Future<void> toggleBluetooth() async {
+  Future<void> toggleBluetooth({required VoidCallback onUnsupported}) async {
+    if (kIsWeb) {
+      onUnsupported();
+      return;
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      // En PC abrimos la configuración del sistema directamente
+      await openSettings();
+      return;
+    }
+
     if (_bluetoothEnabled) {
-      // turnOff is deprecated on Android 13+ with no replacement. 
-      // We rely on requestDisable() which may show a dialog or work on older versions.
       await classic.FlutterBluetoothSerial.instance.requestDisable();
     } else {
-      // turnOn is also deprecated, requestEnable() is preferred as it shows a system dialog.
       await classic.FlutterBluetoothSerial.instance.requestEnable();
     }
   }
