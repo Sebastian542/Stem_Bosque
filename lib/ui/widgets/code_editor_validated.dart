@@ -143,11 +143,15 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   ValidationResult _result      = const ValidationResult.valid();
   List<String>     _sugerencias = [];
 
-  static const _fontSize   = 14.0;
+  static const _fontSize   = 15.0;
   static const _lineHeight = 1.5;
-  static const _fontFamily = 'monospace';
-  static const _lineH      = _fontSize * _lineHeight; // 21 px por línea
+  static const _lineH      = _fontSize * _lineHeight; 
   static const _padding    = 8.0;
+
+  TextStyle get _codeBaseStyle => AppTheme.codeStyle.copyWith(
+    fontSize: _fontSize,
+    height: _lineHeight,
+  );
 
   @override
   void initState() {
@@ -298,11 +302,8 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                     padding: const EdgeInsets.only(left: _padding, top: _padding),
                     child: RichText(
                       text: TextSpan(
-                        style: const TextStyle(
-                          fontFamily: _fontFamily,
-                          fontSize:   _fontSize,
-                          height:     _lineHeight,
-                          color:      AppTheme.foreground,
+                        style: _codeBaseStyle.copyWith(
+                          color: AppTheme.foreground,
                         ),
                         children: spans,
                       ),
@@ -320,19 +321,16 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                 scrollController: _scrollController,
                 maxLines:         null,
                 expands:          true,
-                strutStyle: const StrutStyle(
-                  fontFamily: _fontFamily,
+                strutStyle: StrutStyle(
+                  fontFamily: _codeBaseStyle.fontFamily,
                   fontSize:   _fontSize,
                   height:     _lineHeight,
                   forceStrutHeight: true,
                 ),
-                style: const TextStyle(
-                  fontFamily: _fontFamily,
-                  fontSize:   _fontSize,
-                  height:     _lineHeight,
-                  color:      Colors.transparent, // ← texto invisible, solo cursor visible
+                style: _codeBaseStyle.copyWith(
+                  color:      Colors.transparent, 
                 ),
-                cursorHeight: 20, // Fijar altura del cursor para evitar el bug de escalado
+                cursorHeight: 20, 
                 cursorColor:  AppTheme.cyan,
                 cursorWidth:  2,
                 keyboardType: TextInputType.multiline,
@@ -340,6 +338,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                   border:         InputBorder.none,
                   contentPadding: EdgeInsets.only(left: _padding, top: _padding),
                   isCollapsed:    true,
+                  filled:         false, // IMPORTANTE: Evita que el fondo del tema tape el código
                 ),
               ),
             ),
@@ -376,8 +375,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                   padding: const EdgeInsets.only(right: 8),
                   child: Text(
                     '$num',
-                    style: TextStyle(
-                      fontFamily: _fontFamily,
+                    style: _codeBaseStyle.copyWith(
                       fontSize:   12,
                       color:      isError ? AppTheme.red : AppTheme.comment,
                       fontWeight: isError ? FontWeight.bold : FontWeight.normal,
