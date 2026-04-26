@@ -470,7 +470,11 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
               ),
               const SizedBox(width: 3),
               Text(it.$1,
-                  style: TextStyle(fontSize: 9, color: it.$2, fontFamily: _fontFamily)),
+                  style: TextStyle(
+                    fontSize: 9, 
+                    color: it.$2, 
+                    fontFamily: AppTheme.codeStyle.fontFamily,
+                  )),
             ],
           ),
         );
@@ -515,7 +519,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                     s,
                     style: TextStyle(
                       color:      chipColor,
-                      fontFamily: _fontFamily,
+                      fontFamily: AppTheme.codeStyle.fontFamily,
                       fontSize:   12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -565,10 +569,10 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
           Expanded(
             child: Text(
               display,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.red,
                 fontSize: 13,
-                fontFamily: _fontFamily,
+                fontFamily: AppTheme.codeStyle.fontFamily,
                 fontWeight: FontWeight.w500,
               ),
             ),
