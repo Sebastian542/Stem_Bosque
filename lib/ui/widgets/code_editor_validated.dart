@@ -82,7 +82,7 @@ TextSpan _buildLineSpan(String line, {bool isError = false}) {
     // Línea de error: fondo rojo suave, texto rojo
     return TextSpan(
       text: line,
-      style: const TextStyle(
+      style: TextStyle(
         color:               AppTheme.red,
         decoration:          TextDecoration.underline,
         decorationColor:     AppTheme.red,
@@ -101,6 +101,7 @@ TextSpan _buildLineSpan(String line, {bool isError = false}) {
         style: TextStyle(
           color:      _colorFor(tk.kind),
           fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontFamily: AppTheme.codeStyle.fontFamily,
         ),
       );
     }).toList(),
@@ -117,7 +118,7 @@ const _palabrasClave = [
 
 // ── Controlador Personalizado para Resaltado de Sintaxis ─────────────────────
 
-class _SyntaxHighlightingController extends TextEditingController {
+class CodeEditorController extends TextEditingController {
   @override
   TextSpan buildTextSpan({
     required BuildContext context,
@@ -312,6 +313,13 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
         builder: (context, value, _) {
           final lines = value.text.split('\n');
           final errorLine = _result.errorLine;
+          
+          // Calculamos la línea actual del cursor para el resaltado
+          int currentLineIndex = -1;
+          if (value.selection.baseOffset >= 0) {
+            currentLineIndex = '\n'.allMatches(value.text.substring(0, value.selection.baseOffset)).length;
+          }
+
           return ListView.builder(
             controller: _lineScrollCtrl,
             physics: const NeverScrollableScrollPhysics(),
@@ -320,21 +328,34 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
             itemBuilder: (_, i) {
               final num = i + 1;
               final isError = errorLine != null && num == errorLine;
+              final isCurrent = i == currentLineIndex;
+              
               return SizedBox(
                 height: _lineH,
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  color: isError
-                      ? AppTheme.red.withValues(alpha: 0.12)
-                      : Colors.transparent,
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    color: isError
+                        ? AppTheme.red.withValues(alpha: 0.12)
+                        : isCurrent
+                            ? AppTheme.cyan.withValues(alpha: 0.08)
+                            : Colors.transparent,
+                    border: isCurrent 
+                        ? const Border(right: BorderSide(color: AppTheme.cyan, width: 2))
+                        : null,
+                  ),
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 8),
                   child: Text(
                     '$num',
                     style: _codeBaseStyle.copyWith(
                       fontSize: 12,
-                      color: isError ? AppTheme.red : AppTheme.comment,
-                      fontWeight: isError ? FontWeight.bold : FontWeight.normal,
+                      color: isError 
+                          ? AppTheme.red 
+                          : isCurrent 
+                              ? AppTheme.cyan 
+                              : AppTheme.comment,
+                      fontWeight: (isError || isCurrent) ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ),

@@ -5,13 +5,27 @@ import 'package:flutter/material.dart';
 import '../../bluetooth/bluetooth_manager.dart';
 import '../../compiler/compiler.dart';
 import '../../services/file_manager.dart';
+import '../theme/app_theme.dart';
 import '../widgets/bluetooth_panel.dart';
 import '../widgets/code_editor_validated.dart';
+import '../widgets/toolbar.dart';
+import '../widgets/ide_drawer.dart';
+import '../widgets/confetti_widget.dart';
+import 'simulation_screen.dart';
 
-// ... dentro de _IDEScreenState ...
+class IDEScreen extends StatefulWidget {
+  const IDEScreen({super.key});
+
+  @override
+  State<IDEScreen> createState() => _IDEScreenState();
+}
+
+class _IDEScreenState extends State<IDEScreen> {
+  final _bt = BluetoothManager.instance;
+  final _fm = FileManager.instance;
 
   // ── Editor ───────────────────────────────────────────────────
-  late final _codeController = _SyntaxHighlightingController();
+  late final _codeController = CodeEditorController();
   bool         _isRunning     = false;
   bool         _codeIsValid   = false;
   bool         _compiledSuccess  = false;

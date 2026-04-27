@@ -9,6 +9,9 @@ import 'file_manager_stub.dart'
     if (dart.library.html) 'web_downloader.dart';
 
 class FileManager {
+  static final FileManager instance = FileManager._internal();
+  FileManager._internal();
+
   static const String _autoSaveFileName = 'stembosque_current_program.sb';
 
   String? currentFilePath;
