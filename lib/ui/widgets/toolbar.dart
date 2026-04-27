@@ -40,51 +40,56 @@ class Toolbar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          // Grupo de Acciones de Código
-          _buildActionButton(
-            context,
-            label: isRunning ? 'Parar' : 'Ejecutar',
-            icon: isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
-            color: isRunning ? AppTheme.red : AppTheme.green,
-            onPressed: onRun,
-            isPrimary: true,
-          ),
-          
-          const SizedBox(width: 12),
-          const VerticalDivider(color: AppTheme.currentLine, indent: 20, endIndent: 20),
-          const SizedBox(width: 12),
-
-          _buildIconButton(context, Icons.folder_open_rounded, 'Abrir', AppTheme.cyan, onOpen),
-          _buildIconButton(context, Icons.save_rounded, 'Guardar', AppTheme.purple, onSave),
-          _buildIconButton(context, Icons.delete_sweep_rounded, 'Limpiar', AppTheme.orange, onClear),
-
-          const Spacer(),
-
-          // Sección Bluetooth
-          _buildBluetoothButton(context),
-          
-          const SizedBox(width: 16),
-          
-          // Badge de Versión
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.currentLine,
-              borderRadius: BorderRadius.circular(20),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // Grupo de Acciones de Código
+            _buildActionButton(
+              context,
+              label: isRunning ? 'Parar' : 'Ejecutar',
+              icon: isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
+              color: isRunning ? AppTheme.red : AppTheme.green,
+              onPressed: onRun,
+              isPrimary: true,
             ),
-            child: const Text(
-              'v0.6 BETA',
-              style: TextStyle(
-                color: AppTheme.comment,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
+            
+            const SizedBox(width: 12),
+            const VerticalDivider(color: AppTheme.currentLine, indent: 20, endIndent: 20),
+            const SizedBox(width: 8),
+  
+            _buildIconButton(context, Icons.folder_open_rounded, 'Abrir', AppTheme.cyan, onOpen),
+            _buildIconButton(context, Icons.save_rounded, 'Guardar', AppTheme.purple, onSave),
+            _buildIconButton(context, Icons.delete_sweep_rounded, 'Limpiar', AppTheme.orange, onClear),
+  
+            const SizedBox(width: 12),
+            const VerticalDivider(color: AppTheme.currentLine, indent: 20, endIndent: 20),
+            const SizedBox(width: 12),
+  
+            // Sección Bluetooth
+            _buildBluetoothButton(context),
+            
+            const SizedBox(width: 12),
+            
+            // Badge de Versión
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.currentLine,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'v0.6',
+                style: TextStyle(
+                  color: AppTheme.comment,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -105,7 +110,7 @@ class Toolbar extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: AppTheme.background,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           elevation: isPrimary ? 4 : 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),

@@ -29,6 +29,9 @@ class BluetoothCallbacks {
 }
 
 class BluetoothManager {
+  static final BluetoothManager instance = BluetoothManager._internal();
+  BluetoothManager._internal();
+
   // ── Estado interno ───────────────────────────────────────────
   BluetoothAdapterState _bleState = BluetoothAdapterState.unknown;
   classic.BluetoothConnection? _classicConnection;
