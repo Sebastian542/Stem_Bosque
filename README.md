@@ -42,6 +42,8 @@ No necesitas instalar nada. Simplemente entra a:
 3. Puedes **descargar** tus programas para usarlos más tarde.
 
 ### 📱 App Móvil (Android)
+**[📥 Descargar APK para Android](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk)**
+
 1. Escribe tu programa y valida la sintaxis en la barra de estado.
 2. Usa el panel de **Bluetooth** para conectar con un robot físico.
 3. Envía el código directamente al dispositivo mediante BLE o Serial.
