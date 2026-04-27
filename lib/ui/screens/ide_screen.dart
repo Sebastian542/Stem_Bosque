@@ -12,6 +12,7 @@ import '../widgets/toolbar.dart';
 import '../widgets/ide_drawer.dart';
 import '../widgets/confetti_widget.dart';
 import 'simulation_screen.dart';
+import 'block_mode_screen.dart';
 
 class IDEScreen extends StatefulWidget {
   const IDEScreen({super.key});
@@ -395,6 +396,12 @@ FIN PROGRAMA''';
         onToggleBluetooth: () => _bt.toggleBluetooth(
           onUnsupported: () => _showUnsupportedPlatformDialog(),
         ),
+        onOpenBlockMode: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BlockModeScreen()),
+          );
+        },
       ),
       body: SafeArea(
         child: Column(
