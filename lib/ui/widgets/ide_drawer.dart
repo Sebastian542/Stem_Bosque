@@ -14,6 +14,7 @@ class IDEDrawer extends StatelessWidget {
   final VoidCallback onClearCode;
   final VoidCallback onShareFile;
   final VoidCallback onToggleBluetooth;
+  final VoidCallback onOpenBlockMode;
 
   const IDEDrawer({
     super.key,
@@ -27,6 +28,7 @@ class IDEDrawer extends StatelessWidget {
     required this.onClearCode,
     required this.onShareFile,
     required this.onToggleBluetooth,
+    required this.onOpenBlockMode,
   });
 
   @override
@@ -105,6 +107,14 @@ class IDEDrawer extends StatelessWidget {
                       builder: (context) => const HelpDialog(),
                     );
                   },
+                ),
+                _buildItem(
+                  context,
+                  icon: Icons.grid_view_rounded,
+                  title: 'Modo Bloque',
+                  subtitle: 'Añadir elementos a la simulación',
+                  color: AppTheme.green,
+                  onTap: onOpenBlockMode,
                 ),
               ],
             ),
