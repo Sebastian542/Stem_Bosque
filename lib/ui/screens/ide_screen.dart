@@ -7,29 +7,11 @@ import '../../compiler/compiler.dart';
 import '../../services/file_manager.dart';
 import '../widgets/bluetooth_panel.dart';
 import '../widgets/code_editor_validated.dart';
-import '../widgets/ide_drawer.dart';
-import '../theme/app_theme.dart';
-import '../widgets/confetti_widget.dart';
-import '../widgets/toolbar.dart';
-import 'simulation_screen.dart';
 
-
-class IDEScreen extends StatefulWidget {
-  const IDEScreen({super.key});
-
-  @override
-  State<IDEScreen> createState() => _IDEScreenState();
-}
-
-class _IDEScreenState extends State<IDEScreen> {
-
-  // ── Servicios ────────────────────────────────────────────────
-
-  final _bt   = BluetoothManager();
-  final _fm   = FileManager();
+// ... dentro de _IDEScreenState ...
 
   // ── Editor ───────────────────────────────────────────────────
-  final _codeController = TextEditingController();
+  late final _codeController = _SyntaxHighlightingController();
   bool         _isRunning     = false;
   bool         _codeIsValid   = false;
   bool         _compiledSuccess  = false;

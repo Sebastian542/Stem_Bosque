@@ -115,6 +115,32 @@ const _palabrasClave = [
   'AND', 'OR', 'NOT', 'SEN', 'COS', 'TANG',
 ];
 
+// ── Controlador Personalizado para Resaltado de Sintaxis ─────────────────────
+
+class _SyntaxHighlightingController extends TextEditingController {
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final lines = text.split('\n');
+    final children = <TextSpan>[];
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      // Aquí podríamos integrar el errorLine si lo pasamos al controlador, 
+      // pero por simplicidad de la refactorización usaremos el tokenizador base.
+      children.add(_buildLineSpan(line));
+      if (i < lines.length - 1) {
+        children.add(const TextSpan(text: '\n'));
+      }
+    }
+
+    return TextSpan(style: style, children: children);
+  }
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // ValidatedCodeEditor
 // ════════════════════════════════════════════════════════════════════════════
@@ -134,24 +160,24 @@ class ValidatedCodeEditor extends StatefulWidget {
 }
 
 class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
-  final _validator         = SyntaxValidator();
-  final _focusNode         = FocusNode();
-  final _scrollController  = ScrollController();
-  final _lineScrollCtrl    = ScrollController();
-  final _hScrollController = ScrollController(); // scroll horizontal compartido
+  final _validator = SyntaxValidator();
+  final _focusNode = FocusNode();
+  final _scrollController = ScrollController();
+  final _lineScrollCtrl = ScrollController();
 
-  ValidationResult _result      = const ValidationResult.valid();
-  List<String>     _sugerencias = [];
+  ValidationResult _result = const ValidationResult.valid();
+  List<String> _sugerencias = [];
 
-  static const _fontSize   = 15.0;
+  static const _fontSize = 15.0;
   static const _lineHeight = 1.5;
-  static const _lineH      = _fontSize * _lineHeight; 
-  static const _padding    = 8.0;
+  static const _lineH = _fontSize * _lineHeight;
+  static const _padding = 12.0;
 
   TextStyle get _codeBaseStyle => AppTheme.codeStyle.copyWith(
-    fontSize: _fontSize,
-    height: _lineHeight,
-  );
+        fontSize: _fontSize,
+        height: _lineHeight,
+        color: AppTheme.foreground,
+      );
 
   @override
   void initState() {
@@ -165,12 +191,9 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
     _focusNode.dispose();
     _scrollController.dispose();
     _lineScrollCtrl.dispose();
-    _hScrollController.dispose();
     widget.controller.removeListener(_onTextChanged);
     super.dispose();
   }
-
-  // ── Validación y sugerencias ─────────────────────────────────────────────
 
   void _onTextChanged() {
     final result = _validator.validate(widget.controller.text);
@@ -182,7 +205,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   }
 
   void _actualizarSugerencias() {
-    final text      = widget.controller.text;
+    final text = widget.controller.text;
     final cursorPos = widget.controller.selection.baseOffset;
     if (cursorPos < 0 || cursorPos > text.length) {
       setState(() => _sugerencias = []);
@@ -205,7 +228,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   }
 
   void _aplicarSugerencia(String sugerencia) {
-    final text      = widget.controller.text;
+    final text = widget.controller.text;
     final cursorPos = widget.controller.selection.baseOffset;
     if (cursorPos < 0) return;
 
@@ -215,10 +238,11 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
     }
     inicio++;
 
-    final nuevoTexto   = text.substring(0, inicio) + sugerencia + text.substring(cursorPos);
-    final nuevoCursor  = inicio + sugerencia.length;
+    final nuevoTexto =
+        text.substring(0, inicio) + sugerencia + text.substring(cursorPos);
+    final nuevoCursor = inicio + sugerencia.length;
     widget.controller.value = TextEditingValue(
-      text:      nuevoTexto,
+      text: nuevoTexto,
       selection: TextSelection.collapsed(offset: nuevoCursor),
     );
     setState(() => _sugerencias = []);
@@ -229,8 +253,6 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
       _lineScrollCtrl.jumpTo(_scrollController.offset);
     }
   }
-
-  // ── BUILD ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -245,110 +267,42 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
     );
   }
 
-  // ── Área principal del editor ─────────────────────────────────────────────
-
   Widget _buildEditorArea() {
     return Container(
       color: AppTheme.background,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Columna de números de línea
           _buildLineNumbers(),
-          // Separador
           Container(width: 1, color: AppTheme.currentLine),
-          // Editor con overlay de colores
-          Expanded(child: _buildSyntaxEditor()),
+          Expanded(child: _buildTextField()),
         ],
       ),
     );
   }
 
-  // ── Editor con syntax highlighting ───────────────────────────────────────
-  //
-  // Técnica: Stack con dos hijos alineados.
-  //   1. TextField con texto transparente (invisible) → captura input y scroll
-  //   2. RichText con texto coloreado → visible, sincronizado al mismo scroll
-  //
-  Widget _buildSyntaxEditor() {
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: widget.controller,
-      builder: (context, value, _) {
-        final lines    = value.text.split('\n');
-        final errorLine = _result.errorLine;
-
-        // Construir el RichText coloreado
-        final spans = <TextSpan>[];
-        for (int i = 0; i < lines.length; i++) {
-          final isErr = errorLine != null && (i + 1) == errorLine;
-          spans.add(_buildLineSpan(lines[i], isError: isErr));
-          if (i < lines.length - 1) {
-            spans.add(const TextSpan(text: '\n'));
-          }
-        }
-
-        return Stack(
-          children: [
-            // ── Capa 1: RichText coloreado (debajo, scrollea con el TextField) ──
-            Positioned.fill(
-              child: SingleChildScrollView(
-                controller: _hScrollController,
-                scrollDirection: Axis.horizontal,
-                physics: const NeverScrollableScrollPhysics(),
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: _padding, top: _padding),
-                    child: RichText(
-                      text: TextSpan(
-                        style: _codeBaseStyle.copyWith(
-                          color: AppTheme.foreground,
-                        ),
-                        children: spans,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Capa 2: TextField con texto transparente (encima, captura input) ──
-            Positioned.fill(
-              child: TextField(
-                controller:       widget.controller,
-                focusNode:        _focusNode,
-                scrollController: _scrollController,
-                maxLines:         null,
-                expands:          true,
-                strutStyle: StrutStyle(
-                  fontFamily: _codeBaseStyle.fontFamily,
-                  fontSize:   _fontSize,
-                  height:     _lineHeight,
-                  forceStrutHeight: true,
-                ),
-                style: _codeBaseStyle.copyWith(
-                  color:      Colors.transparent, 
-                ),
-                cursorHeight: 20, 
-                cursorColor:  AppTheme.cyan,
-                cursorWidth:  2,
-                keyboardType: TextInputType.multiline,
-                decoration:   const InputDecoration(
-                  border:         InputBorder.none,
-                  contentPadding: EdgeInsets.only(left: _padding, top: _padding),
-                  isCollapsed:    true,
-                  filled:         false, // IMPORTANTE: Evita que el fondo del tema tape el código
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+  Widget _buildTextField() {
+    return TextField(
+      controller: widget.controller,
+      focusNode: _focusNode,
+      scrollController: _scrollController,
+      maxLines: null,
+      expands: true,
+      textAlignVertical: TextAlignVertical.top,
+      autocorrect: false,
+      enableSuggestions: false,
+      style: _codeBaseStyle,
+      cursorColor: AppTheme.cyan,
+      cursorWidth: 2,
+      keyboardType: TextInputType.multiline,
+      decoration: const InputDecoration(
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.all(_padding),
+        isCollapsed: true,
+        filled: false,
+      ),
     );
   }
-
-  // ── Números de línea ─────────────────────────────────────────────────────
 
   Widget _buildLineNumbers() {
     return SizedBox(
@@ -356,28 +310,30 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
       child: ValueListenableBuilder<TextEditingValue>(
         valueListenable: widget.controller,
         builder: (context, value, _) {
-          final lines     = value.text.split('\n');
+          final lines = value.text.split('\n');
           final errorLine = _result.errorLine;
           return ListView.builder(
-            controller:  _lineScrollCtrl,
-            physics:     const NeverScrollableScrollPhysics(),
-            padding:     const EdgeInsets.only(top: _padding),
-            itemCount:   lines.length,
+            controller: _lineScrollCtrl,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(top: _padding),
+            itemCount: lines.length,
             itemBuilder: (_, i) {
-              final num     = i + 1;
+              final num = i + 1;
               final isError = errorLine != null && num == errorLine;
               return SizedBox(
                 height: _lineH,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  color: isError ? AppTheme.red.withValues(alpha: 0.12) : Colors.transparent,
+                  color: isError
+                      ? AppTheme.red.withValues(alpha: 0.12)
+                      : Colors.transparent,
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 8),
                   child: Text(
                     '$num',
                     style: _codeBaseStyle.copyWith(
-                      fontSize:   12,
-                      color:      isError ? AppTheme.red : AppTheme.comment,
+                      fontSize: 12,
+                      color: isError ? AppTheme.red : AppTheme.comment,
                       fontWeight: isError ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
