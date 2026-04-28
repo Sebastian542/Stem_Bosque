@@ -32,7 +32,7 @@ class _IDEScreenState extends State<IDEScreen> {
   bool         _compiledSuccess  = false;
   OverlayEntry? _confettiOverlay;
   List<String> _compiledLines  = []; // comandos expandidos post-compilación
-  String?      _compiledFilePath;          // ruta del compilado.sb guardado
+  String?      _compiledFilePath;          // ruta del compilado.txt guardado
 
   // ── Bluetooth UI ─────────────────────────────────────────────
   
@@ -173,14 +173,14 @@ FIN PROGRAMA''';
     }
 
     final currentName = _fm.currentFilePath != null
-        ? _fm.currentFilePath!.split('/').last.replaceAll('.sb', '')
+        ? _fm.currentFilePath!.split('/').last.replaceAll('.txt', '')
         : 'mi_programa';
 
     final nameCtrl = TextEditingController(text: currentName);
 
     final confirmed = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.currentLine,
         title: const Row(children: [
@@ -200,7 +200,7 @@ FIN PROGRAMA''';
               style: const TextStyle(color: AppTheme.foreground),
               onSubmitted: (_) => Navigator.of(ctx).pop(true),
               decoration: InputDecoration(
-                suffixText: '.sb',
+                suffixText: '.txt',
                 suffixStyle: const TextStyle(color: AppTheme.comment),
                 filled: true,
                 fillColor: AppTheme.background,
@@ -221,7 +221,7 @@ FIN PROGRAMA''';
 
     if (confirmed == true && nameCtrl.text.isNotEmpty && mounted) {
       final name = nameCtrl.text.trim();
-      final fullName = name.endsWith('.sb') ? name : '$name.sb';
+      final fullName = name.endsWith('.txt') ? name : '$name.txt';
       await _fm.saveToFile(_codeController.text, customFileName: fullName);
       setState(() {});
     }

@@ -12,7 +12,7 @@ class FileManager {
   static final FileManager instance = FileManager._internal();
   FileManager._internal();
 
-  static const String _autoSaveFileName = 'stembosque_current_program.sb';
+  static const String _autoSaveFileName = 'stembosque_current_program.txt';
 
   String? currentFilePath;
   String? lastSavedContent;
@@ -31,37 +31,37 @@ class FileManager {
 
   /// Guarda el archivo. En PC/Web abre un selector para elegir ubicación (Windows Explorer).
   Future<bool> saveToFile(String content, {String? customFileName}) async {
-    if (kIsWeb) {
-      downloadWebFile(content, customFileName ?? 'programa.sb');
-      return true;
-    }
+    try {
+      if (kIsWeb) {
+        downloadWebFile(content, customFileName ?? 'programa.txt');
+        return true;
+      }
 
-    if (defaultTargetPlatform == TargetPlatform.windows || 
-        defaultTargetPlatform == TargetPlatform.linux || 
-        defaultTargetPlatform == TargetPlatform.macOS) {
-      
-      // En PC, si saveFile falla, usamos pickDirectory como el flujo de abrir
-      String? selectedDirectory = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: 'Selecciona la carpeta para guardar tu programa',
-      );
+      if (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        // En PC, intentamos abrir el selector de carpetas
+        String? selectedDirectory;
+        try {
+          selectedDirectory = await FilePicker.platform.getDirectoryPath(
+            dialogTitle: 'Selecciona la carpeta para guardar tu programa',
+          );
+        } catch (e) {
+          debugPrint('Error al abrir selector de carpetas: $e');
+          return false;
+        }
 
-      if (selectedDirectory == null) return false;
+        if (selectedDirectory == null) return false;
 
-      try {
-        final fileName = customFileName ?? 'programa.sb';
+        final fileName = customFileName ?? 'programa.txt';
         final file = File('$selectedDirectory/$fileName');
         await file.writeAsString(content);
         currentFilePath = file.path;
         lastSavedContent = content;
         return true;
-      } catch (e) {
-        debugPrint('Error guardando en PC: $e');
-        return false;
       }
-    }
 
-    // Caso Android (Original)
-    try {
+      // Caso Android/Otros
       final dir = await getAppDirectory();
       final fileName = customFileName ?? _autoSaveFileName;
       final filePath = '${dir.path}/$fileName';
@@ -69,11 +69,11 @@ class FileManager {
       final file = File(filePath);
       await file.writeAsString(content);
 
-      currentFilePath  = filePath;
+      currentFilePath = filePath;
       lastSavedContent = content;
       return true;
     } catch (e) {
-      debugPrint('Error al guardar en Android: $e');
+      debugPrint('Error general en saveToFile: $e');
       return false;
     }
   }
@@ -142,7 +142,7 @@ class FileManager {
     
     try {
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/${fileName ?? 'programa.sb'}');
+      final file = File('${dir.path}/${fileName ?? 'programa.txt'}');
       await file.writeAsString(content);
       await Share.shareXFiles([XFile(file.path)], subject: 'Programa StemBosque');
     } catch (e) {
@@ -154,7 +154,7 @@ class FileManager {
     if (kIsWeb) return null;
     try {
       final dir  = await getAppDirectory();
-      final file = File('${dir.path}/compilado.sb');
+      final file = File('${dir.path}/compilado.txt');
       await file.writeAsString(content);
       return file.path;
     } catch (e) {
@@ -166,7 +166,7 @@ class FileManager {
     if (kIsWeb) return;
     try {
       final dir  = await getAppDirectory();
-      final file = File('${dir.path}/compilado.sb');
+      final file = File('${dir.path}/compilado.txt');
       if (await file.exists()) await file.delete();
     } catch (_) {}
   }
