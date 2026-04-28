@@ -3,7 +3,7 @@ name: CI/CD Flutter Web & Android
 on:
   push:
     branches:
-      - aleja
+      - Sebastian
       - main
 
 permissions:
@@ -24,13 +24,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 2. Sincronizar aleja con main (Solo si el push fue en aleja)
-        if: github.ref == 'refs/heads/aleja'
+      - name: 2. Sincronizar Sebastian con main (Solo si el push fue en Sebastian)
+        if: github.ref == 'refs/heads/Sebastian'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git checkout main
-          git merge -X theirs aleja
+          git merge -X theirs Sebastian
           git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
