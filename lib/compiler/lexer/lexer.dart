@@ -21,6 +21,9 @@ class AnalizadorLexico {
     'ENTONCES': TipoToken.ENTONCES,
     'REPETIR':  TipoToken.REPETIR,
     'VECES':    TipoToken.VECES,
+    'SEN':  TipoToken.SEN,
+    'COS':  TipoToken.COS,
+    'TANG': TipoToken.TANG,
   };
 
   // NUEVO: mapa de palabras en minúsculas/mixtas → corrección
@@ -128,12 +131,21 @@ class AnalizadorLexico {
           tokens.add(Token(TipoToken.CORCHETE_DER, ']', _linea));
           _pos++;
           break;
+        case '(':
+          tokens.add(Token(TipoToken.PARENTESIS_IZQ, '(', _linea));
+          _pos++;
+          break;
+        case ')':
+          tokens.add(Token(TipoToken.PARENTESIS_DER, ')', _linea));
+          _pos++;
+          break;
         default:
         // ANTES: throw ErrorLexico('Carácter inesperado "$ch" en línea $_linea');
         // AHORA: mensaje amigable
           throw ErrorLexico(
-              '😕 ¡Ups! En la línea $_linea hay un símbolo que no entiendo: "$ch"\n'
-                  '💡 Revisa que no hayas escrito un símbolo raro o un espacio de más.'
+              '❌ Línea $_linea: El símbolo "$ch" no es válido en este lenguaje.\n'
+                  '👉 Revisa si copiaste texto de otro lado o escribiste un símbolo por error.\n'
+                  '   Solo se permiten letras, números y estos símbolos: = == < > : [ ] ( ) " /'
           );
       }
     }
@@ -163,8 +175,10 @@ class AnalizadorLexico {
     if (_pos >= fuente.length) {
       // ANTES: throw ErrorLexico('Cadena sin cerrar, línea $_linea');
       throw ErrorLexico(
-          '😕 En la línea $_linea abriste unas comillas " pero nunca las cerraste.\n'
-              '💡 Asegúrate de que el nombre del programa esté entre comillas: "Mi programa"'
+          '❌ Línea $_linea: Abriste comillas " pero nunca las cerraste.\n'
+              '👉 El nombre del programa debe estar entre comillas dobles:\n'
+              '   PROGRAMA "Mi robot explorador"\n'
+              '   Asegúrate de tener la comilla de cierre al final del nombre.'
       );
     }
     _pos++;

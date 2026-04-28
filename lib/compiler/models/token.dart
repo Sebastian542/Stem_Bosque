@@ -21,6 +21,12 @@ enum TipoToken {
   DOS_PUNTOS,
   CORCHETE_IZQ,
   CORCHETE_DER,
+  //Expresiones aritmeticas
+  SEN,
+  COS,
+  TANG,
+  PARENTESIS_IZQ,
+  PARENTESIS_DER,
   // Fin de archivo
   FIN_ARCHIVO,
 }

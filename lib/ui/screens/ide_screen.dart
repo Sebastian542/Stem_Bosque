@@ -1,47 +1,48 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
-
-import 'package:android_intent_plus/android_intent.dart';
 
 import '../../bluetooth/bluetooth_manager.dart';
 import '../../compiler/compiler.dart';
 import '../../services/file_manager.dart';
+import '../theme/app_theme.dart';
 import '../widgets/bluetooth_panel.dart';
 import '../widgets/code_editor_validated.dart';
-import '../widgets/execution_console.dart';
+import '../widgets/toolbar.dart';
 import '../widgets/ide_drawer.dart';
-import '../theme/app_theme.dart';
+import '../widgets/confetti_widget.dart';
+import 'simulation_screen.dart';
+import '../widgets/vampirito_pet.dart';
+import 'dart:async';
 
 class IDEScreen extends StatefulWidget {
-  const IDEScreen({Key? key}) : super(key: key);
+  const IDEScreen({super.key});
 
   @override
   State<IDEScreen> createState() => _IDEScreenState();
 }
 
 class _IDEScreenState extends State<IDEScreen> {
-
-  // ── Servicios ────────────────────────────────────────────────
-
-  final _bt   = BluetoothManager();
-  final _fm   = FileManager();
+  final _bt = BluetoothManager();
+  final _fm = FileManager();
 
   // ── Editor ───────────────────────────────────────────────────
-  final _codeController = TextEditingController();
-  bool         _isRunning     = false;
-  bool         _codeIsValid   = false;
-  bool         _showConsole   = false;
-  bool         _execSuccess   = false;
-  String?      _execError;
-  List<String> _execLines     = [];
-  List<String> _compiledLines  = []; // comandos expandidos post-compilación
-  String?      _compiledFilePath;          // ruta del compilado.txt guardado
+  final _codeController = CodeEditorController();
+  bool         _isRunning       = false;
+  bool         _codeIsValid     = false;
+  bool         _compiledSuccess = false;
+  OverlayEntry? _confettiOverlay;
+  OverlayEntry? _vampiritoOverlay;
+  bool          _vampiritoAnimating = false;
+  List<String> _compiledLines   = [];
+  String?      _compiledFilePath;
+  String?      _lastErrorMessage;
+  bool _isTyping = false;
+  Timer? _typingTimer;
 
   // ── Bluetooth UI ─────────────────────────────────────────────
   bool _bluetoothEnabled   = false;
   bool _showBluetoothPanel = false;
-  List<UnifiedBluetoothDevice> _discoveredDevices = [];
+  final List<UnifiedBluetoothDevice> _discoveredDevices = [];
 
   bool get _isScanning    => _bt.isScanning;
   bool get _isConnecting  => _bt.isConnecting;
@@ -80,12 +81,33 @@ FIN PROGRAMA''';
     _codeController.text = _sampleCode;
     _bt.init(_btCallbacks);
     _loadAutoSaved();
+    _codeController.addListener(_onCodeChanged);
+  }
+
+  void _onCodeChanged() {
+    _typingTimer?.cancel();
+    setState(() => _isTyping = true);
+    _typingTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _isTyping = false);
+    });
+    if (_compiledSuccess) {
+      setState(() {
+        _compiledSuccess  = false;
+        _compiledLines    = [];
+        _compiledFilePath = null;
+        _lastErrorMessage = null;
+      });
+    }
   }
 
   @override
   void dispose() {
     _codeController.dispose();
     _bt.dispose();
+    _confettiOverlay?.remove();
+    _codeController.removeListener(_onCodeChanged);
+    _typingTimer?.cancel();
+    _vampiritoOverlay?.remove();
     super.dispose();
   }
 
@@ -148,8 +170,7 @@ FIN PROGRAMA''';
         title: const Row(children: [
           Icon(Icons.save, color: AppTheme.purple),
           SizedBox(width: 12),
-          Text('Guardar archivo',
-              style: TextStyle(color: AppTheme.foreground)),
+          Text('Guardar archivo', style: TextStyle(color: AppTheme.foreground)),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -218,7 +239,9 @@ FIN PROGRAMA''';
             Icon(saved ? Icons.check_circle : Icons.error,
                 color: saved ? AppTheme.green : AppTheme.red),
             const SizedBox(width: 12),
-            Text(saved ? 'Guardado como "$fullName"' : 'Error al guardar'),
+            Text(saved
+                ? 'Guardado como "$fullName"'
+                : 'Error al guardar'),
           ]),
           backgroundColor: AppTheme.currentLine,
           duration: const Duration(seconds: 2),
@@ -239,8 +262,7 @@ FIN PROGRAMA''';
           title: const Row(children: [
             Icon(Icons.folder_open, color: AppTheme.orange),
             SizedBox(width: 12),
-            Text('Sin archivos',
-                style: TextStyle(color: AppTheme.foreground)),
+            Text('Sin archivos', style: TextStyle(color: AppTheme.foreground)),
           ]),
           content: const Text(
             'No hay archivos guardados todavía.\nUsa "Guardar archivo" para crear uno.',
@@ -249,8 +271,7 @@ FIN PROGRAMA''';
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Entendido',
-                  style: TextStyle(color: AppTheme.cyan)),
+              child: const Text('Entendido', style: TextStyle(color: AppTheme.cyan)),
             ),
           ],
         ),
@@ -269,8 +290,7 @@ FIN PROGRAMA''';
           title: const Row(children: [
             Icon(Icons.folder_open, color: AppTheme.cyan),
             SizedBox(width: 12),
-            Text('Abrir archivo',
-                style: TextStyle(color: AppTheme.foreground)),
+            Text('Abrir archivo', style: TextStyle(color: AppTheme.foreground)),
           ]),
           content: SizedBox(
             width: double.maxFinite,
@@ -303,8 +323,7 @@ FIN PROGRAMA''';
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(fileName,
                                   style: const TextStyle(
@@ -317,8 +336,7 @@ FIN PROGRAMA''';
                               Text(
                                 '${(stat.size / 1024).toStringAsFixed(1)} KB  •  ${_fm.formatDate(stat.modified)}',
                                 style: const TextStyle(
-                                    color: AppTheme.comment,
-                                    fontSize: 10),
+                                    color: AppTheme.comment, fontSize: 10),
                               ),
                             ],
                           ),
@@ -396,7 +414,7 @@ FIN PROGRAMA''';
     );
 
     if (selected != null && mounted) {
-      final content = await selected.readAsString();
+      final content        = await selected.readAsString();
       _fm.currentFilePath  = selected.path;
       _fm.lastSavedContent = content;
       setState(() => _codeController.text = content);
@@ -414,10 +432,8 @@ FIN PROGRAMA''';
             style: TextStyle(color: AppTheme.foreground)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppTheme.comment)),
-          ),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar')),
           TextButton(
             onPressed: () {
               _codeController.clear();
@@ -425,22 +441,18 @@ FIN PROGRAMA''';
               setState(() {});
               Navigator.pop(ctx);
             },
-            child: const Text('Limpiar',
-                style: TextStyle(color: AppTheme.red)),
+            child: const Text('Limpiar', style: TextStyle(color: AppTheme.red)),
           ),
         ],
       ),
     );
   }
 
-  // _shareFile: sin cambios, comparte el código fuente tal cual
   Future<void> _shareFile() async {
     if (_fm.hasUnsavedChanges(_codeController.text)) {
       await _fm.saveToFile(_codeController.text);
     }
     if (_fm.currentFilePath == null) return;
-    final file = File(_fm.currentFilePath!);
-    if (!await file.exists()) return;
     await _fm.share(_fm.currentFilePath!);
   }
 
@@ -451,66 +463,43 @@ FIN PROGRAMA''';
   Future<void> _executeProgram() async {
     if (_isRunning || !_codeIsValid) return;
     setState(() => _isRunning = true);
+
     try {
-      final r = Compilador().compilar(_codeController.text);
+      final r        = Compilador().compilar(_codeController.text);
+      final compiled = r.exito
+          ? (r.salidaEjecucion ?? [])
+          .where((l) =>
+      l.trim().startsWith('GIRAR') ||
+          l.trim().startsWith('AVANZAR'))
+          .toList()
+          : <String>[];
+
       setState(() {
-        _showConsole   = true;
-        _execSuccess   = r.exito;
-        _execError     = r.error;
-        _execLines     = r.salidaEjecucion ?? [];
-        // Guardar solo GIRAR/AVANZAR expandidos para el envío
-        _compiledLines = r.exito
-            ? (r.salidaEjecucion ?? [])
-            .where((l) {
-          final t = l.trim();
-          return t.startsWith('GIRAR') || t.startsWith('AVANZAR');
-        })
-            .toList()
-            : [];
+        _compiledSuccess = r.exito;
+        _compiledLines   = r.exito ? List<String>.from(compiled) : [];
       });
-      // Guardar compilado en archivo (reemplaza el anterior)
+
       if (r.exito && _compiledLines.isNotEmpty) {
         await _fm.deleteCompiled();
         _compiledFilePath = await _fm.saveCompiled(_compiledLines.join('\n'));
-      } else {
-        _compiledFilePath = null;
+        _launchVampiritoAnimation(success: true);
+      } else if (!r.exito) {
+        _launchVampiritoAnimation(success: false, errorMsg: r.error);
       }
     } catch (e) {
-      setState(() {
-        _showConsole   = true;
-        _execSuccess   = false;
-        _execError     = e.toString();
-        _execLines     = [];
-        _compiledLines    = [];
-        _compiledFilePath = null;
-      });
+      debugPrint(e.toString());
     } finally {
       setState(() => _isRunning = false);
     }
   }
 
-  // _sendProgram: comparte compilado.txt (Bluetooth aparece en el share sheet)
   Future<void> _sendProgram() async {
     if (_compiledLines.isEmpty || _compiledFilePath == null) return;
-
     if (!_bluetoothEnabled) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Row(children: [
-          Icon(Icons.bluetooth_disabled, color: Colors.white),
-          SizedBox(width: 12),
-          Flexible(child: Text('Debes encender el Bluetooth para enviar el programa.')),
-        ]),
-        backgroundColor: Colors.redAccent,
-        duration: Duration(seconds: 3),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enciende el Bluetooth primero')));
       return;
     }
-
-    final file = File(_compiledFilePath!);
-    if (!await file.exists()) return;
-
-    // Compartir el .txt real — Bluetooth lo recibe como archivo, no como HTML
     await _fm.share(_compiledFilePath!);
   }
 
@@ -524,57 +513,28 @@ FIN PROGRAMA''';
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Text('StemBosque IDE'),
-            if (unsaved) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.orange,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text('Sin guardar',
-                    style: TextStyle(
-                        fontSize: 10, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ],
-        ),
-        centerTitle: false,
-        leading: Builder(
-          builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
-          ),
-        ),
+        title: const Text('StemBosque IDE'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ElevatedButton.icon(
-              onPressed:
-              (_codeIsValid && !_isRunning) ? _executeProgram : null,
-              icon: _isRunning
-                  ? const SizedBox(
-                  width: 16, height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                    AlwaysStoppedAnimation<Color>(Colors.white),
-                  ))
-                  : const Icon(Icons.play_arrow, size: 20),
-              label: Text(_isRunning ? 'Ejecutando...' : 'Ejecutar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: (_codeIsValid && !_isRunning)
-                    ? AppTheme.green
-                    : AppTheme.comment,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+          if (unsaved)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.orange.withAlpha(50),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.orange),
+                  ),
+                  child: const Text('SIN GUARDAR',
+                      style: TextStyle(
+                          color: AppTheme.orange,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
+                ),
               ),
             ),
-          ),
         ],
       ),
       drawer: IDEDrawer(
@@ -588,53 +548,138 @@ FIN PROGRAMA''';
         onShareFile:       _shareFile,
         onToggleBluetooth: () => _bt.toggleBluetooth(),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          if (_showBluetoothPanel)
-            BluetoothPanel(
-              bluetoothEnabled: _bluetoothEnabled,
-              isScanning:       _isScanning,
-              isConnecting:     _isConnecting,
-              devices:          _discoveredDevices,
-              connectedDevice:  _connectedDevice,
-              onToggle:         _toggleBluetoothPanel,
-              onToggleBluetooth: () => _bt.toggleBluetooth(),
-              onStartScan:      _startScan,
-              onStopScan:       _stopScan,
-              onOpenSettings:   () => _bt.openSettings(),
-              onDisconnect:     () => _bt.disconnect(_btCallbacks),
-              onConnect:        (d) => _bt.connect(d, _btCallbacks),
+          SafeArea(
+            child: Column(
+              children: [
+                Toolbar(
+                  onRun:     _executeProgram,
+                  onClear:   _clearCode,
+                  onOpen:    _openFile,
+                  onSave:    _saveWithName,
+                  isRunning: _isRunning,
+                ),
+                if (_showBluetoothPanel)
+                  BluetoothPanel(
+                    bluetoothEnabled:  _bluetoothEnabled,
+                    isScanning:        _isScanning,
+                    isConnecting:      _isConnecting,
+                    devices:           _discoveredDevices,
+                    connectedDevice:   _connectedDevice,
+                    onToggle:          _toggleBluetoothPanel,
+                    onToggleBluetooth: () => _bt.toggleBluetooth(),
+                    onStartScan:       _startScan,
+                    onStopScan:        _stopScan,
+                    onOpenSettings:    () => _bt.openSettings(),
+                    onDisconnect:      () => _bt.disconnect(_btCallbacks),
+                    onConnect:         (d) => _bt.connect(d, _btCallbacks),
+                  ),
+                Expanded(
+                  child: ValidatedCodeEditor(
+                    controller: _codeController,
+                    onValidityChanged: (isValid, errorMsg) => setState(() {
+                      _codeIsValid      = isValid;
+                      _lastErrorMessage = errorMsg;
+                    }),
+                  ),
+                ),
+                if (_compiledSuccess)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    color: AppTheme.currentLine.withAlpha(100),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SimulationScreen(commands: _compiledLines),
+                              ),
+                            ),
+                            icon:  const Icon(Icons.play_circle_fill),
+                            label: const Text('SIMULAR'),
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.purple),
+                          ),
+                        ),
+                        if (_bluetoothEnabled) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _sendProgram,
+                              icon:  const Icon(Icons.send_rounded),
+                              label: const Text('ENVIAR'),
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.cyan),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
             ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, anim) => SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1, 0),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
-              ),
-              child: _showConsole
-                  ? ExecutionConsole(
-                key: const ValueKey('console'),
-                lines:        _execLines,
-                isSuccess:    _execSuccess,
-                errorMessage: _execError,
-                onSend:       _sendProgram,
-                onClose: () => setState(() => _showConsole = false),
-              )
-                  : ValidatedCodeEditor(
-                key: const ValueKey('editor'),
-                controller: _codeController,
-                onValidityChanged: (v) =>
-                    setState(() => _codeIsValid = v),
+          ),
+
+          // ── Vampirito ─────────────────────────────────────────────
+          Positioned(
+            right:  16,
+            bottom: _compiledSuccess ? 88 : 20,
+            child: AnimatedOpacity(
+              opacity:  _vampiritoAnimating ? 0.0 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              child: VampiritoPet(
+                isTyping:     _isTyping,
+                state:        _isRunning
+                    ? VampiritoState.running
+                    : _compiledSuccess
+                    ? VampiritoState.success
+                    : !_codeIsValid && _codeController.text.trim().isNotEmpty
+                    ? VampiritoState.error
+                    : _codeController.text.trim().isNotEmpty
+                    ? VampiritoState.watching
+                    : VampiritoState.idle,
+                errorMessage: _lastErrorMessage,
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // HELPERS
+  // ─────────────────────────────────────────────────────────────
+
+  void _launchVampiritoAnimation({
+    required bool success,
+    String? errorMsg,
+  }) {
+    _vampiritoOverlay?.remove();
+    _vampiritoOverlay = null;
+    setState(() => _vampiritoAnimating = true);
+
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => VampiritoExecutionAnimation(
+        success:      success,
+        errorMessage: errorMsg,
+        onComplete: () {
+          entry.remove();
+          _vampiritoOverlay = null;
+          if (mounted) {
+            setState(() => _vampiritoAnimating = false);
+            if (success) _launchConfetti();
+          }
+        },
+      ),
+    );
+    _vampiritoOverlay = entry;
+    overlay.insert(entry);
   }
 
   void _startScan() {
@@ -645,5 +690,20 @@ FIN PROGRAMA''';
   void _stopScan() {
     _bt.stopScan();
     setState(() {});
+  }
+
+  void _launchConfetti() {
+    _confettiOverlay?.remove();
+    _confettiOverlay = null;
+
+    final overlay = Overlay.of(context);
+    final entry   = OverlayEntry(builder: (_) => ConfettiWidget());
+    _confettiOverlay = entry;
+    overlay.insert(entry);
+
+    Future.delayed(const Duration(milliseconds: 3500), () {
+      entry.remove();
+      if (_confettiOverlay == entry) _confettiOverlay = null;
+    });
   }
 }

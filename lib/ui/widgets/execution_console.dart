@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../screens/simulation_screen.dart';
 
 class ExecutionConsole extends StatefulWidget {
   final List<String> lines;
+  final List<String> compiledLines;
   final bool         isSuccess;
   final String?      errorMessage;
   final VoidCallback onSend;
   final VoidCallback onClose;
 
   const ExecutionConsole({
-    Key? key,
+    super.key,
     required this.lines,
+    required this.compiledLines,
     required this.isSuccess,
     this.errorMessage,
     required this.onSend,
-    required this.onClose,
-  }) : super(key: key);
+    required this.onClose
+
+  });
 
   @override
   State<ExecutionConsole> createState() => _ExecutionConsoleState();
@@ -109,9 +113,9 @@ class _ExecutionConsoleState extends State<ExecutionConsole>
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color:        AppTheme.red.withOpacity(0.08),
+                  color:        AppTheme.red.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border:       Border.all(color: AppTheme.red.withOpacity(0.4)),
+                  border:       Border.all(color: AppTheme.red.withValues(alpha: 0.4)),
                 ),
                 child: Text(
                   clean,
@@ -165,7 +169,7 @@ class _ExecutionConsoleState extends State<ExecutionConsole>
   Widget _buildFooter() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color:  AppTheme.currentLine,
         border: Border(top: BorderSide(color: AppTheme.comment, width: 1)),
       ),
@@ -176,11 +180,29 @@ class _ExecutionConsoleState extends State<ExecutionConsole>
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
-              'Programa ejecutado exitosamente. ¿Desea enviarlo?',
+              'Programa ejecutado exitosamente.',
               style: TextStyle(color: AppTheme.green, fontSize: 13),
             ),
           ),
           const SizedBox(width: 12),
+          // ── NUEVO: Botón Simulación ──
+          ElevatedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SimulationScreen(commands: widget.compiledLines),
+              ),
+            ),
+            icon:  const Icon(Icons.play_circle_outline, size: 18),
+            label: const Text('Simulación'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.cyan,
+              foregroundColor: AppTheme.background,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // ── Sin cambios: Botón Enviar ──
           ElevatedButton.icon(
             onPressed: widget.onSend,
             icon:  const Icon(Icons.send, size: 18),
@@ -188,8 +210,7 @@ class _ExecutionConsoleState extends State<ExecutionConsole>
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.purple,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
           ),
         ],

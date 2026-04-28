@@ -41,10 +41,10 @@ class Interprete {
       // AHORA: lanza error si la variable no fue declarada
       if (!variables.containsKey(c.identificador)) {
         throw ErrorEjecucion(
-            '😕 Estás usando la variable "${c.identificador}" en un SI, '
-                'pero nunca le diste un valor.\n'
-                '💡 Antes del SI, escribe: ${c.identificador} = 10\n'
-                '   (o el número que quieras)'
+            '❌ Línea de ejecución: La variable "${c.identificador}" se usa en SI pero nunca se le dio un valor.\n'
+                '👉 Antes del SI escribe:\n'
+                '   ${c.identificador} = 10\n'
+                '   (cambia 10 por el número que necesites)'
         );
       }
 
@@ -59,10 +59,10 @@ class Interprete {
       if (nodo.identificador != null &&
           !variables.containsKey(nodo.identificador!)) {
         throw ErrorEjecucion(
-            '😕 Estás usando la variable "${nodo.identificador}" en un REPETIR, '
-                'pero nunca le diste un valor.\n'
-                '💡 Antes del REPETIR, escribe: ${nodo.identificador} = 5\n'
-                '   (o el número de veces que quieras repetir)'
+            '❌ Línea de ejecución: La variable "${nodo.identificador}" se usa en REPETIR pero nunca se le dio un valor.\n'
+                '👉 Antes del REPETIR escribe:\n'
+                '   ${nodo.identificador} = 5\n'
+                '   (ese número será la cantidad de veces que se repite)'
         );
       }
 
@@ -73,18 +73,20 @@ class Interprete {
       // NUEVO: evitar ciclos infinitos o negativos
       if (veces <= 0) {
         throw ErrorEjecucion(
-            '😕 La variable "${nodo.identificador}" vale $veces, '
-                'pero para REPETIR necesitas un número mayor a 0.\n'
-                '💡 Cambia el valor: ${nodo.identificador} = 5'
+            '❌ La variable "${nodo.identificador}" vale $veces, pero REPETIR necesita un número mayor a 0.\n'
+                '👉 Cambia el valor de la variable antes del REPETIR:\n'
+                '   ${nodo.identificador} = 5\n'
+                '   (cualquier número mayor a cero)'
         );
       }
 
       // NUEVO: evitar que un niño ponga N=99999 y cuelgue la app
-      if (veces > 10000) {
+      if (veces > 400) {
         throw ErrorEjecucion(
-            '😕 La variable "${nodo.identificador}" vale $veces. '
-                '¡Eso es demasiadas repeticiones!\n'
-                '💡 Usa un número menor a 10,000.'
+            '❌ La variable "${nodo.identificador}" vale $veces. ¡Eso son demasiadas repeticiones!\n'
+                '👉 Usa un número menor a 400.\n'
+                '   ${nodo.identificador} = 100\n'
+                '   (por ejemplo)'
         );
       }
 
