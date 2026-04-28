@@ -93,7 +93,7 @@ class FileUtils {
 
       // Guardar con nombre por defecto
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'programa_$timestamp.sb';
+      final fileName = 'compilado_$timestamp.sb';
       final filePath = '${stemBosqueDir.path}/$fileName';
 
       final file = File(filePath);
