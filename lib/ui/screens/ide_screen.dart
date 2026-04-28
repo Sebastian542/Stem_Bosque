@@ -178,54 +178,62 @@ FIN PROGRAMA''';
 
     final nameCtrl = TextEditingController(text: currentName);
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.currentLine,
-        title: const Row(children: [
-          Icon(Icons.save, color: AppTheme.purple),
-          SizedBox(width: 12),
-          Text('Guardar archivo', style: TextStyle(color: AppTheme.foreground)),
-        ]),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Nombre del archivo:', style: TextStyle(color: AppTheme.comment, fontSize: 12)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: nameCtrl,
-              autofocus: true,
-              style: const TextStyle(color: AppTheme.foreground),
-              onSubmitted: (_) => Navigator.of(ctx).pop(true),
-              decoration: InputDecoration(
-                suffixText: '.txt',
-                suffixStyle: const TextStyle(color: AppTheme.comment),
-                filled: true,
-                fillColor: AppTheme.background,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: const BorderSide(color: AppTheme.comment),
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: true,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.currentLine,
+          title: const Row(children: [
+            Icon(Icons.save, color: AppTheme.purple),
+            SizedBox(width: 12),
+            Text('Guardar archivo', style: TextStyle(color: AppTheme.foreground)),
+          ]),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Nombre del archivo:', style: TextStyle(color: AppTheme.comment, fontSize: 12)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: nameCtrl,
+                  autofocus: true,
+                  style: const TextStyle(color: AppTheme.foreground),
+                  onSubmitted: (_) => Navigator.of(ctx).pop(true),
+                  decoration: InputDecoration(
+                    suffixText: '.txt',
+                    suffixStyle: const TextStyle(color: AppTheme.comment),
+                    filled: true,
+                    fillColor: AppTheme.background,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: const BorderSide(color: AppTheme.comment),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+            ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Guardar')),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
-          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Guardar')),
-        ],
-      ),
-    );
+      );
 
-    if (confirmed == true && nameCtrl.text.isNotEmpty && mounted) {
-      final name = nameCtrl.text.trim();
-      final fullName = name.endsWith('.txt') ? name : '$name.txt';
-      await _fm.saveToFile(_codeController.text, customFileName: fullName);
-      setState(() {});
+      if (confirmed == true && nameCtrl.text.isNotEmpty && mounted) {
+        final name = nameCtrl.text.trim();
+        final fullName = name.endsWith('.txt') ? name : '$name.txt';
+        await _fm.saveToFile(_codeController.text, customFileName: fullName);
+        if (mounted) setState(() {});
+      }
+    } finally {
+      // Pequeño retardo para evitar el error de "disposed" durante la animación de cierre
+      Future.delayed(const Duration(milliseconds: 200), () {
+        nameCtrl.dispose();
+      });
     }
-    nameCtrl.dispose();
   }
 
   Future<void> _openFile() async {
