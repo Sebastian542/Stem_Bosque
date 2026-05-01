@@ -22,8 +22,8 @@ class IDEScreen extends StatefulWidget {
 }
 
 class _IDEScreenState extends State<IDEScreen> {
-  final _bt = BluetoothManager();
-  final _fm = FileManager();
+  final _bt = BluetoothManager.instance;
+  final _fm = FileManager.instance;
 
   // ── Editor ───────────────────────────────────────────────────
   final _codeController = CodeEditorController();
@@ -547,6 +547,12 @@ FIN PROGRAMA''';
         onClearCode:       _clearCode,
         onShareFile:       _shareFile,
         onToggleBluetooth: () => _bt.toggleBluetooth(),
+        onOpenBlockMode: () {
+          // TODO: Implementar apertura de Modo Bloque
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Modo Bloque en desarrollo...")),
+          );
+        },
       ),
       body: Stack(
         children: [
