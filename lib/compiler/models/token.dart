@@ -16,7 +16,11 @@ enum TipoToken {
   ASIGNACION,   // =
   IGUAL,        // ==
   MAYOR,        // >
-  MENOR,        //
+  MENOR,        // <
+  MAS,          // +
+  MENOS,        // -
+  MULTIPLICACION, // *
+  DIVISION,     // /
   // Puntuación
   DOS_PUNTOS,
   CORCHETE_IZQ,

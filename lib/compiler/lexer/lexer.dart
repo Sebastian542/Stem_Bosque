@@ -26,18 +26,6 @@ class AnalizadorLexico {
     'TANG': TipoToken.TANG,
   };
 
-  // NUEVO: mapa de palabras en minúsculas/mixtas → corrección
-  static const Map<String, String> _correccionPalabras = {
-    'programa': 'PROGRAMA',
-    'fin':      'FIN',
-    'girar':    'GIRAR',
-    'avanzar':  'AVANZAR',
-    'si':       'SI',
-    'entonces': 'ENTONCES',
-    'repetir':  'REPETIR',
-    'veces':    'VECES',
-  };
-
   AnalizadorLexico(this.fuente);
 
   List<Token> tokenizar() {
@@ -89,19 +77,33 @@ class AnalizadorLexico {
         continue;
       }
 
-      if (ch == '-' &&
-          _pos + 1 < fuente.length &&
-          _esDigito(fuente[_pos + 1])) {
-        tokens.add(_leerNumero(negativo: true));
-        continue;
-      }
-
       if (_esLetra(ch)) {
         tokens.add(_leerPalabra());
         continue;
       }
 
       switch (ch) {
+        case '+':
+          tokens.add(Token(TipoToken.MAS, '+', _linea));
+          _pos++;
+          break;
+        case '-':
+          // Si el '-' está seguido de un dígito, se lee como número negativo
+          if (_pos + 1 < fuente.length && _esDigito(fuente[_pos + 1])) {
+            tokens.add(_leerNumero(negativo: true));
+          } else {
+            tokens.add(Token(TipoToken.MENOS, '-', _linea));
+            _pos++;
+          }
+          break;
+        case '*':
+          tokens.add(Token(TipoToken.MULTIPLICACION, '*', _linea));
+          _pos++;
+          break;
+        case '/':
+          tokens.add(Token(TipoToken.DIVISION, '/', _linea));
+          _pos++;
+          break;
         case '=':
           if (_pos + 1 < fuente.length && fuente[_pos + 1] == '=') {
             tokens.add(Token(TipoToken.IGUAL, '==', _linea));
@@ -140,12 +142,9 @@ class AnalizadorLexico {
           _pos++;
           break;
         default:
-        // ANTES: throw ErrorLexico('Carácter inesperado "$ch" en línea $_linea');
-        // AHORA: mensaje amigable
           throw ErrorLexico(
               '❌ Línea $_linea: El símbolo "$ch" no es válido en este lenguaje.\n'
-                  '👉 Revisa si copiaste texto de otro lado o escribiste un símbolo por error.\n'
-                  '   Solo se permiten letras, números y estos símbolos: = == < > : [ ] ( ) " /'
+                  '👉 Solo se permiten letras, números y símbolos básicos como +, -, *, /'
           );
       }
     }
@@ -173,13 +172,7 @@ class AnalizadorLexico {
       _pos++;
     }
     if (_pos >= fuente.length) {
-      // ANTES: throw ErrorLexico('Cadena sin cerrar, línea $_linea');
-      throw ErrorLexico(
-          '❌ Línea $_linea: Abriste comillas " pero nunca las cerraste.\n'
-              '👉 El nombre del programa debe estar entre comillas dobles:\n'
-              '   PROGRAMA "Mi robot explorador"\n'
-              '   Asegúrate de tener la comilla de cierre al final del nombre.'
-      );
+      throw ErrorLexico('❌ Línea $_linea: Abriste comillas " pero nunca las cerraste.');
     }
     _pos++;
     return Token(TipoToken.TEXTO, sb.toString(), _linea);
@@ -189,6 +182,10 @@ class AnalizadorLexico {
     final inicio = _pos;
     if (negativo) _pos++;
     while (_pos < fuente.length && _esDigito(fuente[_pos])) _pos++;
+    if (_pos < fuente.length && fuente[_pos] == '.') {
+      _pos++;
+      while (_pos < fuente.length && _esDigito(fuente[_pos])) _pos++;
+    }
     final raw = fuente.substring(inicio, _pos);
     return Token(TipoToken.NUMERO, raw, _linea);
   }
@@ -202,17 +199,11 @@ class AnalizadorLexico {
       _pos++;
     }
     final palabra = fuente.substring(inicio, _pos);
-
-    // NUEVO: si está en minúsculas/mixtas, corregir automáticamente
     final enMayusculas = palabra.toUpperCase();
-    if (_palabrasClave.containsKey(enMayusculas) &&
-        !_palabrasClave.containsKey(palabra)) {
-      // Es una palabra clave escrita en minúsculas → corregir sin error
+    if (_palabrasClave.containsKey(enMayusculas)) {
       return Token(_palabrasClave[enMayusculas]!, enMayusculas, _linea);
     }
-
-    final tipo = _palabrasClave[palabra] ?? TipoToken.IDENTIFICADOR;
-    return Token(tipo, palabra, _linea);
+    return Token(TipoToken.IDENTIFICADOR, palabra, _linea);
   }
 
   bool _esDigito(String c) =>
