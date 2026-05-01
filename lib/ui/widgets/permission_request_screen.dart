@@ -7,9 +7,9 @@ class PermissionRequestScreen extends StatefulWidget {
   final Widget child;
 
   const PermissionRequestScreen({
-    super.key,
+    Key? key,
     required this.child,
-  });
+  }) : super(key: key);
 
   @override
   State<PermissionRequestScreen> createState() => _PermissionRequestScreenState();
@@ -26,8 +26,7 @@ class _PermissionRequestScreenState extends State<PermissionRequestScreen> {
   }
 
   Future<void> _checkAndRequestPermissions() async {
-    // En la web no manejamos los permisos de esta manera, ya que el navegador
-    // gestiona el acceso a Bluetooth bajo demanda.
+    // En Web no se manejan permisos de esta forma, saltamos la verificación
     if (kIsWeb) {
       setState(() {
         _permissionsGranted = true;

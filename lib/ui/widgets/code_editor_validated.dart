@@ -1,10 +1,15 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../compiler/syntax_validator.dart';
 import '../theme/app_theme.dart';
 
-// ── Categorías de tokens para colorear ──────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// SISTEMA DE TOKENS — solo visual, no toca el compilador
+// ═══════════════════════════════════════════════════════════════════════════
 
-enum _TokenKind { keyword, command, trig, boolean, number, string, comment, identifier, other }
+enum _TokenKind {
+  keyword, command, trig, boolean, number, string, comment, identifier, other
+}
 
 class _Token {
   final String text;
@@ -12,111 +17,55 @@ class _Token {
   _Token(this.text, this.kind);
 }
 
-// ── Tokenizador de colores (léxico simplificado solo para colores) ──────────
-
 List<_Token> _tokenizeLine(String line) {
-  // Comentarios de línea
   final commentIdx = line.indexOf('//');
-  String code    = commentIdx >= 0 ? line.substring(0, commentIdx) : line;
-  String? comment = commentIdx >= 0 ? line.substring(commentIdx) : null;
+  final code    = commentIdx >= 0 ? line.substring(0, commentIdx) : line;
+  final comment = commentIdx >= 0 ? line.substring(commentIdx) : null;
 
   final tokens = <_Token>[];
-
-  // Regex para dividir: strings, números, identificadores/keywords, otros
   final re = RegExp(r'"[^"]*"|[0-9]+(?:\.[0-9]+)?|[A-Za-z_][A-Za-z0-9_]*|[^\s]|\s+');
 
   for (final m in re.allMatches(code)) {
-    final raw = m.group(0)!;
-    tokens.add(_Token(raw, _classifyToken(raw)));
+    tokens.add(_Token(m.group(0)!, _classifyToken(m.group(0)!)));
   }
-
-  if (comment != null) {
-    tokens.add(_Token(comment, _TokenKind.comment));
-  }
-
+  if (comment != null) tokens.add(_Token(comment, _TokenKind.comment));
   return tokens;
 }
 
 _TokenKind _classifyToken(String t) {
+  const structureKw = {'PROGRAMA', 'FIN', 'SI', 'ENTONCES', 'REPETIR', 'VECES'};
+  const commandKw   = {'GIRAR', 'AVANZAR'};
+  const trigKw      = {'SEN', 'COS', 'TANG'};
+  const boolKw      = {'AND', 'OR', 'NOT'};
   final up = t.toUpperCase();
 
-  // Keywords de estructura
-  const structureKw = {
-    'PROGRAMA', 'FIN', 'SI', 'ENTONCES', 'REPETIR', 'VECES',
-  };
-  // Comandos de movimiento
-  const commandKw = {'GIRAR', 'AVANZAR'};
-  // Trigonométricas
-  const trigKw = {'SEN', 'COS', 'TANG'};
-  // Booleanos
-  const boolKw = {'AND', 'OR', 'NOT'};
-
-  if (t.startsWith('"')) return _TokenKind.string;
-  if (RegExp(r'^[0-9]+(?:\.[0-9]+)?$').hasMatch(t)) return _TokenKind.number;
+  if (t.startsWith('"'))                                return _TokenKind.string;
+  if (RegExp(r'^[0-9]+(?:\.[0-9]+)?$').hasMatch(t))    return _TokenKind.number;
   if (structureKw.contains(up) && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.keyword;
-  if (commandKw.contains(up) && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.command;
-  if (trigKw.contains(up) && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.trig;
-  if (boolKw.contains(up) && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.boolean;
+  if (commandKw.contains(up)   && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.command;
+  if (trigKw.contains(up)      && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.trig;
+  if (boolKw.contains(up)      && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.boolean;
   if (RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(t)) return _TokenKind.identifier;
   return _TokenKind.other;
 }
 
 Color _colorFor(_TokenKind kind) {
   switch (kind) {
-    case _TokenKind.keyword:    return AppTheme.pink;       // PROGRAMA, FIN, SI, ENTONCES, REPETIR, VECES
-    case _TokenKind.command:    return AppTheme.cyan;       // GIRAR, AVANZAR
-    case _TokenKind.trig:       return AppTheme.orange;     // SEN, COS, TANG
-    case _TokenKind.boolean:    return AppTheme.purple;     // AND, OR, NOT
-    case _TokenKind.number:     return AppTheme.purple;     // números
-    case _TokenKind.string:     return AppTheme.yellow;     // "texto"
-    case _TokenKind.comment:    return AppTheme.comment;    // // comentario
-    case _TokenKind.identifier: return AppTheme.green;      // variables
-    case _TokenKind.other:      return AppTheme.foreground; // operadores, puntuación
+    case _TokenKind.keyword:    return AppTheme.pink;
+    case _TokenKind.command:    return AppTheme.cyan;
+    case _TokenKind.trig:       return AppTheme.orange;
+    case _TokenKind.boolean:    return AppTheme.purple;
+    case _TokenKind.number:     return AppTheme.purple;
+    case _TokenKind.string:     return AppTheme.yellow;
+    case _TokenKind.comment:    return AppTheme.comment;
+    case _TokenKind.identifier: return AppTheme.green;
+    case _TokenKind.other:      return AppTheme.foreground;
   }
 }
 
-// ── Construye un TextSpan coloreado para una línea ──────────────────────────
-
-TextSpan _buildLineSpan(String line, {bool isError = false}) {
-  if (isError) {
-    // Línea de error: fondo rojo suave, texto rojo
-    return TextSpan(
-      text: line,
-      style: TextStyle(
-        color:               AppTheme.red,
-        decoration:          TextDecoration.underline,
-        decorationColor:     AppTheme.red,
-        decorationStyle:     TextDecorationStyle.wavy,
-        decorationThickness: 2,
-      ),
-    );
-  }
-
-  final tks = _tokenizeLine(line);
-  return TextSpan(
-    children: tks.map((tk) {
-      final isBold = tk.kind == _TokenKind.keyword || tk.kind == _TokenKind.command;
-      return TextSpan(
-        text:  tk.text,
-        style: TextStyle(
-          color:      _colorFor(tk.kind),
-          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-          fontFamily: AppTheme.codeStyle.fontFamily,
-        ),
-      );
-    }).toList(),
-  );
-}
-
-// ── Sugerencias ─────────────────────────────────────────────────────────────
-
-const _palabrasClave = [
-  'PROGRAMA', 'FIN PROGRAMA', 'FIN REPETIR', 'FIN SI',
-  'AVANZAR', 'GIRAR', 'REPETIR', 'VECES', 'SI', 'ENTONCES', 'FIN',
-  'AND', 'OR', 'NOT', 'SEN', 'COS', 'TANG',
-];
-
-// ── Controlador Personalizado para Resaltado de Sintaxis ─────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTROLADOR CON RESALTADO DE SINTAXIS
+// ═══════════════════════════════════════════════════════════════════════════
 
 class CodeEditorController extends TextEditingController {
   @override
@@ -129,56 +78,78 @@ class CodeEditorController extends TextEditingController {
     final children = <TextSpan>[];
 
     for (int i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      // Aquí podríamos integrar el errorLine si lo pasamos al controlador, 
-      // pero por simplicidad de la refactorización usaremos el tokenizador base.
-      children.add(_buildLineSpan(line));
-      if (i < lines.length - 1) {
-        children.add(const TextSpan(text: '\n'));
-      }
+      final tks = _tokenizeLine(lines[i]);
+      children.add(TextSpan(
+        children: tks.map((tk) {
+          final bold = tk.kind == _TokenKind.keyword || tk.kind == _TokenKind.command;
+          return TextSpan(
+            text: tk.text,
+            style: TextStyle(
+              color:      _colorFor(tk.kind),
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            ),
+          );
+        }).toList(),
+      ));
+      if (i < lines.length - 1) children.add(const TextSpan(text: '\n'));
     }
 
     return TextSpan(style: style, children: children);
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// ValidatedCodeEditor
-// ════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// SUGERENCIAS
+// ═══════════════════════════════════════════════════════════════════════════
+
+const _palabrasClave = [
+  'PROGRAMA', 'FIN PROGRAMA', 'FIN REPETIR', 'FIN SI',
+  'AVANZAR', 'GIRAR', 'REPETIR', 'VECES', 'SI', 'ENTONCES', 'FIN',
+  'AND', 'OR', 'NOT', 'SEN', 'COS', 'TANG',
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WIDGET
+// ═══════════════════════════════════════════════════════════════════════════
 
 class ValidatedCodeEditor extends StatefulWidget {
   final TextEditingController controller;
-  final ValueChanged<bool> onValidityChanged;
+  final void Function(bool isValid, String? errorMessage) onValidityChanged;
 
   const ValidatedCodeEditor({
-    super.key,
+    Key? key,
     required this.controller,
     required this.onValidityChanged,
-  });
+  }) : super(key: key);
 
   @override
   State<ValidatedCodeEditor> createState() => _ValidatedCodeEditorState();
 }
 
-class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
-  final _validator = SyntaxValidator();
-  final _focusNode = FocusNode();
+class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
+    with SingleTickerProviderStateMixin {
+  final _validator        = SyntaxValidator();
+  final _focusNode        = FocusNode();
   final _scrollController = ScrollController();
-  final _lineScrollCtrl = ScrollController();
+  final _lineScrollCtrl   = ScrollController();
 
-  ValidationResult _result = const ValidationResult.valid();
-  List<String> _sugerencias = [];
+  ValidationResult _result      = const ValidationResult.valid();
+  List<String>     _sugerencias = [];
 
-  static const _fontSize = 15.0;
-  static const _lineHeight = 1.5;
-  static const _lineH = _fontSize * _lineHeight;
-  static const _padding = 12.0;
+  // ── Zoom ──────────────────────────────────────────────────────────────────
+  double _fontSize            = 14.0;
+  double _fontSizeOnScaleStart = 14.0;
+  static const double _minFontSize  = 9.0;
+  static const double _maxFontSize  = 28.0;
+  static const double _lineHeight   = 1.5;
+  double get _lineH => _fontSize * _lineHeight;
 
-  TextStyle get _codeBaseStyle => AppTheme.codeStyle.copyWith(
-        fontSize: _fontSize,
-        height: _lineHeight,
-        color: AppTheme.foreground,
-      );
+  // ── Mascota animación ─────────────────────────────────────────────────────
+  late final AnimationController _mascotBounceCtrl;
+  late final Animation<double>    _mascotBounce;
+
+  static const _fontFamily = 'monospace';
+  static const _padding    = 8.0;
 
   @override
   void initState() {
@@ -196,30 +167,30 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
     super.dispose();
   }
 
+  // ── Lógica ────────────────────────────────────────────────────────────────
+
   void _onTextChanged() {
     final result = _validator.validate(widget.controller.text);
     if (mounted) {
       setState(() => _result = result);
-      widget.onValidityChanged(result.isValid);
+      widget.onValidityChanged(result.isValid, result.isValid ? null : result.errorMessage);
     }
     _actualizarSugerencias();
   }
 
   void _actualizarSugerencias() {
-    final text = widget.controller.text;
+    final text      = widget.controller.text;
     final cursorPos = widget.controller.selection.baseOffset;
     if (cursorPos < 0 || cursorPos > text.length) {
       setState(() => _sugerencias = []);
       return;
     }
-
     final textHastaCursor = text.substring(0, cursorPos);
     final match = RegExp(r'[A-Za-z_]+$').firstMatch(textHastaCursor);
     if (match == null || match.group(0)!.length < 2) {
       setState(() => _sugerencias = []);
       return;
     }
-
     final palabraActual = match.group(0)!.toUpperCase();
     setState(() {
       _sugerencias = _palabrasClave
@@ -229,7 +200,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   }
 
   void _aplicarSugerencia(String sugerencia) {
-    final text = widget.controller.text;
+    final text      = widget.controller.text;
     final cursorPos = widget.controller.selection.baseOffset;
     if (cursorPos < 0) return;
 
@@ -243,7 +214,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
         text.substring(0, inicio) + sugerencia + text.substring(cursorPos);
     final nuevoCursor = inicio + sugerencia.length;
     widget.controller.value = TextEditingValue(
-      text: nuevoTexto,
+      text:      nuevoTexto,
       selection: TextSelection.collapsed(offset: nuevoCursor),
     );
     setState(() => _sugerencias = []);
@@ -255,55 +226,90 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
     }
   }
 
+  // ── Pinch-to-zoom ─────────────────────────────────────────────────────────
+
+  void _onScaleStart(ScaleStartDetails d) {
+    _fontSizeOnScaleStart = _fontSize;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    if (d.pointerCount < 2) return; // solo con dos dedos
+    final newSize = (_fontSizeOnScaleStart * d.scale)
+        .clamp(_minFontSize, _maxFontSize);
+    if ((newSize - _fontSize).abs() > 0.1) {
+      setState(() => _fontSize = newSize);
+    }
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final hasError = !_result.isValid && _result.errorMessage != null;
+
     return Column(
       children: [
         _buildStatusBar(),
         if (_sugerencias.isNotEmpty) _buildSuggestionBar(),
-        Expanded(child: _buildEditorArea()),
-        if (!_result.isValid && _result.errorMessage != null)
-          _buildErrorBanner(_result.errorMessage!),
+
+        // ── Área del editor con soporte de pinch-to-zoom ──────────────────
+        Expanded(
+          child: GestureDetector(
+            onScaleStart:  _onScaleStart,
+            onScaleUpdate: _onScaleUpdate,
+            child: Container(
+              color: AppTheme.background,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLineNumbers(),
+                  Container(width: 1, color: AppTheme.currentLine),
+                  Expanded(child: _buildTextField()),
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildEditorArea() {
-    return Container(
-      color: AppTheme.background,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildLineNumbers(),
-          Container(width: 1, color: AppTheme.currentLine),
-          Expanded(child: _buildTextField()),
-        ],
+  // ── TextField ─────────────────────────────────────────────────────────────
+
+  Widget _buildTextField() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: 1800,
+        child: TextField(
+          controller:       widget.controller,
+          focusNode:        _focusNode,
+          scrollController: _scrollController,
+          maxLines:         null,
+          expands:          true,
+          textAlignVertical: TextAlignVertical.top,
+          style: TextStyle(
+            fontFamily: _fontFamily,
+            fontSize:   _fontSize,
+            height:     _lineHeight,
+            color:      AppTheme.foreground,
+          ),
+          decoration: const InputDecoration(
+            border:         InputBorder.none,
+            contentPadding: EdgeInsets.only(left: _padding, top: _padding),
+            isCollapsed:    true,
+          ),
+          cursorColor:       AppTheme.cyan,
+          cursorWidth:       2,
+          keyboardType:      TextInputType.multiline,
+          autocorrect:       false,
+          enableSuggestions: false,
+        ),
       ),
     );
   }
 
-  Widget _buildTextField() {
-    return TextField(
-      controller: widget.controller,
-      focusNode: _focusNode,
-      scrollController: _scrollController,
-      maxLines: null,
-      expands: true,
-      textAlignVertical: TextAlignVertical.top,
-      autocorrect: false,
-      enableSuggestions: false,
-      style: _codeBaseStyle,
-      cursorColor: AppTheme.cyan,
-      cursorWidth: 2,
-      keyboardType: TextInputType.multiline,
-      decoration: const InputDecoration(
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.all(_padding),
-        isCollapsed: true,
-        filled: false,
-      ),
-    );
-  }
+  // ── Números de línea ──────────────────────────────────────────────────────
 
   Widget _buildLineNumbers() {
     return SizedBox(
@@ -313,49 +319,55 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
         builder: (context, value, _) {
           final lines = value.text.split('\n');
           final errorLine = _result.errorLine;
-          
-          // Calculamos la línea actual del cursor para el resaltado
-          int currentLineIndex = -1;
+
+          int currentLine = -1;
           if (value.selection.baseOffset >= 0) {
-            currentLineIndex = '\n'.allMatches(value.text.substring(0, value.selection.baseOffset)).length;
+            currentLine = '\n'
+                .allMatches(
+                value.text.substring(0, value.selection.baseOffset))
+                .length;
           }
 
           return ListView.builder(
-            controller: _lineScrollCtrl,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(top: _padding),
-            itemCount: lines.length,
+            controller:  _lineScrollCtrl,
+            physics:     const NeverScrollableScrollPhysics(),
+            padding:     const EdgeInsets.only(top: _padding),
+            itemCount:   lines.length,
             itemBuilder: (_, i) {
-              final num = i + 1;
-              final isError = errorLine != null && num == errorLine;
-              final isCurrent = i == currentLineIndex;
-              
+              final num       = i + 1;
+              final isError   = errorLine != null && num == errorLine;
+              final isCurrent = i == currentLine;
+
               return SizedBox(
                 height: _lineH,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   decoration: BoxDecoration(
                     color: isError
-                        ? AppTheme.red.withValues(alpha: 0.12)
+                        ? AppTheme.red.withOpacity(0.12)
                         : isCurrent
-                            ? AppTheme.cyan.withValues(alpha: 0.08)
-                            : Colors.transparent,
-                    border: isCurrent 
-                        ? const Border(right: BorderSide(color: AppTheme.cyan, width: 2))
+                        ? AppTheme.cyan.withOpacity(0.08)
+                        : Colors.transparent,
+                    border: isCurrent
+                        ? const Border(
+                        right: BorderSide(color: AppTheme.cyan, width: 2))
                         : null,
                   ),
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 8),
                   child: Text(
                     '$num',
-                    style: _codeBaseStyle.copyWith(
-                      fontSize: 12,
-                      color: isError 
-                          ? AppTheme.red 
-                          : isCurrent 
-                              ? AppTheme.cyan 
-                              : AppTheme.comment,
-                      fontWeight: (isError || isCurrent) ? FontWeight.bold : FontWeight.normal,
+                    style: TextStyle(
+                      fontFamily: _fontFamily,
+                      fontSize:   12,
+                      color: isError
+                          ? AppTheme.red
+                          : isCurrent
+                          ? AppTheme.cyan
+                          : AppTheme.comment,
+                      fontWeight: (isError || isCurrent)
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -379,12 +391,11 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          // Indicador de estado
           Icon(
             isEmpty  ? Icons.edit_outlined
-                : isValid ? Icons.check_circle_outline
+                : isValid ? Icons.check_circle
                 : Icons.error_outline,
-            size:  13,
+            size:  14,
             color: isEmpty  ? AppTheme.comment
                 : isValid ? AppTheme.green
                 : AppTheme.red,
@@ -393,10 +404,10 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
           Flexible(
             child: Text(
               isEmpty
-                  ? 'Listo para programar...'
+                  ? 'Escribe tu programa...'
                   : isValid
-                  ? '✓  Sin errores — listo para ejecutar'
-                  : '✗  Error${_result.errorLine != null ? ' en línea ${_result.errorLine}' : ''}',
+                  ? 'Sin errores — listo para ejecutar'
+                  : 'Error${_result.errorLine != null ? ' — línea ${_result.errorLine}' : ''}',
               style: TextStyle(
                 fontSize: 11,
                 color: isEmpty  ? AppTheme.comment
@@ -404,15 +415,20 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                     : AppTheme.red,
               ),
               overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
-          const SizedBox(width: 12),
-          // Leyenda de colores
+          const SizedBox(width: 8),
           _buildLegend(),
-          const SizedBox(width: 12),
-          // Contador de líneas
+          const SizedBox(width: 8),
+          // Indicador de zoom actual
           Text(
-            '${widget.controller.text.split('\n').length} L',
+            '${_fontSize.round()}px',
+            style: const TextStyle(fontSize: 10, color: AppTheme.comment),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '${widget.controller.text.split('\n').length}L',
             style: const TextStyle(fontSize: 11, color: AppTheme.comment),
           ),
         ],
@@ -422,51 +438,49 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
 
   Widget _buildLegend() {
     const items = [
-      ('KW', AppTheme.pink),
+      ('KW',  AppTheme.pink),
       ('CMD', AppTheme.cyan),
-      ('TRIG', AppTheme.orange),
-      ('BOOL', AppTheme.purple),
       ('NUM', AppTheme.purple),
       ('VAR', AppTheme.green),
       ('STR', AppTheme.yellow),
     ];
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: items.map((it) {
-        return Padding(
-          padding: const EdgeInsets.only(right: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8, height: 8,
-                decoration: BoxDecoration(
-                  color: it.$2,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+      children: items.map((it) => Padding(
+        padding: const EdgeInsets.only(right: 5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7, height: 7,
+              decoration: BoxDecoration(
+                color: it.$2,
+                borderRadius: BorderRadius.circular(2),
               ),
-              const SizedBox(width: 3),
-              Text(it.$1,
-                  style: TextStyle(
-                    fontSize: 9, 
-                    color: it.$2, 
-                    fontFamily: AppTheme.codeStyle.fontFamily,
-                  )),
-            ],
-          ),
-        );
-      }).toList(),
+            ),
+            const SizedBox(width: 3),
+            Text(it.$1,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: it.$2,
+                  fontFamily: _fontFamily,
+                )),
+          ],
+        ),
+      )).toList(),
     );
   }
 
-  // ── Barra de sugerencias ─────────────────────────────────────────────────
+  // ── Chips de sugerencias ──────────────────────────────────────────────────
 
   Widget _buildSuggestionBar() {
     return Container(
       height: 40,
       decoration: BoxDecoration(
         color: AppTheme.currentLine,
-        border: Border(bottom: BorderSide(color: AppTheme.cyan.withValues(alpha: 0.3))),
+        border: Border(
+          bottom: BorderSide(color: AppTheme.cyan.withOpacity(0.3)),
+        ),
       ),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
@@ -474,18 +488,17 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
         itemCount: _sugerencias.length,
         separatorBuilder: (_, __) => const SizedBox(width: 6),
         itemBuilder: (_, i) {
-          final s = _sugerencias[i];
-          // Color del chip según categoría
-          final kind = _classifyToken(s.split(' ').first);
+          final s         = _sugerencias[i];
+          final kind      = _classifyToken(s.split(' ').first);
           final chipColor = _colorFor(kind);
           return GestureDetector(
             onTap: () => _aplicarSugerencia(s),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color:        chipColor.withValues(alpha: 0.12),
+                color:        chipColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(6),
-                border:       Border.all(color: chipColor.withValues(alpha: 0.5)),
+                border:       Border.all(color: chipColor.withOpacity(0.5)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -496,8 +509,8 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                     s,
                     style: TextStyle(
                       color:      chipColor,
-                      fontFamily: AppTheme.codeStyle.fontFamily,
-                      fontSize:   12,
+                      fontFamily: _fontFamily,
+                      fontSize:   13,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -510,52 +523,64 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
     );
   }
 
-  // ── Banner de error ──────────────────────────────────────────────────────
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
 
-  Widget _buildErrorBanner(String message) {
-    String display = message
-        .replaceAll('❌ Error Léxico: ', '')
-        .replaceAll('❌ Error Sintáctico: ', '');
+// ═══════════════════════════════════════════════════════════════════════════
+// _HighlightedText — conservado por compatibilidad
+// ═══════════════════════════════════════════════════════════════════════════
 
-    if (display.length > 220) {
-      display = '${display.substring(0, 220)}...';
+class _HighlightedText extends StatelessWidget {
+  final String text;
+  final int?   errorLine;
+  final double fontSize;
+  final double lineHeight;
+  final String fontFamily;
+
+  const _HighlightedText({
+    required this.text,
+    required this.errorLine,
+    required this.fontSize,
+    required this.lineHeight,
+    required this.fontFamily,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (errorLine == null) {
+      return Text(
+        text,
+        style: TextStyle(
+          fontFamily: fontFamily,
+          fontSize:   fontSize,
+          height:     lineHeight,
+          color:      AppTheme.foreground,
+        ),
+      );
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppTheme.red.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border(
-          left: BorderSide(
-            color: AppTheme.red,
-            width: 4,
-          ),
+    final lines  = text.split('\n');
+    final spans  = <TextSpan>[];
+    final errIdx = errorLine! - 1;
+
+    for (int i = 0; i < lines.length; i++) {
+      final lineText = i < lines.length - 1 ? '${lines[i]}\n' : lines[i];
+      spans.add(TextSpan(
+        text: lineText,
+        style: TextStyle(
+          fontFamily:          fontFamily,
+          fontSize:            fontSize,
+          height:              lineHeight,
+          color:               i == errIdx ? AppTheme.red : AppTheme.foreground,
+          decoration:          i == errIdx ? TextDecoration.underline : null,
+          decorationColor:     i == errIdx ? AppTheme.red : null,
+          decorationStyle:     i == errIdx ? TextDecorationStyle.wavy : null,
+          decorationThickness: i == errIdx ? 2 : null,
         ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            color: AppTheme.red,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              display,
-              style: TextStyle(
-                color: AppTheme.red,
-                fontSize: 13,
-                fontFamily: AppTheme.codeStyle.fontFamily,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+      ));
+    }
+
+    return RichText(text: TextSpan(children: spans));
   }
 }

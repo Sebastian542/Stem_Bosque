@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import '../ast/nodes.dart';
 
 class ErrorEjecucion implements Exception {
@@ -9,7 +8,7 @@ class ErrorEjecucion implements Exception {
 }
 
 class Interprete {
-  final Map<String, double> variables = {};
+  final Map<String, int> variables = {};
   final List<String> salida = [];
 
   void ejecutar(NodoPrograma programa) {
@@ -26,124 +25,83 @@ class Interprete {
 
   void _ejecutar(Nodo nodo) {
     if (nodo is NodoAsignacion) {
-      final val = _evalArit(nodo.expresion);
-      variables[nodo.identificador] = val;
-      salida.add('${nodo.identificador} = ${_fmt(val)}');
+      variables[nodo.identificador] = nodo.numero;
+      salida.add('${nodo.identificador} = ${nodo.numero}');
 
     } else if (nodo is NodoGirar) {
-      final val = _evalArit(nodo.expresion).round();
-      salida.add('GIRAR $val');
+      salida.add('GIRAR ${nodo.numero}');
 
     } else if (nodo is NodoAvanzar) {
-      final val = _evalArit(nodo.expresion).round();
-      salida.add('AVANZAR $val');
+      salida.add('AVANZAR ${nodo.numero}');
 
     } else if (nodo is NodoCondicional) {
-      if (_evalBool(nodo.condicion)) _ejecutarLista(nodo.instrucciones);
+      final c = nodo.condicion;
+
+      // ANTES: variables[c.identificador] ?? 0  → usaba 0 si no existía
+      // AHORA: lanza error si la variable no fue declarada
+      if (!variables.containsKey(c.identificador)) {
+        throw ErrorEjecucion(
+            '❌ Línea de ejecución: La variable "${c.identificador}" se usa en SI pero nunca se le dio un valor.\n'
+                '👉 Antes del SI escribe:\n'
+                '   ${c.identificador} = 10\n'
+                '   (cambia 10 por el número que necesites)'
+        );
+      }
+
+      final valVar = variables[c.identificador]!;
+      final ok     = _evaluar(valVar, c.comparador, c.numero);
+      if (ok) _ejecutarLista(nodo.instrucciones);
 
     } else if (nodo is NodoCiclo) {
-      final veces = _evalArit(nodo.expresion).round();
+
+      // ANTES: variables[nodo.identificador!] ?? 0  → usaba 0 si no existía
+      // AHORA: lanza error si la variable no fue declarada
+      if (nodo.identificador != null &&
+          !variables.containsKey(nodo.identificador!)) {
+        throw ErrorEjecucion(
+            '❌ Línea de ejecución: La variable "${nodo.identificador}" se usa en REPETIR pero nunca se le dio un valor.\n'
+                '👉 Antes del REPETIR escribe:\n'
+                '   ${nodo.identificador} = 5\n'
+                '   (ese número será la cantidad de veces que se repite)'
+        );
+      }
+
+      final veces = nodo.identificador != null
+          ? variables[nodo.identificador!]!
+          : 1;
+
+      // NUEVO: evitar ciclos infinitos o negativos
       if (veces <= 0) {
         throw ErrorEjecucion(
-            '😕 La expresión del REPETIR dio $veces, pero necesitas un número mayor a 0.\n'
-                '💡 Revisa el valor de tus variables.'
+            '❌ La variable "${nodo.identificador}" vale $veces, pero REPETIR necesita un número mayor a 0.\n'
+                '👉 Cambia el valor de la variable antes del REPETIR:\n'
+                '   ${nodo.identificador} = 5\n'
+                '   (cualquier número mayor a cero)'
         );
       }
-      if (veces > 10000) {
+
+      // NUEVO: evitar que un niño ponga N=99999 y cuelgue la app
+      if (veces > 400) {
         throw ErrorEjecucion(
-            '😕 La expresión del REPETIR dio $veces. ¡Eso es demasiado!\n'
-                '💡 Usa un número menor a 10,000.'
+            '❌ La variable "${nodo.identificador}" vale $veces. ¡Eso son demasiadas repeticiones!\n'
+                '👉 Usa un número menor a 400.\n'
+                '   ${nodo.identificador} = 100\n'
+                '   (por ejemplo)'
         );
       }
+
       for (var i = 0; i < veces; i++) {
         _ejecutarLista(nodo.instrucciones);
       }
     }
   }
 
-  // ── Evaluación aritmética ─────────────────────────────────────
-
-  double _evalArit(NodoExpArit exp) {
-    if (exp is NodoNumero) return exp.valor;
-
-    if (exp is NodoVariable) {
-      if (!variables.containsKey(exp.nombre)) {
-        throw ErrorEjecucion(
-            '😕 La variable "${exp.nombre}" no tiene valor.\n'
-                '💡 Escribe: ${exp.nombre} = 10  antes de usarla.'
-        );
-      }
-      return variables[exp.nombre]!;
+  bool _evaluar(int a, String op, int b) {
+    switch (op) {
+      case '==': return a == b;
+      case '>':  return a > b;
+      case '<':  return a < b;
+      default:   return false;
     }
-
-    if (exp is NodoNegUnaria) return -_evalArit(exp.expresion);
-
-    if (exp is NodoFuncTrig) {
-      final arg = _evalArit(exp.argumento);
-      final rad = arg * math.pi / 180;
-      switch (exp.funcion) {
-        case 'SEN':  return math.sin(rad);
-        case 'COS':  return math.cos(rad);
-        case 'TANG':
-          if ((arg % 180) == 90) {
-            throw ErrorEjecucion(
-                '😕 TANG de ${arg.round()}° no está definida (división entre cero).\n'
-                    '💡 Usa un ángulo diferente a 90°, 270°, etc.'
-            );
-          }
-          return math.tan(rad);
-        default:
-          throw ErrorEjecucion('😕 Función trigonométrica desconocida: ${exp.funcion}');
-      }
-      // ← BUG CORREGIDO: cada case ya tiene return, el default lanza excepción
-    }
-
-    if (exp is NodoOpBinaria) {
-      final izq = _evalArit(exp.izq);
-      final der = _evalArit(exp.der);
-      switch (exp.operador) {
-        case '+': return izq + der;
-        case '-': return izq - der;
-        case '*': return izq * der;
-        case '/':
-          if (der == 0) throw ErrorEjecucion('😕 División entre cero.\n💡 Revisa el divisor.');
-          return izq / der;
-        case '%':
-          if (der == 0) throw ErrorEjecucion('😕 Módulo entre cero.\n💡 Revisa el divisor.');
-          return izq % der;
-        case '^': return math.pow(izq, der).toDouble();
-        default:
-          throw ErrorEjecucion('😕 Operador desconocido: ${exp.operador}');
-      }
-      // ← BUG CORREGIDO: default lanza excepción, Dart sabe que no hay camino sin return
-    }
-
-    throw ErrorEjecucion('😕 Expresión aritmética desconocida: ${exp.runtimeType}');
-    // ← BUG CORREGIDO: antes terminaba con 'return 0' tras los if, ahora lanza error
   }
-
-  // ── Evaluación booleana ───────────────────────────────────────
-
-  bool _evalBool(NodoExpBool exp) {
-    if (exp is NodoComparacion) {
-      final izq = _evalArit(exp.izq);
-      final der = _evalArit(exp.der);
-      switch (exp.comparador) {
-        case '==': return izq == der;
-        case '>':  return izq > der;
-        case '<':  return izq < der;
-        default:
-          throw ErrorEjecucion('😕 Comparador desconocido: ${exp.comparador}');
-      // ← BUG CORREGIDO: antes el switch no tenía return/default al final
-      }
-    }
-    if (exp is NodoNot) return !_evalBool(exp.expresion);
-    if (exp is NodoAnd) return _evalBool(exp.izq) && _evalBool(exp.der);
-    if (exp is NodoOr)  return _evalBool(exp.izq) || _evalBool(exp.der);
-
-    throw ErrorEjecucion('😕 Expresión booleana desconocida: ${exp.runtimeType}');
-  }
-
-  String _fmt(double v) =>
-      v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(4);
 }

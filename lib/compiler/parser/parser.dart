@@ -1,5 +1,6 @@
 import '../models/token.dart';
 import '../ast/nodes.dart';
+import 'dart:math' as math;
 
 class ErrorSintactico implements Exception {
   final String mensaje;
@@ -18,40 +19,153 @@ class Parser {
   bool _es(TipoToken tipo) => _actual.tipo == tipo;
 
   Token _consumir(TipoToken tipo) {
-    if (_actual.tipo != tipo) throw ErrorSintactico(_mensajeError(tipo, _actual));
+    if (_actual.tipo != tipo) {
+      throw ErrorSintactico(_mensajeError(tipo, _actual));
+    }
     return tokens[_pos++];
   }
 
   String _mensajeError(TipoToken esperado, Token encontrado) {
     final linea = encontrado.linea;
-    final enc = encontrado.valor.isEmpty ? 'el final del programa' : '"${encontrado.valor}"';
+    final encontradoStr = encontrado.valor.isEmpty
+        ? 'el final del archivo'
+        : '"${encontrado.valor}"';
+
     switch (esperado) {
       case TipoToken.PROGRAMA:
-        return '😕 Línea $linea: Tu programa debe comenzar con PROGRAMA.\n💡 Ejemplo: PROGRAMA "Mi robot"';
-      case TipoToken.FIN:
-        return '😕 Línea $linea: Falta FIN para cerrar un bloque.\n💡 Cada SI y REPETIR necesitan su FIN.';
+        return '❌ Línea $linea: El programa no empieza con PROGRAMA.\n'
+            '👉 La primera línea siempre debe ser:\n'
+            '   PROGRAMA "nombre de tu programa"';
+
       case TipoToken.TEXTO:
-        return '😕 Línea $linea: Después de PROGRAMA pon el nombre entre comillas.\n💡 Ejemplo: PROGRAMA "Mi robot"';
+        return '❌ Línea $linea: Después de PROGRAMA falta el nombre entre comillas.\n'
+            '👉 Escribe el nombre de tu programa entre comillas dobles:\n'
+            '   PROGRAMA "Mi robot"\n'
+            '   Encontré $encontradoStr en lugar del nombre.';
+
+      case TipoToken.FIN:
+      // Detectar contexto por lo que sigue
+        if (encontrado.tipo == TipoToken.FIN_ARCHIVO) {
+          return '❌ Línea $linea: El programa nunca se cerró.\n'
+              '👉 Al final de todo tu código debes escribir:\n'
+              '   FIN PROGRAMA';
+        }
+        return '❌ Línea $linea: Falta cerrar un bloque con FIN.\n'
+            '👉 Revisa que cada SI tenga su FIN SI\n'
+            '   y cada REPETIR tenga su FIN REPETIR.\n'
+            '   Encontré $encontradoStr donde esperaba FIN.';
+
+      case TipoToken.PROGRAMA when encontrado.tipo == TipoToken.FIN:
+        return '❌ Línea $linea: Escribiste FIN pero falta completar con PROGRAMA.\n'
+            '👉 Para cerrar el programa escribe exactamente:\n'
+            '   FIN PROGRAMA';
+
       case TipoToken.ENTONCES:
-        return '😕 Línea $linea: Falta ENTONCES después de la condición.\n💡 Ejemplo: SI N < 10 ENTONCES:';
+        return '❌ Línea $linea: En el SI falta escribir ENTONCES: después de la condición.\n'
+            '👉 La estructura correcta es:\n'
+            '   SI ${encontrado.valor != '' ? '[variable] [comparador] [número]' : 'N < 10'} ENTONCES:\n'
+            '     (instrucciones)\n'
+            '   FIN SI\n'
+            '   Encontré $encontradoStr donde esperaba ENTONCES.';
+
       case TipoToken.DOS_PUNTOS:
-        return '😕 Línea $linea: Falta ":" al final de la línea.\n💡 ENTONCES: y VECES: siempre llevan dos puntos.';
+        if (encontrado.tipo == TipoToken.ENTONCES) {
+          return '❌ Línea $linea: Escribiste ENTONCES pero falta el ":" al final.\n'
+              '👉 Debe ser ENTONCES: (con dos puntos pegados).';
+        }
+        if (encontrado.tipo == TipoToken.VECES) {
+          return '❌ Línea $linea: Escribiste VECES pero falta el ":" al final.\n'
+              '👉 Debe ser VECES: (con dos puntos pegados).';
+        }
+        return '❌ Línea $linea: Falta el ":" al final de esta línea.\n'
+            '👉 Tanto ENTONCES como VECES siempre terminan con ":".\n'
+            '   Encontré $encontradoStr donde esperaba ":".';
+
       case TipoToken.VECES:
-        return '😕 Línea $linea: Falta VECES después de los corchetes.\n💡 Ejemplo: REPETIR [N] VECES:';
+        return '❌ Línea $linea: Después de [${encontrado.valor}] falta escribir VECES:\n'
+            '👉 La estructura correcta es:\n'
+            '   REPETIR [N] VECES:\n'
+            '     (instrucciones)\n'
+            '   FIN REPETIR\n'
+            '   Encontré $encontradoStr donde esperaba VECES.';
+
       case TipoToken.CORCHETE_IZQ:
-        return '😕 Línea $linea: Falta "[" antes de la expresión.\n💡 Ejemplo: REPETIR [N * 2] VECES:';
+        return '❌ Línea $linea: Después de REPETIR falta el "[" para encerrar la variable.\n'
+            '👉 La estructura correcta es:\n'
+            '   REPETIR [N] VECES:\n'
+            '   El nombre de la variable va entre corchetes [ ].\n'
+            '   Encontré $encontradoStr donde esperaba "[".';
+
       case TipoToken.CORCHETE_DER:
-        return '😕 Línea $linea: Falta "]" para cerrar.\n💡 Ejemplo: REPETIR [N] VECES:';
-      case TipoToken.PAREN_DER:
-        return '😕 Línea $linea: Falta ")" para cerrar el paréntesis.\n💡 Ejemplo: SI (N < 10 AND M > 5) ENTONCES:';
-      case TipoToken.NUMERO:
-        return '😕 Línea $linea: Se necesita un número pero encontré $enc.\n💡 Ejemplo: GIRAR 90';
+        return '❌ Línea $linea: Falta cerrar el corchete "]" después del nombre de la variable.\n'
+            '👉 Debe ser [${encontrado.valor}] con corchete de cierre.\n'
+            '   Ejemplo: REPETIR [N] VECES:';
+
       case TipoToken.IDENTIFICADOR:
-        return '😕 Línea $linea: Se esperaba una variable pero encontré $enc.\n💡 Los nombres solo tienen letras y números.';
+        if (encontrado.tipo == TipoToken.NUMERO) {
+          return '❌ Línea $linea: Pusiste el número ${encontrado.valor} donde debía ir el nombre de una variable.\n'
+              '👉 El nombre de una variable solo puede tener letras, como N, Contador, Pasos.\n'
+              '   Ejemplo correcto: REPETIR [N] VECES:';
+        }
+        return '❌ Línea $linea: Se esperaba el nombre de una variable pero encontré $encontradoStr.\n'
+            '👉 Los nombres de variables usan solo letras y números, sin espacios ni símbolos.\n'
+            '   Ejemplos válidos: N, Contador, Pasos, Vel2';
+
+      case TipoToken.NUMERO:
+        if (encontrado.tipo == TipoToken.IDENTIFICADOR) {
+          return '❌ Línea $linea: Pusiste "${encontrado.valor}" donde debía ir un número.\n'
+              '👉 Después de GIRAR y AVANZAR siempre va un número.\n'
+              '   Ejemplo: GIRAR 90   AVANZAR 5\n'
+              '   Si quieres usar una variable, primero asígnale un valor:\n'
+              '   N = 90\n'
+              '   GIRAR N  ← esto aún no está soportado, usa el número directo.';
+        }
+        if (encontrado.tipo == TipoToken.FIN_ARCHIVO) {
+          return '❌ Línea $linea: La instrucción se cortó, falta el número al final.\n'
+              '👉 Completa la instrucción con un número.\n'
+              '   Ejemplo: GIRAR 90   AVANZAR -5';
+        }
+        return '❌ Línea $linea: Se esperaba un número pero encontré $encontradoStr.\n'
+            '👉 Escribe un número entero, positivo o negativo.\n'
+            '   Ejemplos: GIRAR 90   GIRAR -45   AVANZAR 10   AVANZAR -3';
+
       case TipoToken.ASIGNACION:
-        return '😕 Línea $linea: Falta "=" para asignar valor.\n💡 Ejemplo: N = 10';
+        return '❌ Línea $linea: Falta el "=" para asignarle un valor a la variable "${encontrado.valor}".\n'
+            '👉 Para guardar un número en una variable escribe:\n'
+            '   ${encontrado.valor} = 10\n'
+            '   Encontré $encontradoStr donde esperaba "=".';
+
+      case TipoToken.SI:
+        return '❌ Línea $linea: Falta cerrar el bloque SI con FIN SI.\n'
+            '👉 Todo bloque SI debe cerrarse así:\n'
+            '   SI condición ENTONCES:\n'
+            '     (instrucciones)\n'
+            '   FIN SI   ← esto falta\n'
+            '   Encontré $encontradoStr donde esperaba FIN SI.';
+
+      case TipoToken.REPETIR:
+        return '❌ Línea $linea: Falta cerrar el bloque REPETIR con FIN REPETIR.\n'
+            '👉 Todo ciclo REPETIR debe cerrarse así:\n'
+            '   REPETIR [N] VECES:\n'
+            '     (instrucciones)\n'
+            '   FIN REPETIR   ← esto falta\n'
+            '   Encontré $encontradoStr donde esperaba FIN REPETIR.';
+
+      case TipoToken.PARENTESIS_IZQ:
+        return '❌ Línea $linea: Después del nombre de la función falta el paréntesis "(".\n'
+            '👉 Las funciones matemáticas se escriben así:\n'
+            '   SEN(90)   COS(45)   TANG(30)\n'
+            '   Encontré $encontradoStr donde esperaba "(".';
+
+      case TipoToken.PARENTESIS_DER:
+        return '❌ Línea $linea: Falta cerrar el paréntesis ")" de la función.\n'
+            '👉 Ejemplo correcto: SEN(90)  COS(45)  TANG(30)\n'
+            '   Encontré $encontradoStr donde esperaba ")".';
+
       default:
-        return '😕 Línea $linea: Algo no está bien cerca de $enc.\n💡 Revisa las palabras y el orden.';
+        return '❌ Línea $linea: Error inesperado cerca de $encontradoStr.\n'
+            '👉 Revisa que la instrucción esté completa y bien escrita.\n'
+            '   Instrucciones válidas: PROGRAMA, GIRAR, AVANZAR, SI, REPETIR, FIN PROGRAMA.';
     }
   }
 
@@ -68,8 +182,6 @@ class Parser {
     }
   }
 
-  // ── Programa ──────────────────────────────────────────────────
-
   NodoPrograma parsePrograma() {
     _consumir(TipoToken.PROGRAMA);
     final nombre = _consumir(TipoToken.TEXTO).valor;
@@ -78,33 +190,51 @@ class Parser {
     _consumir(TipoToken.PROGRAMA);
     if (!_es(TipoToken.FIN_ARCHIVO)) {
       throw ErrorSintactico(
-          '😕 Línea ${_actual.linea}: Hay código después de FIN PROGRAMA.\n'
-              '💡 FIN PROGRAMA debe ser lo último.'
+          '❌ Línea ${_actual.linea}: Hay código suelto después de FIN PROGRAMA.\n'
+              '👉 FIN PROGRAMA debe ser la última línea del archivo.\n'
+              '   Elimina o mueve lo que está después de FIN PROGRAMA.'
       );
     }
+
     return NodoPrograma(nombre, instrucciones);
   }
 
   NodoInstrucciones parseInstrucciones() {
     final lista = <Nodo>[];
-    while (_esInicioInstruccion()) lista.add(parseInstruccion());
+    while (_esInicioInstruccion()) {
+      lista.add(parseInstruccion());
+    }
     if (lista.isEmpty) {
-      final linea = _actual.linea;
-      if (_actual.tipo == TipoToken.FIN) {
+      final linea     = _actual.linea;
+      final siguiente = _actual.tipo;
+
+      if (siguiente == TipoToken.FIN) {
         throw ErrorSintactico(
-            '😕 Línea $linea: ¡Este bloque está vacío!\n'
-                '💡 Pon al menos una instrucción dentro del SI o REPETIR.'
+            '❌ Línea $linea: El bloque está vacío, no tiene ninguna instrucción.\n'
+                '👉 Dentro de un SI o REPETIR debe haber al menos una instrucción.\n'
+                '   Ejemplo:\n'
+                '   SI N < 5 ENTONCES:\n'
+                '     AVANZAR 10\n'
+                '   FIN SI'
         );
       }
-      if (_actual.tipo == TipoToken.FIN_ARCHIVO) {
+
+      if (siguiente == TipoToken.FIN_ARCHIVO) {
         throw ErrorSintactico(
-            '😕 Línea $linea: El programa termina sin instrucciones.\n'
-                '💡 Agrega al menos un GIRAR o AVANZAR.'
+            '❌ Línea $linea: El programa termina sin ninguna instrucción.\n'
+                '👉 Agrega al menos un GIRAR o AVANZAR dentro del programa.\n'
+                '   Ejemplo: AVANZAR 5'
         );
       }
+
       throw ErrorSintactico(
-          '😕 Línea $linea: Se esperaba una instrucción pero encontré "${_actual.valor}".\n'
-              '💡 Instrucciones válidas: GIRAR, AVANZAR, SI, REPETIR, o una variable.'
+          '❌ Línea $linea: "${_actual.valor}" no es una instrucción válida.\n'
+              '👉 Las instrucciones que puedes usar son:\n'
+              '   GIRAR [número]       → gira el robot\n'
+              '   AVANZAR [número]     → mueve el robot\n'
+              '   SI condición ENTONCES:  → bloque condicional\n'
+              '   REPETIR [N] VECES:   → ciclo\n'
+              '   [variable] = [número] → guardar un valor'
       );
     }
     return NodoInstrucciones(lista);
@@ -119,34 +249,34 @@ class Parser {
       case TipoToken.REPETIR:       return parseCiclo();
       default:
         throw ErrorSintactico(
-            '😕 Línea ${_actual.linea}: No reconozco "${_actual.valor}".\n'
-                '💡 Instrucciones válidas: GIRAR, AVANZAR, SI, REPETIR, o una variable.'
+            '😕 Línea ${_actual.linea}: No reconozco la instrucción "${_actual.valor}".\n'
+                '💡 Las instrucciones válidas son: GIRAR, AVANZAR, SI, REPETIR, o el nombre de una variable.'
         );
     }
   }
 
-  // ── Instrucciones ─────────────────────────────────────────────
-
   NodoAsignacion parseAsignacion() {
-    final id = _consumir(TipoToken.IDENTIFICADOR).valor;
+    final id  = _consumir(TipoToken.IDENTIFICADOR).valor;
     _consumir(TipoToken.ASIGNACION);
-    final exp = parseExpArit();
-    return NodoAsignacion(id, exp);
+    final num = int.parse(_consumir(TipoToken.NUMERO).valor);
+    return NodoAsignacion(id, num);
   }
 
   NodoGirar parseGirar() {
     _consumir(TipoToken.GIRAR);
-    return NodoGirar(parseExpArit());
+    final num = _parseExpresionNumerica();
+    return NodoGirar(num);
   }
 
   NodoAvanzar parseAvanzar() {
     _consumir(TipoToken.AVANZAR);
-    return NodoAvanzar(parseExpArit());
+    final num = _parseExpresionNumerica();
+    return NodoAvanzar(num);
   }
 
   NodoCondicional parseCondicional() {
     _consumir(TipoToken.SI);
-    final condicion = parseExpBool();
+    final condicion = parseCondicion();
     _consumir(TipoToken.ENTONCES);
     _consumir(TipoToken.DOS_PUNTOS);
     final instrucciones = parseInstrucciones();
@@ -157,60 +287,31 @@ class Parser {
 
   NodoCiclo parseCiclo() {
     _consumir(TipoToken.REPETIR);
+
     if (!_es(TipoToken.CORCHETE_IZQ)) {
       throw ErrorSintactico(
-          '😕 Línea ${_actual.linea}: Después de REPETIR pon la expresión entre corchetes.\n'
-              '💡 Ejemplo: REPETIR [N * 2] VECES:'
+          '❌ Línea ${_actual.linea}: Después de REPETIR falta la variable entre corchetes.\n'
+              '👉 Escribe el nombre de la variable entre [ ] así:\n'
+              '   REPETIR [N] VECES:\n'
+              '   Primero asegúrate de haber definido N = 5 antes del REPETIR.'
       );
     }
     _consumir(TipoToken.CORCHETE_IZQ);
-    final exp = parseExpArit();
+    final identificador = _consumir(TipoToken.IDENTIFICADOR).valor;
     _consumir(TipoToken.CORCHETE_DER);
     _consumir(TipoToken.VECES);
     _consumir(TipoToken.DOS_PUNTOS);
     final instrucciones = parseInstrucciones();
     _consumir(TipoToken.FIN);
     _consumir(TipoToken.REPETIR);
-    return NodoCiclo(exp, instrucciones);
+    return NodoCiclo(identificador, instrucciones);
   }
 
-  // ── Expresiones booleanas (OR < AND < NOT) ────────────────────
-
-  NodoExpBool parseExpBool() {
-    NodoExpBool izq = parseExpAnd();
-    while (_es(TipoToken.OR)) {
-      _pos++;
-      izq = NodoOr(izq, parseExpAnd());
-    }
-    return izq;
-  }
-
-  NodoExpBool parseExpAnd() {
-    NodoExpBool izq = parseExpNot();
-    while (_es(TipoToken.AND)) {
-      _pos++;
-      izq = NodoAnd(izq, parseExpNot());
-    }
-    return izq;
-  }
-
-  NodoExpBool parseExpNot() {
-    if (_es(TipoToken.NOT)) { _pos++; return NodoNot(parseExpNot()); }
-    return parseAtomoBool();
-  }
-
-  NodoExpBool parseAtomoBool() {
-    if (_es(TipoToken.PAREN_IZQ)) {
-      _pos++;
-      final exp = parseExpBool();
-      _consumir(TipoToken.PAREN_DER);
-      return exp;
-    }
-    // Comparación: expArit comparador expArit
-    final izq  = parseExpArit();
+  NodoCondicion parseCondicion() {
+    final id   = _consumir(TipoToken.IDENTIFICADOR).valor;
     final comp = parseComparador();
-    final der  = parseExpArit();
-    return NodoComparacion(izq, comp, der);
+    final num  = int.parse(_consumir(TipoToken.NUMERO).valor);
+    return NodoCondicion(id, comp, num);
   }
 
   String parseComparador() {
@@ -218,81 +319,65 @@ class Parser {
     if (_es(TipoToken.MAYOR)) { _pos++; return '>'; }
     if (_es(TipoToken.MENOR)) { _pos++; return '<'; }
     throw ErrorSintactico(
-        '😕 Línea ${_actual.linea}: Necesito un comparador (==, >, <) pero encontré "${_actual.valor}".\n'
-            '💡 Ejemplo: SI N < 10 ENTONCES:'
+        '❌ Línea ${_actual.linea}: En el SI falta el símbolo de comparación.\n'
+            '👉 Después del nombre de la variable debes poner uno de estos:\n'
+            '   <  (menor que)   →  SI N < 10 ENTONCES:\n'
+            '   >  (mayor que)   →  SI N > 3  ENTONCES:\n'
+            '   == (igual a)     →  SI N == 5 ENTONCES:\n'
+            '   Encontré "${_actual.valor}" donde esperaba <, > o =='
     );
   }
 
-  // ── Expresiones aritméticas ───────────────────────────────────
-  // Precedencia: + - < * / % < ^ < unario/trig < átomo
-
-  /// Nivel 1 — suma y resta
-  NodoExpArit parseExpArit() {
-    NodoExpArit izq = parseExpMult();
-    while (_es(TipoToken.SUMA) || _es(TipoToken.RESTA)) {
-      final op = _actual.valor;
-      _pos++;
-      izq = NodoOpBinaria(izq, op, parseExpMult());
-    }
-    return izq;
-  }
-
-  /// Nivel 2 — multiplicación, división, módulo
-  NodoExpArit parseExpMult() {
-    NodoExpArit izq = parseExpPot();
-    while (_es(TipoToken.MULT) || _es(TipoToken.DIV) || _es(TipoToken.MODULO)) {
-      final op = _actual.valor;
-      _pos++;
-      izq = NodoOpBinaria(izq, op, parseExpPot());
-    }
-    return izq;
-  }
-
-  /// Nivel 3 — potencia (asociativa a la derecha)
-  NodoExpArit parseExpPot() {
-    final base = parseExpUnaria();
-    if (_es(TipoToken.POTENCIA)) {
-      _pos++;
-      return NodoOpBinaria(base, '^', parseExpPot()); // recursión derecha
-    }
-    return base;
-  }
-
-  /// Nivel 4 — negación unaria y funciones trigonométricas
-  NodoExpArit parseExpUnaria() {
-    if (_es(TipoToken.RESTA)) {
-      _pos++;
-      return NodoNegUnaria(parseExpUnaria());
-    }
+  int _parseExpresionNumerica() {
+    // Caso trig: SEN(90), COS(45), TANG(30)
     if (_es(TipoToken.SEN) || _es(TipoToken.COS) || _es(TipoToken.TANG)) {
-      final fn = _actual.valor;
+      final tipo    = _actual.tipo;
+      final nombre  = _actual.valor;
+      final lineaFn = _actual.linea;
       _pos++;
-      return NodoFuncTrig(fn, parseAtomoArit());
-    }
-    return parseAtomoArit();
-  }
 
-  /// Nivel 5 — átomo: número, variable o paréntesis
-  NodoExpArit parseAtomoArit() {
-    if (_es(TipoToken.NUMERO)) {
-      final val = double.parse(_actual.valor);
-      _pos++;
-      return NodoNumero(val);
+      if (!_es(TipoToken.PARENTESIS_IZQ)) {
+        throw ErrorSintactico(
+            '❌ Línea ${_actual.linea}: Después del nombre de la función falta "(".\n'
+                '👉 Escribe el ángulo en grados dentro de paréntesis:\n'
+                '   GIRAR SEN(90)\n'
+                '   AVANZAR COS(45)'
+        );
+      }
+      _consumir(TipoToken.PARENTESIS_IZQ);
+
+      if (!_es(TipoToken.NUMERO)) {
+        throw ErrorSintactico(
+            '❌ Línea ${_actual.linea}: Dentro de la función falta el número de grados.\n'
+                '👉 Escribe un número en grados dentro del paréntesis:\n'
+                '   SEN(90)   COS(45)   TANG(30)'
+        );
+      }
+      final grados  = int.parse(_consumir(TipoToken.NUMERO).valor);
+      _consumir(TipoToken.PARENTESIS_DER);
+
+      final rad = grados * math.pi / 180.0;
+      double resultado;
+      switch (tipo) {
+        case TipoToken.SEN:  resultado = math.sin(rad); break;
+        case TipoToken.COS:  resultado = math.cos(rad); break;
+        case TipoToken.TANG: resultado = math.tan(rad); break;
+        default:             resultado = 0;
+      }
+      return resultado.round();
     }
-    if (_es(TipoToken.IDENTIFICADOR)) {
-      final nombre = _actual.valor;
-      _pos++;
-      return NodoVariable(nombre);
+
+    // Caso normal: número directo
+    if (!_es(TipoToken.NUMERO)) {
+      throw ErrorSintactico(
+          '❌ Línea ${_actual.linea}: Se esperaba un número o una función matemática.\n'
+              '👉 Ejemplos válidos:\n'
+              '   GIRAR 90\n'
+              '   GIRAR -45\n'
+              '   GIRAR SEN(90)\n'
+              '   AVANZAR COS(45)'
+      );
     }
-    if (_es(TipoToken.PAREN_IZQ)) {
-      _pos++;
-      final exp = parseExpArit();
-      _consumir(TipoToken.PAREN_DER);
-      return exp;
-    }
-    throw ErrorSintactico(
-        '😕 Línea ${_actual.linea}: Se esperaba un número o variable pero encontré "${_actual.valor}".\n'
-            '💡 Ejemplo: N + 5  o  SEN 90  o  (N * 2)'
-    );
+    return int.parse(_consumir(TipoToken.NUMERO).valor);
   }
 }
