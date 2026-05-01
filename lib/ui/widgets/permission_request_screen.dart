@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -25,6 +26,15 @@ class _PermissionRequestScreenState extends State<PermissionRequestScreen> {
   }
 
   Future<void> _checkAndRequestPermissions() async {
+    // En Web no se manejan permisos de esta forma, saltamos la verificación
+    if (kIsWeb) {
+      setState(() {
+        _permissionsGranted = true;
+        _checking = false;
+      });
+      return;
+    }
+
     // Primero verificar si ya están concedidos
     final granted = await _arePermissionsGranted();
 
