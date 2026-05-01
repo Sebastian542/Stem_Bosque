@@ -91,7 +91,7 @@ jobs:
           files: app-release.apk
           tag_name: latest
           name: "StemBosque APK (Última Versión)"
-          body: "Esta versión se compila automáticamente con cada cambio en la rama main."
+          body: "Esta versión se compila automáticamente con cada cambio en la rama main. ."
           draft: false
           prerelease: false
           make_latest: true
