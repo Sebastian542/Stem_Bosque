@@ -546,7 +546,11 @@ FIN PROGRAMA''';
         onSaveFile:        _saveWithName,
         onClearCode:       _clearCode,
         onShareFile:       _shareFile,
-        onToggleBluetooth: () => _bt.toggleBluetooth(),
+        onToggleBluetooth: () => _bt.toggleBluetooth(onUnsupported: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Bluetooth no soportado en esta plataforma')),
+          );
+        }),
         onOpenBlockMode: () {
           // TODO: Implementar apertura de Modo Bloque
           ScaffoldMessenger.of(context).showSnackBar(
@@ -574,7 +578,11 @@ FIN PROGRAMA''';
                     devices:           _discoveredDevices,
                     connectedDevice:   _connectedDevice,
                     onToggle:          _toggleBluetoothPanel,
-                    onToggleBluetooth: () => _bt.toggleBluetooth(),
+                    onToggleBluetooth: () => _bt.toggleBluetooth(onUnsupported: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Bluetooth no soportado en esta plataforma')),
+                      );
+                    }),
                     onStartScan:       _startScan,
                     onStopScan:        _stopScan,
                     onOpenSettings:    () => _bt.openSettings(),

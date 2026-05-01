@@ -1,4 +1,5 @@
 import '../ast/nodes.dart';
+import 'dart:math' as math;
 
 class ErrorEjecucion implements Exception {
   final String mensaje;
@@ -8,13 +9,19 @@ class ErrorEjecucion implements Exception {
 }
 
 class Interprete {
-  final Map<String, int> variables = {};
+  final Map<String, double> variables = {};
   final List<String> salida = [];
 
   void ejecutar(NodoPrograma programa) {
+    salida.clear();
+    variables.clear();
     salida.add('▶ Iniciando programa: "${programa.nombre}"');
-    _ejecutarLista(programa.instrucciones);
-    salida.add('■ Programa finalizado correctamente.');
+    try {
+      _ejecutarLista(programa.instrucciones);
+      salida.add('■ Programa finalizado correctamente.');
+    } catch (e) {
+      salida.add(e.toString());
+    }
   }
 
   void _ejecutarLista(NodoInstrucciones nodo) {
@@ -23,85 +30,96 @@ class Interprete {
     }
   }
 
+  double _evaluarExp(NodoExpArit exp) {
+    if (exp is NodoNumero) {
+      return exp.valor;
+    } else if (exp is NodoVariable) {
+      if (!variables.containsKey(exp.nombre)) {
+        throw ErrorEjecucion('❌ Error: La variable "${exp.nombre}" no ha sido definida.');
+      }
+      return variables[exp.nombre]!;
+    } else if (exp is NodoOpBinaria) {
+      final izq = _evaluarExp(exp.izq);
+      final der = _evaluarExp(exp.der);
+      switch (exp.operador) {
+        case '+': return izq + der;
+        case '-': return izq - der;
+        case '*': return izq * der;
+        case '/':
+          if (der == 0) throw ErrorEjecucion('❌ Error: División por cero.');
+          return izq / der;
+        case '^': return math.pow(izq, der).toDouble();
+        default: return 0;
+      }
+    } else if (exp is NodoNegUnaria) {
+      return -_evaluarExp(exp.expresion);
+    } else if (exp is NodoFuncTrig) {
+      final arg = _evaluarExp(exp.argumento);
+      final rad = arg * math.pi / 180.0;
+      switch (exp.funcion) {
+        case 'SEN': return math.sin(rad);
+        case 'COS': return math.cos(rad);
+        case 'TANG': return math.tan(rad);
+        default: return 0;
+      }
+    }
+    return 0;
+  }
+
+  bool _evaluarBool(NodoExpBool exp) {
+    if (exp is NodoComparacion) {
+      final izq = _evaluarExp(exp.izq);
+      final der = _evaluarExp(exp.der);
+      switch (exp.comparador) {
+        case '==': return izq == der;
+        case '>':  return izq > der;
+        case '<':  return izq < der;
+        case '>=': return izq >= der;
+        case '<=': return izq <= der;
+        case '!=': return izq != der;
+        default: return false;
+      }
+    } else if (exp is NodoNot) {
+      return !_evaluarBool(exp.expresion);
+    } else if (exp is NodoAnd) {
+      return _evaluarBool(exp.izq) && _evaluarBool(exp.der);
+    } else if (exp is NodoOr) {
+      return _evaluarBool(exp.izq) || _evaluarBool(exp.der);
+    }
+    return false;
+  }
+
   void _ejecutar(Nodo nodo) {
     if (nodo is NodoAsignacion) {
-      variables[nodo.identificador] = nodo.numero;
-      salida.add('${nodo.identificador} = ${nodo.numero}');
+      final valor = _evaluarExp(nodo.expresion);
+      variables[nodo.identificador] = valor;
+      salida.add('${nodo.identificador} = $valor');
 
     } else if (nodo is NodoGirar) {
-      salida.add('GIRAR ${nodo.numero}');
+      final valor = _evaluarExp(nodo.expresion);
+      salida.add('GIRAR $valor');
 
     } else if (nodo is NodoAvanzar) {
-      salida.add('AVANZAR ${nodo.numero}');
+      final valor = _evaluarExp(nodo.expresion);
+      salida.add('AVANZAR $valor');
 
     } else if (nodo is NodoCondicional) {
-      final c = nodo.condicion;
-
-      // ANTES: variables[c.identificador] ?? 0  → usaba 0 si no existía
-      // AHORA: lanza error si la variable no fue declarada
-      if (!variables.containsKey(c.identificador)) {
-        throw ErrorEjecucion(
-            '❌ Línea de ejecución: La variable "${c.identificador}" se usa en SI pero nunca se le dio un valor.\n'
-                '👉 Antes del SI escribe:\n'
-                '   ${c.identificador} = 10\n'
-                '   (cambia 10 por el número que necesites)'
-        );
+      if (_evaluarBool(nodo.condicion)) {
+        _ejecutarLista(nodo.instrucciones);
       }
-
-      final valVar = variables[c.identificador]!;
-      final ok     = _evaluar(valVar, c.comparador, c.numero);
-      if (ok) _ejecutarLista(nodo.instrucciones);
 
     } else if (nodo is NodoCiclo) {
+      final veces = _evaluarExp(nodo.expresion).toInt();
 
-      // ANTES: variables[nodo.identificador!] ?? 0  → usaba 0 si no existía
-      // AHORA: lanza error si la variable no fue declarada
-      if (nodo.identificador != null &&
-          !variables.containsKey(nodo.identificador!)) {
-        throw ErrorEjecucion(
-            '❌ Línea de ejecución: La variable "${nodo.identificador}" se usa en REPETIR pero nunca se le dio un valor.\n'
-                '👉 Antes del REPETIR escribe:\n'
-                '   ${nodo.identificador} = 5\n'
-                '   (ese número será la cantidad de veces que se repite)'
-        );
-      }
+      if (veces <= 0) return;
 
-      final veces = nodo.identificador != null
-          ? variables[nodo.identificador!]!
-          : 1;
-
-      // NUEVO: evitar ciclos infinitos o negativos
-      if (veces <= 0) {
-        throw ErrorEjecucion(
-            '❌ La variable "${nodo.identificador}" vale $veces, pero REPETIR necesita un número mayor a 0.\n'
-                '👉 Cambia el valor de la variable antes del REPETIR:\n'
-                '   ${nodo.identificador} = 5\n'
-                '   (cualquier número mayor a cero)'
-        );
-      }
-
-      // NUEVO: evitar que un niño ponga N=99999 y cuelgue la app
       if (veces > 400) {
-        throw ErrorEjecucion(
-            '❌ La variable "${nodo.identificador}" vale $veces. ¡Eso son demasiadas repeticiones!\n'
-                '👉 Usa un número menor a 400.\n'
-                '   ${nodo.identificador} = 100\n'
-                '   (por ejemplo)'
-        );
+        throw ErrorEjecucion('❌ Error: El ciclo REPETIR tiene demasiadas repeticiones ($veces). Máximo 400.');
       }
 
       for (var i = 0; i < veces; i++) {
         _ejecutarLista(nodo.instrucciones);
       }
-    }
-  }
-
-  bool _evaluar(int a, String op, int b) {
-    switch (op) {
-      case '==': return a == b;
-      case '>':  return a > b;
-      case '<':  return a < b;
-      default:   return false;
     }
   }
 }
