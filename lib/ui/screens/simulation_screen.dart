@@ -25,6 +25,11 @@ class _SimulationScreenState extends State<SimulationScreen>
   double _y = 0;
   double _angle = 0; // radianes
 
+  // ── Obstáculos y Edición ──────────────────────────────────
+  final List<Rect> _obstacles = [];
+  bool _isEditMode = false;
+  bool _collisionDetected = false;
+
   // ── Rastro (trail) ─────────────────────────────────────────
   final List<Offset> _trail = [];
 
@@ -75,6 +80,7 @@ class _SimulationScreenState extends State<SimulationScreen>
     setState(() {
       _isPlaying  = false;
       _isDone     = false;
+      _collisionDetected = false;
       _cmdIndex   = 0;
       _stepIndex  = 0;
       _trail.clear();
@@ -126,10 +132,49 @@ class _SimulationScreenState extends State<SimulationScreen>
 
   void _stepAvanzar() {
     if (!mounted) return;
+
+    final nextX = _x + _stepSign * _moveSpeed * cos(_angle);
+    final nextY = _y + _stepSign * _moveSpeed * sin(_angle);
+
+    // Detección de colisión básica
+    // El robot mide aprox 40x30, usaremos un radio de seguridad
+    final robotRect = Rect.fromCenter(center: Offset(nextX, nextY), width: 30, height: 30);
+    bool hit = false;
+    for (var obs in _obstacles) {
+      if (obs.overlaps(robotRect)) {
+        hit = true;
+        break;
+      }
+    }
+
+    if (hit) {
+      setState(() {
+        _collisionDetected = true;
+        _isPlaying = false;
+      });
+      return;
+    }
+
     setState(() {
-      _x += _stepSign * _moveSpeed * cos(_angle);
-      _y += _stepSign * _moveSpeed * sin(_angle);
+      _x = nextX;
+      _y = nextY;
       _trail.add(Offset(_x, _y));
+    });
+  }
+
+  void _addObstacle(Offset pos) {
+    // Alinear a la cuadrícula (30px)
+    final gx = (pos.dx / 30).floor() * 30.0;
+    final gy = (pos.dy / 30).floor() * 30.0;
+    final newObs = Rect.fromLTWH(gx, gy, 30, 30);
+
+    setState(() {
+      // Si ya existe uno ahí, lo quitamos (toggle)
+      if (_obstacles.contains(newObs)) {
+        _obstacles.remove(newObs);
+      } else {
+        _obstacles.add(newObs);
+      }
     });
   }
 
@@ -160,6 +205,13 @@ class _SimulationScreenState extends State<SimulationScreen>
           ),
         ),
         actions: [
+          // Botón Modo Edición
+          IconButton(
+            icon: Icon(_isEditMode ? Icons.layers : Icons.layers_outlined),
+            color: _isEditMode ? const Color(0xFFffb86c) : const Color(0xFF6272a4),
+            tooltip: 'Modo Bloque (Editar obstáculos)',
+            onPressed: () => setState(() => _isEditMode = !_isEditMode),
+          ),
           // Info de comandos
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -186,13 +238,18 @@ class _SimulationScreenState extends State<SimulationScreen>
                 final size = Size(constraints.maxWidth, constraints.maxHeight);
                 _initRobot(size);
                 return ClipRect(
-                  child: CustomPaint(
-                    size: size,
-                    painter: _RobotPainter(
-                      robotX:  _x,
-                      robotY:  _y,
-                      angle:   _angle,
-                      trail:   List.unmodifiable(_trail),
+                  child: GestureDetector(
+                    onTapUp: _isEditMode ? (details) => _addObstacle(details.localPosition) : null,
+                    child: CustomPaint(
+                      size: size,
+                      painter: _RobotPainter(
+                        robotX:  _x,
+                        robotY:  _y,
+                        angle:   _angle,
+                        trail:   List.unmodifiable(_trail),
+                        obstacles: List.unmodifiable(_obstacles),
+                        collision: _collisionDetected,
+                      ),
                     ),
                   ),
                 );
@@ -289,12 +346,16 @@ class _RobotPainter extends CustomPainter {
   final double robotY;
   final double angle;
   final List<Offset> trail;
+  final List<Rect> obstacles;
+  final bool collision;
 
   const _RobotPainter({
     required this.robotX,
     required this.robotY,
     required this.angle,
     required this.trail,
+    this.obstacles = const [],
+    this.collision = false,
   });
 
   @override
@@ -308,11 +369,53 @@ class _RobotPainter extends CustomPainter {
     // Cuadrícula
     _drawGrid(canvas, size);
 
+    // Obstáculos
+    _drawObstacles(canvas);
+
     // Rastro
     _drawTrail(canvas);
 
     // Robot
     _drawRobot(canvas, size);
+
+    if (collision) {
+      _drawCollisionAlert(canvas, size);
+    }
+  }
+
+  void _drawObstacles(Canvas canvas) {
+    final paint = Paint()
+      ..color = const Color(0xFFff5555).withAlpha(180)
+      ..style = PaintingStyle.fill;
+    final borderPaint = Paint()
+      ..color = const Color(0xFFff5555)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    for (var obs in obstacles) {
+      canvas.drawRect(obs, paint);
+      canvas.drawRect(obs, borderPaint);
+    }
+  }
+
+  void _drawCollisionAlert(Canvas canvas, Size size) {
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: '💥 COLISIÓN DETECTADA',
+        style: TextStyle(
+          color: Color(0xFFff5555),
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+          fontFamily: 'monospace',
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset((size.width - textPainter.width) / 2, 50),
+    );
   }
 
   void _drawGrid(Canvas canvas, Size size) {
@@ -355,7 +458,7 @@ class _RobotPainter extends CustomPainter {
     // Cuerpo (rectángulo gris)
     canvas.drawRect(
       const Rect.fromLTWH(-20, -15, 40, 30),
-      Paint()..color = const Color(0xFF888888),
+      Paint()..color = collision ? const Color(0xFFff5555) : const Color(0xFF888888),
     );
 
     // Ruedas (rectángulos negros)

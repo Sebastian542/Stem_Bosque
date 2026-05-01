@@ -1,4 +1,4 @@
-# 🤖 STEMBosque DSL
+# 🤖 STEMBosque DSL (v1.0.0+1)
 
 > **Un lenguaje de programación educativo para robótica**, diseñado para que niños y jóvenes aprendan lógica computacional controlando un robot virtual en español.
 
@@ -13,87 +13,78 @@
 
 **STEMBosque DSL** es un *Domain-Specific Language* (Lenguaje de Dominio Específico) desarrollado con **Flutter**. Permite escribir programas en **español natural** para controlar un robot animado, facilitando el aprendizaje de variables, ciclos, condicionales y matemáticas de forma visual.
 
-La versión web se actualiza automáticamente desde la rama `aleja` y corre **100% en el navegador** — sin instalaciones ni configuraciones complejas.
+La versión web está optimizada para ejecutarse **100% en el navegador**, con un intérprete capaz de evaluar expresiones matemáticas complejas en tiempo real.
 
 ---
 
-## ✨ Características
+## ✨ Características Actualizadas
 
 | Característica              | Descripción                                                                                   |
 |-----------------------------|-----------------------------------------------------------------------------------------------|
-| 🧠 **Compilador integrado** | Analizador léxico, sintáctico e intérprete desarrollado íntegramente en Dart                  |
-| 🎨 **IDE moderno**          | Editor con resaltado de sintaxis, números de línea y detección de errores en tiempo real      |
-| 🤖 **Robot animado**        | Visualización 2D donde el robot reacciona instantáneamente a tus instrucciones                |
-| ⚙️ **CI/CD Automatizado**   | Despliegue continuo: los cambios en `aleja` se sincronizan con `main` y se publican en la web |
-| 🔵 **Bluetooth Dual**       | Soporte para Bluetooth Clásico (SPP) y BLE para conexión con robots físicos (App móvil)       |
-| 📂 **Gestión de archivos**  | Guarda y carga tus programas en formato `.txt` o `.sb`                                        |
-| 💻 **Multiplataforma**      | Disponible para Web (GitHub Pages) y Android                                                  |
+| 🧠 **Compilador Potente**   | Ahora soporta expresiones aritméticas recursivas y funciones trigonométricas.                 |
+| 📐 **Matemáticas Avanzadas**| Evaluación interna basada en `double`. Soporte para `+`, `-`, `*`, `/`, `SEN`, `COS` y `TANG`. |
+| 🧩 **Modo Bloque**          | Nueva interfaz para configurar obstáculos y desafíos en la simulación (En desarrollo).        |
+| 🎨 **Tema Dracula**         | Interfaz visual refinada basada en la paleta Dracula para reducir la fatiga visual.           |
+| 🛡️ **Estabilidad**          | Protección contra ciclos infinitos (>400 repeticiones) y división por cero.                    |
+| 🔵 **Bluetooth Dual**       | Gestión optimizada mediante Singletons para Bluetooth Clásico (SPP) y BLE.                    |
+| ⚙️ **CI/CD Automatizado**   | Despliegue continuo via GitHub Actions con compatibilidad Web/Android asegurada.              |
+
+---
+
+## 📖 Sintaxis del Lenguaje (Novedades)
+
+El lenguaje ha evolucionado para permitir lógica más compleja:
+
+### Ejemplo de Expresiones y Trigonometría
+```
+PROGRAMA "Círculo Matemático"
+  RADIO = 50
+  ANGULO = 0
+  REPETIR [36] VECES:
+    PASO = 2 * 3.1416 * RADIO / 36
+    AVANZAR PASO
+    GIRAR 10
+  FIN REPETIR
+FIN PROGRAMA
+```
+
+### Comandos Soportados
+- **Estructura**: `PROGRAMA "nombre" ... FIN PROGRAMA`
+- **Movimiento**: `AVANZAR [expresión]`, `GIRAR [expresión]`
+- **Control**: `SI [condición] ENTONCES ... FIN SI`, `REPETIR [veces] VECES: ... FIN REPETIR`
+- **Variables**: `MI_VAR = 10 + (5 * SEN(45))`
 
 ---
 
 ## 🚀 Cómo usar
 
-### 🌐 Versión Web (Recomendado)
-No necesitas instalar nada. Simplemente entra a:  
-**[sebastian542.github.io/Stem_Bosque/](https://sebastian542.github.io/Stem_Bosque/)**
-
-1. **Escribe** tu código en el editor.
-2. Presiona el botón **Ejecutar** para ver al robot en acción.
-3. Puedes **descargar** tus programas para usarlos más tarde.
+### 🌐 Versión Web
+Simplemente entra a: **[sebastian542.github.io/Stem_Bosque/](https://sebastian542.github.io/Stem_Bosque/)**
+- Soporta todas las funciones de programación y simulación.
+- **Nota**: El soporte Bluetooth en Web es experimental (requiere navegador compatible con Web Bluetooth).
 
 ### 📱 App Móvil (Android)
-**[📥 Descargar APK para Android](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk)**
-
-1. Escribe tu programa y valida la sintaxis en la barra de estado.
-2. Usa el panel de **Bluetooth** para conectar con un robot físico.
-3. Envía el código directamente al dispositivo mediante BLE o Serial.
+**[📥 Descargar APK](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk)**
+- Control total de robots físicos vía Bluetooth.
+- Gestión de archivos locales para guardar tus proyectos.
 
 ---
 
-## 🛠️ Flujo de Desarrollo (CI/CD)
+## 🏗️ Arquitectura Técnica
 
-Este proyecto utiliza **GitHub Actions** para garantizar que la versión web esté siempre al día:
-1. Los desarrollos se realizan en la rama `aleja`.
-2. Al hacer `push` a `aleja`, un workflow automatizado:
-   - Sincroniza (merge) los cambios con la rama `main`.
-   - Compila la versión **Flutter Web**.
-   - Despliega el resultado en la rama `gh-pages` para actualizar el sitio público.
+- **Patrón Singleton**: Acceso unificado a recursos mediante `BluetoothManager.instance` y `FileManager.instance`.
+- **AST Refactorizado**: Los nodos del árbol sintáctico ahora son dinámicos, permitiendo que cualquier comando acepte una expresión matemática en lugar de solo valores fijos.
+- **Compatibilidad**: Manejo de parámetros `onUnsupported` para evitar crashes en plataformas sin APIs específicas (como Bluetooth en Web).
 
 ---
 
-## 📖 Sintaxis del Lenguaje (Resumen)
+## 🔧 Contribución y Desarrollo
 
-```
-PROGRAMA "Mi Cuadrado"
-  LADO = 100
-  REPETIR [4] VECES:
-    AVANZAR LADO
-    GIRAR 90
-  FIN REPETIR
-FIN PROGRAMA
-```
+1. Clona el repo: `git clone https://github.com/Sebastian542/Stem_Bosque.git`
+2. Instala dependencias: `flutter pub get`
+3. Ejecuta en modo debug: `flutter run`
 
-*Para ver la documentación completa de la sintaxis y operadores, consulta las secciones inferiores de este documento.*
-
----
-
-## 🏗️ Arquitectura (Flutter)
-
-```
-lib/
-├── compiler/       — El corazón del lenguaje (Lexer, Parser, Intérprete)
-├── ui/             — Interfaz de usuario (Editor, Consola, Botones)
-└── widgets/        — Componentes visuales y manejo de Bluetooth
-```
-
----
-
-## 🔧 Notas de Instalación (Desarrolladores)
-
-Si clonas el repositorio, recuerda que este proyecto utiliza:
-- **Flutter SDK** (Canal estable)
-- Dependencias para Bluetooth y manejo de archivos (ver `pubspec.yaml`)
-- El parche de `namespace` para `flutter_bluetooth_serial` (ver sección de Errores Comunes).
+*Nota para builds Web: Usar `flutter build web --release --no-wasm-dry-run` para evitar advertencias de incompatibilidad de librerías nativas con WebAssembly.*
 
 ---
 
