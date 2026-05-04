@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/login_screen.dart';
 import '../screens/admin_panel_screen.dart';
+import '../screens/remote_control_screen.dart';
 import 'help_dialog.dart';
 
 class IDEDrawer extends StatelessWidget {
@@ -126,27 +127,60 @@ class IDEDrawer extends StatelessWidget {
                   builder: (context, snapshot) {
                     final bool isLoggedIn = snapshot.hasData;
                     if (!isLoggedIn) {
-                      return _buildItem(
-                        context,
-                        icon: Icons.login_rounded,
-                        title: 'Iniciar Sesión',
-                        subtitle: 'Sincroniza tus programas en la nube',
-                        color: AppTheme.purple,
-                        onTap: () {
-                          Navigator.push(
+                      return Column(
+                        children: [
+                          _buildItem(
                             context,
-                            MaterialPageRoute(builder: (context) => const LoginScreen()),
-                          );
-                        },
+                            icon: Icons.login_rounded,
+                            title: 'Iniciar Sesión',
+                            subtitle: 'Sincroniza tus programas en la nube',
+                            color: AppTheme.purple,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                              );
+                            },
+                          ),
+                          _buildItem(
+                            context,
+                            icon: Icons.gamepad_rounded,
+                            title: 'Control Remoto',
+                            subtitle: 'Controla el robot en tiempo real',
+                            color: AppTheme.cyan,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const RemoteControlScreen()),
+                              );
+                            },
+                          ),
+                        ],
                       );
                     }
 
                     return FutureBuilder<Map<String, dynamic>?>(
                       future: AuthService().getCurrentUserProfile(),
                       builder: (context, profileSnapshot) {
-                        final isAdmin = profileSnapshot.data?['role'] == 'admin';
+                        final profile = profileSnapshot.data;
+                        final isAdmin = profile?['role'] == 'admin';
+                        final roleName = profile?['role'] ?? 'Cargando...';
+
                         return Column(
                           children: [
+                            _buildItem(
+                              context,
+                              icon: Icons.gamepad_rounded,
+                              title: 'Control Remoto',
+                              subtitle: 'Controla el robot en tiempo real',
+                              color: AppTheme.cyan,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const RemoteControlScreen()),
+                                );
+                              },
+                            ),
                             if (isAdmin)
                               _buildItem(
                                 context,
@@ -165,7 +199,7 @@ class IDEDrawer extends StatelessWidget {
                               context,
                               icon: Icons.logout_rounded,
                               title: 'Cerrar Sesión',
-                              subtitle: 'Cuenta: ${snapshot.data?.email}',
+                              subtitle: 'Cuenta: ${snapshot.data?.email}\nRol: $roleName',
                               color: AppTheme.red,
                               onTap: () async {
                                 await AuthService().signOut();

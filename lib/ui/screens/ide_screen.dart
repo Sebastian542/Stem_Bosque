@@ -472,11 +472,15 @@ FIN PROGRAMA''';
   }
 
   Future<void> _shareFile() async {
-    if (_fm.hasUnsavedChanges(_codeController.text)) {
-      await _fm.saveToFile(_codeController.text);
+    final code = _codeController.text;
+    String fileName = 'programa.sb';
+    
+    if (_fm.currentFilePath != null) {
+      // Extraer el nombre del archivo de la ruta si existe
+      fileName = _fm.currentFilePath!.split(Platform.isWindows ? '\\' : '/').last;
     }
-    if (_fm.currentFilePath == null) return;
-    await _fm.share(_fm.currentFilePath!);
+    
+    await _fm.share(code, fileName: fileName);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -517,13 +521,15 @@ FIN PROGRAMA''';
   }
 
   Future<void> _sendProgram() async {
-    if (_compiledLines.isEmpty || _compiledFilePath == null) return;
+    if (_compiledLines.isEmpty) return;
+    
     if (!_bluetoothEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Enciende el Bluetooth primero')));
       return;
     }
-    await _fm.share(_compiledFilePath!);
+    await _fm.share(_compiledLines.join('\n'), fileName: 'compilado.txt');
+
   }
 
   // ─────────────────────────────────────────────────────────────

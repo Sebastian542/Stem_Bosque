@@ -120,7 +120,7 @@ class GeneradorCodigo {
   String _genExpArit(NodoExpArit nodo) {
 
     if (nodo is NodoNumero) {
-      return nodo.valor.toString();
+      return _formatear(nodo.valor);
     }
 
     if (nodo is NodoVariable) {
@@ -191,6 +191,8 @@ class GeneradorCodigo {
   // ============================
   // UTILIDADES
   // ============================
+
+  String _formatear(double n) => n % 1 == 0 ? n.toInt().toString() : n.toString();
 
   void _escribir(String linea) {
     _buf.writeln('${'  ' * _sangria}$linea');

@@ -500,4 +500,32 @@ class BluetoothManager {
 
     cb.onLog('✓ Envío clásico completado', false);
   }
+
+  // ── Envío de comandos en tiempo real (Control Remoto) ────────
+  Future<void> sendInstantCommand(String command) async {
+    if (_connectedDevice == null) return;
+
+    try {
+      final bytes = utf8.encode(command + '\n');
+      if (_connectedDevice!.type == BluetoothDeviceType.ble) {
+        // En BLE buscamos la característica de escritura rápidamente
+        final services = await _connectedDevice!.bleDevice!.discoverServices();
+        for (final s in services) {
+          for (final c in s.characteristics) {
+            if (c.properties.write || c.properties.writeWithoutResponse) {
+              await c.write(bytes, withoutResponse: true);
+              return;
+            }
+          }
+        }
+      } else {
+        if (_classicConnection != null && _classicConnection!.isConnected) {
+          _classicConnection!.output.add(Uint8List.fromList(bytes));
+          await _classicConnection!.output.allSent;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error en comando instantáneo: $e');
+    }
+  }
 }

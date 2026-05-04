@@ -89,19 +89,27 @@ class Interprete {
     return false;
   }
 
+  String _formatear(double n) {
+    if (n.isInfinite || n.isNaN) return n.toString();
+    // Convertimos a 'num' para que toString() sea inteligente (quita el .0 si es entero)
+    num m = n;
+    if (m == m.toInt()) m = m.toInt();
+    return m.toString();
+  }
+
   void _ejecutar(Nodo nodo) {
     if (nodo is NodoAsignacion) {
       final valor = _evaluarExp(nodo.expresion);
       variables[nodo.identificador] = valor;
-      salida.add('${nodo.identificador} = $valor');
+      salida.add('${nodo.identificador} = ${_formatear(valor)}');
 
     } else if (nodo is NodoGirar) {
       final valor = _evaluarExp(nodo.expresion);
-      salida.add('GIRAR $valor');
+      salida.add('GIRAR ${_formatear(valor)}');
 
     } else if (nodo is NodoAvanzar) {
       final valor = _evaluarExp(nodo.expresion);
-      salida.add('AVANZAR $valor');
+      salida.add('AVANZAR ${_formatear(valor)}');
 
     } else if (nodo is NodoCondicional) {
       if (_evaluarBool(nodo.condicion)) {
