@@ -133,24 +133,19 @@ class IDEDrawer extends StatelessWidget {
         color: AppTheme.currentLine,
         border: Border(bottom: BorderSide(color: AppTheme.comment, width: 1)),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset(
-            'assets/images/logo.png',
-            height: 50,
-            errorBuilder: (context, error, stackTrace) =>
-                const Icon(Icons.code, size: 40, color: AppTheme.cyan),
-          ),
-          const SizedBox(height: 12),
-          const Text('StemBosque IDE',
+          Icon(Icons.code, size: 40, color: AppTheme.cyan),
+          SizedBox(height: 12),
+          Text('StemBosque IDE',
               style: TextStyle(
                 color: AppTheme.foreground,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               )),
-          const SizedBox(height: 4),
-          const Text('Opciones del editor',
+          SizedBox(height: 4),
+          Text('Opciones del editor',
               style: TextStyle(color: AppTheme.comment, fontSize: 13)),
         ],
       ),
