@@ -44,7 +44,31 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
       // Al tener éxito, regresamos al IDE (el stream de Auth se encarga del resto)
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        final profile = await _authService.getCurrentUserProfile();
+        final name = profile?['name'] ?? 'Usuario';
+        
+        // Mensaje de bienvenida personalizado
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppTheme.currentLine,
+            title: const Text("¡Bienvenido!", style: TextStyle(color: AppTheme.purple)),
+            content: Text("Hola $name, es un gusto tenerte de vuelta en StemBosque.", 
+              style: const TextStyle(color: AppTheme.foreground)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx); // Cierra el diálogo
+                  Navigator.pop(context); // Vuelve al IDE
+                },
+                child: const Text("Comenzar", style: TextStyle(color: AppTheme.cyan)),
+              )
+            ],
+          ),
+        );
+      }
     } catch (e) {
       _showError(e.toString());
     } finally {

@@ -4,7 +4,7 @@ class UserModel {
   final String uid;
   final String email;
   final String name;
-  final String role; // 'student' o 'teacher'
+  final String role; // 'nuevo usuario', 'student', 'teacher', 'admin'
   final DateTime createdAt;
   final DateTime lastLogin;
 
@@ -12,7 +12,7 @@ class UserModel {
     required this.uid,
     required this.email,
     required this.name,
-    this.role = 'student',
+    this.role = 'nuevo usuario',
     required this.createdAt,
     required this.lastLogin,
   });
@@ -33,7 +33,7 @@ class UserModel {
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
       name: map['name'] ?? '',
-      role: map['role'] ?? 'student',
+      role: map['role'] ?? 'nuevo usuario',
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       lastLogin: (map['lastLogin'] as Timestamp).toDate(),
     );

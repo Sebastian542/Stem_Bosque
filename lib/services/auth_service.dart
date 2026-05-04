@@ -36,6 +36,16 @@ class AuthService {
     await _auth.signOut();
   }
 
+  // Obtener datos del perfil del usuario actual
+  Future<Map<String, dynamic>?> getCurrentUserProfile() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      final doc = await _db.collection('users').doc(user.uid).get();
+      return doc.data();
+    }
+    return null;
+  }
+
   // Registro de nuevo usuario con creación de perfil en Firestore
   Future<UserCredential?> signUp(String email, String password, String name) async {
     try {
@@ -55,11 +65,11 @@ class AuthService {
           'uid': uid,
           'name': name,
           'email': email,
-          'role': 'student',
+          'role': 'nuevo usuario',
           'createdAt': FieldValue.serverTimestamp(),
           'lastLogin': FieldValue.serverTimestamp(),
         });
-        debugPrint("Documento creado en Firestore para el usuario: $uid");
+        debugPrint("Documento creado en Firestore para el usuario: $uid con rol: nuevo usuario");
       }
 
       return credential;

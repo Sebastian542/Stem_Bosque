@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/login_screen.dart';
+import '../screens/admin_panel_screen.dart';
 import 'help_dialog.dart';
 
 class IDEDrawer extends StatelessWidget {
@@ -124,23 +125,54 @@ class IDEDrawer extends StatelessWidget {
                   stream: FirebaseAuth.instance.authStateChanges(),
                   builder: (context, snapshot) {
                     final bool isLoggedIn = snapshot.hasData;
-                    return _buildItem(
-                      context,
-                      icon: isLoggedIn ? Icons.logout_rounded : Icons.login_rounded,
-                      title: isLoggedIn ? 'Cerrar Sesión' : 'Iniciar Sesión',
-                      subtitle: isLoggedIn 
-                          ? 'Cuenta: ${snapshot.data?.email}' 
-                          : 'Sincroniza tus programas en la nube',
-                      color: isLoggedIn ? AppTheme.red : AppTheme.purple,
-                      onTap: () async {
-                        if (isLoggedIn) {
-                          await AuthService().signOut();
-                        } else {
+                    if (!isLoggedIn) {
+                      return _buildItem(
+                        context,
+                        icon: Icons.login_rounded,
+                        title: 'Iniciar Sesión',
+                        subtitle: 'Sincroniza tus programas en la nube',
+                        color: AppTheme.purple,
+                        onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (context) => const LoginScreen()),
                           );
-                        }
+                        },
+                      );
+                    }
+
+                    return FutureBuilder<Map<String, dynamic>?>(
+                      future: AuthService().getCurrentUserProfile(),
+                      builder: (context, profileSnapshot) {
+                        final isAdmin = profileSnapshot.data?['role'] == 'admin';
+                        return Column(
+                          children: [
+                            if (isAdmin)
+                              _buildItem(
+                                context,
+                                icon: Icons.admin_panel_settings_rounded,
+                                title: 'Panel de Usuarios',
+                                subtitle: 'Administrar permisos y roles',
+                                color: AppTheme.yellow,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
+                                  );
+                                },
+                              ),
+                            _buildItem(
+                              context,
+                              icon: Icons.logout_rounded,
+                              title: 'Cerrar Sesión',
+                              subtitle: 'Cuenta: ${snapshot.data?.email}',
+                              color: AppTheme.red,
+                              onTap: () async {
+                                await AuthService().signOut();
+                              },
+                            ),
+                          ],
+                        );
                       },
                     );
                   },
