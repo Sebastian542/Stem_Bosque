@@ -17,11 +17,19 @@ class AuthService {
         password: password
       );
       
-      // Actualizar fecha de último acceso en Firestore
+      // 2. Actualizar fecha de último acceso en Firestore
       if (credential.user != null) {
-        await _db.collection('users').doc(credential.user!.uid).update({
-          'lastLogin': FieldValue.serverTimestamp(),
-        });
+        try {
+          // Usamos un timeout corto para no bloquear al usuario si la red o los permisos fallan
+          await _db.collection('users').doc(credential.user!.uid).set({
+            'lastLogin': FieldValue.serverTimestamp(),
+            'email': email,
+          }, SetOptions(merge: true)).timeout(const Duration(seconds: 3));
+          debugPrint("Firestore: Perfil actualizado correctamente.");
+        } catch (e) {
+          // Si falla aquí (ej. Permission Denied), permitimos que el usuario entre de todos modos
+          debugPrint("Aviso: No se pudo actualizar el perfil en Firestore ($e), pero el login continúa.");
+        }
       }
       
       return credential;
@@ -40,8 +48,14 @@ class AuthService {
   Future<Map<String, dynamic>?> getCurrentUserProfile() async {
     final user = _auth.currentUser;
     if (user != null) {
-      final doc = await _db.collection('users').doc(user.uid).get();
-      return doc.data();
+      try {
+        final doc = await _db.collection('users').doc(user.uid).get()
+            .timeout(const Duration(seconds: 4));
+        return doc.data();
+      } catch (e) {
+        debugPrint("Aviso: No se pudo leer el perfil de Firestore ($e).");
+        return null; // Retornamos null para que el login no falle
+      }
     }
     return null;
   }

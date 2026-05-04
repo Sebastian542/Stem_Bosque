@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_theme.dart';
+import 'command_creator_screen.dart';
 
 class AdminPanelScreen extends StatelessWidget {
   const AdminPanelScreen({super.key});
@@ -13,6 +14,18 @@ class AdminPanelScreen extends StatelessWidget {
         title: const Text('Panel de Administración', style: TextStyle(color: AppTheme.foreground)),
         backgroundColor: AppTheme.selection,
         iconTheme: const IconThemeData(color: AppTheme.foreground),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_box_rounded, color: AppTheme.green),
+            tooltip: 'Crear Nuevo Comando',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CommandCreatorScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('users').snapshots(),
