@@ -1,11 +1,11 @@
 {
-    "name": "stem_bosque",
-    "short_name": "stem_bosque",
+    "name": "StemBosque IDE",
+    "short_name": "StemBosque",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "StemBosque App",
+    "background_color": "#282a36",
+    "theme_color": "#bd93f9",
+    "description": "IDE de programación educativa para robótica - StemBosque",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
