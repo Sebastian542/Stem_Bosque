@@ -39,27 +39,32 @@ class AuthService {
   // Registro de nuevo usuario con creación de perfil en Firestore
   Future<UserCredential?> signUp(String email, String password, String name) async {
     try {
+      debugPrint("Intentando registrar usuario: $email");
       // 1. Crear el usuario en Firebase Auth
       UserCredential credential = await _auth.createUserWithEmailAndPassword(
         email: email, 
         password: password
       );
 
+      debugPrint("Usuario creado en Auth: ${credential.user?.uid}");
+
       // 2. Crear el perfil en la colección 'users' de Firestore
       if (credential.user != null) {
-        await _db.collection('users').doc(credential.user!.uid).set({
-          'uid': credential.user!.uid,
+        final uid = credential.user!.uid;
+        await _db.collection('users').doc(uid).set({
+          'uid': uid,
           'name': name,
           'email': email,
           'role': 'student',
           'createdAt': FieldValue.serverTimestamp(),
           'lastLogin': FieldValue.serverTimestamp(),
         });
+        debugPrint("Documento creado en Firestore para el usuario: $uid");
       }
 
       return credential;
     } catch (e) {
-      debugPrint("Error en Registro: $e");
+      debugPrint("ERROR CRÍTICO EN REGISTRO: $e");
       rethrow;
     }
   }

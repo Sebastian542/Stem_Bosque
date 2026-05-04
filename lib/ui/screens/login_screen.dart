@@ -53,10 +53,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.red,
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.currentLine,
+        title: const Text("Error de Conexión", style: TextStyle(color: AppTheme.red)),
+        content: Text(message, style: const TextStyle(color: AppTheme.foreground)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Entendido", style: TextStyle(color: AppTheme.cyan)),
+          )
+        ],
       ),
     );
   }
