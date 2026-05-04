@@ -17,7 +17,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDwNDScXf66dTN9SY75Urxzk8aPKRpKloY',
+    apiKey: 'AIzaSyCinmt194Sq2X-Vc4GuvppqSoKEJc6QZ48',
     appId: '1:668756871119:web:365e4926ef34ebfc8c34ba', // Generado basado en tu ID de proyecto
     messagingSenderId: '668756871119',
     projectId: 'stembosque',

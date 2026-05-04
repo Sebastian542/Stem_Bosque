@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       // Al tener éxito, regresamos al IDE (el stream de Auth se encarga del resto)
       if (mounted) {
-        final profile = await _authService.getCurrentUserProfile();
+        final profile = await _auth.getCurrentUserProfile();
         final name = profile?['name'] ?? 'Usuario';
         
         // Mensaje de bienvenida personalizado

@@ -5,6 +5,7 @@ class AppTheme {
   // Paleta Dracula Extendida
   static const Color background = Color(0xFF21222C);
   static const Color currentLine = Color(0xFF343746);
+  static const Color selection = Color(0xFF44475A);
   static const Color foreground = Color(0xFFF8F8F2);
   static const Color comment = Color(0xFF6272A4);
   static const Color cyan = Color(0xFF8BE9FD);
