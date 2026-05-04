@@ -11,11 +11,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     
     <application
-        android:label="stem_bosque"
+        android:label="StemBosque"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
-            android:name=".MainActivity"
+            android:name="co.edu.unbosque.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

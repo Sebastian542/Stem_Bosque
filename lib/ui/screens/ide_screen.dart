@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/database_service.dart';
 import '../../bluetooth/bluetooth_manager.dart';
 import '../../compiler/compiler.dart';
 import '../../services/file_manager.dart';
@@ -234,14 +236,35 @@ FIN PROGRAMA''';
       );
       if (mounted) setState(() {});
       if (mounted) {
+        // --- GUARDADO EN LA NUBE (FIREBASE) ---
+        final user = FirebaseAuth.instance.currentUser;
+        bool cloudSaved = false;
+        
+        if (user != null) {
+          try {
+            await DatabaseService().saveProject(
+              name: fullName,
+              code: _codeController.text,
+              obstacles: [], // TODO: Pasar obstáculos reales del Modo Bloque
+            );
+            cloudSaved = true;
+          } catch (e) {
+            debugPrint("Error guardando en la nube: $e");
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Row(children: [
             Icon(saved ? Icons.check_circle : Icons.error,
                 color: saved ? AppTheme.green : AppTheme.red),
             const SizedBox(width: 12),
-            Text(saved
-                ? 'Guardado como "$fullName"'
-                : 'Error al guardar'),
+            Expanded(
+              child: Text(saved
+                  ? (cloudSaved 
+                      ? 'Guardado en dispositivo y nube ☁️' 
+                      : 'Guardado localmente como "$fullName"')
+                  : 'Error al guardar'),
+            ),
           ]),
           backgroundColor: AppTheme.currentLine,
           duration: const Duration(seconds: 2),

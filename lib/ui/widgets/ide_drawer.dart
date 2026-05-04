@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../screens/login_screen.dart';
 import 'help_dialog.dart';
 
 class IDEDrawer extends StatelessWidget {
@@ -115,6 +118,32 @@ class IDEDrawer extends StatelessWidget {
                   subtitle: 'Añadir elementos a la simulación',
                   color: AppTheme.green,
                   onTap: onOpenBlockMode,
+                ),
+                const Divider(color: AppTheme.currentLine, height: 1),
+                StreamBuilder<User?>(
+                  stream: FirebaseAuth.instance.authStateChanges(),
+                  builder: (context, snapshot) {
+                    final bool isLoggedIn = snapshot.hasData;
+                    return _buildItem(
+                      context,
+                      icon: isLoggedIn ? Icons.logout_rounded : Icons.login_rounded,
+                      title: isLoggedIn ? 'Cerrar Sesión' : 'Iniciar Sesión',
+                      subtitle: isLoggedIn 
+                          ? 'Cuenta: ${snapshot.data?.email}' 
+                          : 'Sincroniza tus programas en la nube',
+                      color: isLoggedIn ? AppTheme.red : AppTheme.purple,
+                      onTap: () async {
+                        if (isLoggedIn) {
+                          await AuthService().signOut();
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          );
+                        }
+                      },
+                    );
+                  },
                 ),
               ],
             ),
