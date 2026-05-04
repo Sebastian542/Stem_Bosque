@@ -529,7 +529,6 @@ FIN PROGRAMA''';
       return;
     }
     await _fm.share(_compiledLines.join('\n'), fileName: 'compilado.txt');
-
   }
 
   // ─────────────────────────────────────────────────────────────

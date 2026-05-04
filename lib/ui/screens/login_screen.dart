@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -134,36 +135,46 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 40),
                 
-                // Formulario dinámico
-                if (_isRegistering) ...[
-                  TextField(
-                    controller: _nameController,
-                    style: const TextStyle(color: AppTheme.foreground),
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre completo',
-                      prefixIcon: Icon(Icons.person, color: AppTheme.comment),
-                    ),
-                  ).animate().fadeIn().slideX(),
-                  const SizedBox(height: 16),
-                ],
-                
-                TextField(
-                  controller: _emailController,
-                  style: const TextStyle(color: AppTheme.foreground),
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Correo electrónico',
-                    prefixIcon: Icon(Icons.email, color: AppTheme.comment),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  style: const TextStyle(color: AppTheme.foreground),
-                  decoration: const InputDecoration(
-                    labelText: 'Contraseña',
-                    prefixIcon: Icon(Icons.lock, color: AppTheme.comment),
+                // Formulario dinámico con Autofill
+                AutofillGroup(
+                  child: Column(
+                    children: [
+                      if (_isRegistering) ...[
+                        TextField(
+                          controller: _nameController,
+                          style: const TextStyle(color: AppTheme.foreground),
+                          autofillHints: const [AutofillHints.name],
+                          decoration: const InputDecoration(
+                            labelText: 'Nombre completo',
+                            prefixIcon: Icon(Icons.person, color: AppTheme.comment),
+                          ),
+                        ).animate().fadeIn().slideX(),
+                        const SizedBox(height: 16),
+                      ],
+                      
+                      TextField(
+                        controller: _emailController,
+                        style: const TextStyle(color: AppTheme.foreground),
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
+                        decoration: const InputDecoration(
+                          labelText: 'Correo electrónico',
+                          prefixIcon: Icon(Icons.email, color: AppTheme.comment),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        style: const TextStyle(color: AppTheme.foreground),
+                        autofillHints: const [AutofillHints.password],
+                        onEditingComplete: () => TextInput.finishAutofillContext(),
+                        decoration: const InputDecoration(
+                          labelText: 'Contraseña',
+                          prefixIcon: Icon(Icons.lock, color: AppTheme.comment),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 32),
