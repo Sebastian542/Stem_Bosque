@@ -13,7 +13,7 @@ import '../widgets/toolbar.dart';
 import '../widgets/ide_drawer.dart';
 import '../widgets/confetti_widget.dart';
 import 'simulation_screen.dart';
-import '../widgets/vampirito_pet.dart';
+import '../widgets/tita.dart';
 import 'dart:async';
 
 class IDEScreen extends StatefulWidget {

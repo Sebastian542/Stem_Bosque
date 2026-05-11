@@ -33,5 +33,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-#  assets:
-#    - assets/images/
+  assets:
+    - assets/images/tita_neutral.png
+    - assets/images/tita_happy.png
+    - assets/images/tita_confused.png
+    - assets/images/tita_excited.png
+    - assets/images/tita_watching.png
