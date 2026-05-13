@@ -126,8 +126,7 @@ class ValidatedCodeEditor extends StatefulWidget {
   State<ValidatedCodeEditor> createState() => _ValidatedCodeEditorState();
 }
 
-class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
-    with SingleTickerProviderStateMixin {
+class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   final _validator        = SyntaxValidator();
   final _focusNode        = FocusNode();
   final _scrollController = ScrollController();
@@ -142,10 +141,6 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
   static const double _maxFontSize  = 28.0;
   static const double _lineHeight   = 1.5;
   double get _lineH => _fontSize * _lineHeight;
-
-  // ── Mascota animación ─────────────────────────────────────────────────────
-  late final AnimationController _mascotBounceCtrl;
-  late final Animation<double>    _mascotBounce;
 
   static const _fontFamily = 'monospace';
   static const _padding    = 8.0;
@@ -244,65 +239,77 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
 
   @override
   Widget build(BuildContext context) {
-    final hasError = !_result.isValid && _result.errorMessage != null;
+    return LayoutBuilder(builder: (context, constraints) {
+      final isWide = constraints.maxWidth > 600;
+      final lineCount = widget.controller.text.split('\n').length;
+      // Ancho dinámico del gutter basado en el número de líneas y tamaño de fuente
+      final gutterWidth = (lineCount.toString().length * (_fontSize * 0.55) + 20).clamp(38.0, 100.0);
 
-    return Column(
-      children: [
-        _buildStatusBar(),
-        if (_sugerencias.isNotEmpty) _buildSuggestionBar(),
+      return Column(
+        children: [
+          _buildStatusBar(isWide),
+          if (_sugerencias.isNotEmpty) _buildSuggestionBar(),
 
-        // ── Área del editor con soporte de pinch-to-zoom ──────────────────
-        Expanded(
-          child: GestureDetector(
-            onScaleStart:  _onScaleStart,
-            onScaleUpdate: _onScaleUpdate,
-            child: Container(
-              color: AppTheme.background,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildLineNumbers(),
-                  Container(width: 1, color: AppTheme.currentLine),
-                  Expanded(child: _buildTextField()),
-                ],
+          Expanded(
+            child: GestureDetector(
+              onScaleStart:  _onScaleStart,
+              onScaleUpdate: _onScaleUpdate,
+              child: Container(
+                color: AppTheme.background,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLineNumbers(gutterWidth),
+                    Container(width: 1, color: AppTheme.currentLine),
+                    Expanded(
+                      child: _buildTextField(constraints.maxWidth - gutterWidth),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    );
+          
+          // Banner de error responsive en la base
+          if (!_result.isValid && _result.errorMessage != null)
+            _buildErrorBanner(_result.errorMessage!),
+        ],
+      );
+    });
   }
 
   // ── TextField ─────────────────────────────────────────────────────────────
 
-  Widget _buildTextField() {
+  Widget _buildTextField(double minWidth) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: SizedBox(
-        width: 1800,
-        child: TextField(
-          controller:       widget.controller,
-          focusNode:        _focusNode,
-          scrollController: _scrollController,
-          maxLines:         null,
-          expands:          true,
-          textAlignVertical: TextAlignVertical.top,
-          style: TextStyle(
-            fontFamily: _fontFamily,
-            fontSize:   _fontSize,
-            height:     _lineHeight,
-            color:      AppTheme.foreground,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: minWidth),
+        child: IntrinsicWidth(
+          child: TextField(
+            controller:       widget.controller,
+            focusNode:        _focusNode,
+            scrollController: _scrollController,
+            maxLines:         null,
+            expands:          true,
+            textAlignVertical: TextAlignVertical.top,
+            style: TextStyle(
+              fontFamily: _fontFamily,
+              fontSize:   _fontSize,
+              height:     _lineHeight,
+              color:      AppTheme.foreground,
+            ),
+            decoration: const InputDecoration(
+              border:         InputBorder.none,
+              contentPadding: EdgeInsets.only(left: _padding, top: _padding, right: _padding),
+              isCollapsed:    true,
+            ),
+            cursorColor:       AppTheme.cyan,
+            cursorWidth:       2,
+            keyboardType:      TextInputType.multiline,
+            autocorrect:       false,
+            enableSuggestions: false,
           ),
-          decoration: const InputDecoration(
-            border:         InputBorder.none,
-            contentPadding: EdgeInsets.only(left: _padding, top: _padding),
-            isCollapsed:    true,
-          ),
-          cursorColor:       AppTheme.cyan,
-          cursorWidth:       2,
-          keyboardType:      TextInputType.multiline,
-          autocorrect:       false,
-          enableSuggestions: false,
         ),
       ),
     );
@@ -310,9 +317,9 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
 
   // ── Números de línea ──────────────────────────────────────────────────────
 
-  Widget _buildLineNumbers() {
+  Widget _buildLineNumbers(double width) {
     return SizedBox(
-      width: 44,
+      width: width,
       child: ValueListenableBuilder<TextEditingValue>(
         valueListenable: widget.controller,
         builder: (context, value, _) {
@@ -380,7 +387,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
 
   // ── Status bar ────────────────────────────────────────────────────────────
 
-  Widget _buildStatusBar() {
+  Widget _buildStatusBar(bool isWide) {
     final isEmpty = widget.controller.text.trim().isEmpty;
     final isValid = _result.isValid;
 
@@ -405,8 +412,8 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
               isEmpty
                   ? 'Escribe tu programa...'
                   : isValid
-                  ? 'Sin errores — listo para ejecutar'
-                  : 'Error${_result.errorLine != null ? ' — línea ${_result.errorLine}' : ''}',
+                  ? 'Sin errores — listo'
+                  : 'Error${_result.errorLine != null ? ' (L${_result.errorLine})' : ''}',
               style: TextStyle(
                 fontSize: 11,
                 color: isEmpty  ? AppTheme.comment
@@ -417,15 +424,16 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
               maxLines: 1,
             ),
           ),
+          if (isWide) ...[
+            const SizedBox(width: 8),
+            _buildLegend(),
+          ],
           const SizedBox(width: 8),
-          _buildLegend(),
-          const SizedBox(width: 8),
-          // Indicador de zoom actual
           Text(
             '${_fontSize.round()}px',
             style: const TextStyle(fontSize: 10, color: AppTheme.comment),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Text(
             '${widget.controller.text.split('\n').length}L',
             style: const TextStyle(fontSize: 11, color: AppTheme.comment),
@@ -522,8 +530,54 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
     );
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  // ── Banner de error ──────────────────────────────────────────────────────
+
+  Widget _buildErrorBanner(String message) {
+    String display = message
+        .replaceAll('❌ Error Léxico: ', '')
+        .replaceAll('❌ Error Sintáctico: ', '');
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.red.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(Icons.error_outline, color: AppTheme.red, size: 16),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              display,
+              style: const TextStyle(
+                color: AppTheme.red,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'monospace',
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

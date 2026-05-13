@@ -247,14 +247,14 @@ class _VampiritoPetState extends State<VampiritoPet>
 
   Widget _buildCharacter() {
     return Container(
-      width:  60,
-      height: 80,
+      width:  120,
+      height: 160,
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
             color:        _glowColor.withOpacity(0.45),
-            blurRadius:   14,
-            spreadRadius: 2,
+            blurRadius:   25,
+            spreadRadius: 4,
           ),
         ],
       ),
@@ -649,8 +649,8 @@ class _VampiritoExecutionAnimationState
       final color   = _sparkleColors[i];
 
       return Positioned(
-        left: 30 + off.dx - size / 2,
-        top:  40 + off.dy - size / 2,
+        left: 60.0 + off.dx - size / 2,
+        top:  80.0 + off.dy - size / 2,
         child: Opacity(
           opacity: opacity,
           child: Container(
@@ -688,9 +688,9 @@ class _VampiritoExecutionAnimationState
   Widget build(BuildContext context) {
     final size    = MediaQuery.of(context).size;
 
-    final startX  = size.width  - 76.0;
-    final startY  = size.height - 120.0;
-    final centerX = size.width  / 2 - 50.0;
+    final startX  = size.width  - 140.0;
+    final startY  = size.height - 200.0;
+    final centerX = size.width  / 2 - 60.0;
     final centerY = size.height / 2 - 80.0;
 
     return AnimatedBuilder(
@@ -705,12 +705,12 @@ class _VampiritoExecutionAnimationState
           t     = CurvedAnimation(parent: _flyInCtrl, curve: Curves.easeOutBack).value;
           x     = lerpDouble(startX, centerX, t)!;
           y     = lerpDouble(startY, centerY, t)!;
-          scale = lerpDouble(1.0, 2.2, t)!;
+          scale = lerpDouble(1.0, 1.8, t)!;
         } else {
           t     = CurvedAnimation(parent: _flyOutCtrl, curve: Curves.easeInBack).value;
           x     = lerpDouble(centerX, startX, t)!;
           y     = lerpDouble(centerY, startY, t)!;
-          scale = lerpDouble(2.2, 1.0, t)!;
+          scale = lerpDouble(1.8, 1.0, t)!;
         }
 
         final bounceOffset = _reactionCtrl.isAnimating ? _bounce.value : 0.0;
@@ -724,10 +724,10 @@ class _VampiritoExecutionAnimationState
         if (_isSuspense) {
           final pulse = math.sin(_sparkleCtrl.value * math.pi).abs();
           glowColor  = AppTheme.cyan;
-          glowRadius = 10.0 + pulse * 22.0;
+          glowRadius = 20.0 + pulse * 30.0;
         } else {
           glowColor  = widget.success ? AppTheme.green : AppTheme.red;
-          glowRadius = widget.success ? 10.0 + _glow.value * 30.0 : 14.0;
+          glowRadius = widget.success ? 20.0 + _glow.value * 40.0 : 22.0;
         }
 
         return Stack(
@@ -737,7 +737,7 @@ class _VampiritoExecutionAnimationState
             Positioned.fill(
               child: IgnorePointer(
                 child: ColoredBox(
-                  color: Colors.black.withOpacity(_flyInCtrl.value * 0.30),
+                  color: Colors.black.withOpacity(_flyInCtrl.value * 0.40),
                 ),
               ),
             ),
@@ -798,7 +798,7 @@ class _VampiritoExecutionAnimationState
                               Expanded(
                                 child: Text(
                                   widget.success
-                                      ? '¡Perfecto! 🌿✨  Todo salió bien.'
+                                      ? '¡Perfecto! 🌿✨ Todo salió bien.'
                                       : _cleanErrorText(widget.errorMessage),
                                   style: TextStyle(
                                     color:      widget.success
@@ -832,16 +832,16 @@ class _VampiritoExecutionAnimationState
                   Transform.scale(
                     scale: scale,
                     child: Container(
-                      width:  60,
-                      height: 80,
+                      width:  120,
+                      height: 160,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
                             color:        glowColor.withOpacity(
                                 _isSuspense ? 0.45 : 0.3 + _glow.value * 0.5),
                             blurRadius:   glowRadius,
-                            spreadRadius: 2,
+                            spreadRadius: 4,
                           ),
                         ],
                       ),
