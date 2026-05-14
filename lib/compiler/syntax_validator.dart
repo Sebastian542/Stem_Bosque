@@ -14,10 +14,14 @@ class ValidationResult {
 }
 
 class SyntaxValidator {
+  final List<String> customCommands;
+
+  SyntaxValidator({this.customCommands = const []});
+
   ValidationResult validate(String source) {
     if (source.trim().isEmpty) return const ValidationResult.valid();
     try {
-      final tokens = AnalizadorLexico(source).tokenizar();
+      final tokens = AnalizadorLexico(source, comandosPersonalizados: customCommands).tokenizar();
       Parser(tokens).parsePrograma();
       return const ValidationResult.valid();
     } catch (e) {

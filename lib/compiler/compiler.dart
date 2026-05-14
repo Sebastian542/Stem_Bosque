@@ -36,9 +36,14 @@ class ResultadoCompilacion {
 }
 
 class Compilador {
+  final List<String> comandosPersonalizados;
+
+  Compilador({this.comandosPersonalizados = const []});
+
   ResultadoCompilacion compilar(String fuente) {
     try {
-      final tokens = AnalizadorLexico(fuente).tokenizar();
+      final lexer = AnalizadorLexico(fuente, comandosPersonalizados: comandosPersonalizados);
+      final tokens = lexer.tokenizar();
       final ast    = Parser(tokens).parsePrograma();
       final astTexto = ast.mostrar('');
 

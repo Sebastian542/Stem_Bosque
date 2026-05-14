@@ -52,17 +52,10 @@ class VampiritoPet extends StatefulWidget {
 class _VampiritoPetState extends State<VampiritoPet>
     with TickerProviderStateMixin {
 
-  // Float suave (siempre activo)
   late final AnimationController _floatCtrl;
   late final Animation<double>   _floatY;
-
-  // Shake horizontal (errores)
   late final AnimationController _shakeCtrl;
-
-  // Jump (éxito)
   late final AnimationController _jumpCtrl;
-
-  // Escala del globo (entrar / salir)
   late final AnimationController _bubbleCtrl;
   late final Animation<double>   _bubbleScale;
 
@@ -156,7 +149,6 @@ class _VampiritoPetState extends State<VampiritoPet>
         newExpr = _Expression.happy;
         bubble  = true;
         _jumpCtrl.forward(from: 0);
-        // Esconder globo automáticamente después de 4s
         Future.delayed(const Duration(seconds: 4), () {
           if (mounted && widget.state == VampiritoState.success) {
             _bubbleCtrl.reverse();
@@ -231,7 +223,7 @@ class _VampiritoPetState extends State<VampiritoPet>
                 : const SizedBox.shrink(),
           ),
 
-          // ── Vampirito ──────────────────────────────────────────────────
+          // ── Tita ──────────────────────────────────────────────────────
           AnimatedBuilder(
             animation: Listenable.merge([_floatCtrl, _shakeCtrl, _jumpCtrl]),
             builder: (_, child) => Transform.translate(
@@ -255,20 +247,32 @@ class _VampiritoPetState extends State<VampiritoPet>
 
   Widget _buildCharacter() {
     return Container(
-      width:  60,
-      height: 80,
+      width:  120,
+      height: 160,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color:        _glowColor.withOpacity(0.45),
-            blurRadius:   14,
-            spreadRadius: 2,
+            blurRadius:   25,
+            spreadRadius: 4,
           ),
         ],
       ),
-      child: CustomPaint(painter: _VampirePainter(_expr)),
+      child: Image.asset(
+        _imagePath(),
+        fit: BoxFit.contain,
+      ),
     );
+  }
+
+  String _imagePath() {
+    switch (_expr) {
+      case _Expression.happy:    return 'assets/images/tita_happy.png';
+      case _Expression.confused: return 'assets/images/tita_confused.png';
+      case _Expression.excited:  return 'assets/images/tita_excited.png';
+      case _Expression.watching: return 'assets/images/tita_watching.png';
+      default:                   return 'assets/images/tita_neutral.png';
+    }
   }
 
   Color get _glowColor {
@@ -372,7 +376,7 @@ class _VampiritoPetState extends State<VampiritoPet>
           ),
         ],
 
-        // ── Cola apuntando hacia el vampirito ──────────────────────────
+        // ── Cola apuntando hacia Tita ──────────────────────────────────
         const SizedBox(height: 0),
         Padding(
           padding: const EdgeInsets.only(right: 18),
@@ -409,7 +413,7 @@ class _VampiritoPetState extends State<VampiritoPet>
 
       case VampiritoState.success:
         return const _BubbleContent(
-          text:  '¡Compilación exitosa! 🦇✨\nListo para ejecutar o simular.',
+          text:  '¡Compilación exitosa! 🌿✨\nListo para ejecutar o simular.',
           tip:   null,
           color: AppTheme.green,
           icon:  Icons.check_circle_outline,
@@ -425,7 +429,7 @@ class _VampiritoPetState extends State<VampiritoPet>
 
       default:
         return const _BubbleContent(
-          text:  '¡Hola! Tócame para ver\nla documentación 📚🦇',
+          text:  '¡Hola! Tócame para ver\nla documentación 📚🌿',
           tip:   null,
           color: AppTheme.purple,
           icon:  Icons.help_outline,
@@ -436,7 +440,7 @@ class _VampiritoPetState extends State<VampiritoPet>
   String? _tipFromError(String msg) {
     if (msg.isEmpty) return null;
 
-    final lineas    = msg.split('\n');
+    final lineas     = msg.split('\n');
     final lineaPista = lineas
         .where((l) => l.trimLeft().startsWith('👉'))
         .map((l) => l.replaceAll('👉', '').trim())
@@ -474,8 +478,8 @@ class _VampiritoPetState extends State<VampiritoPet>
 // ═══════════════════════════════════════════════════════════════════════════
 
 class VampiritoExecutionAnimation extends StatefulWidget {
-  final bool    success;
-  final String? errorMessage;
+  final bool         success;
+  final String?      errorMessage;
   final VoidCallback onComplete;
 
   const VampiritoExecutionAnimation({
@@ -494,33 +498,21 @@ class _VampiritoExecutionAnimationState
     extends State<VampiritoExecutionAnimation>
     with TickerProviderStateMixin {
 
-  // Fase 1: vuela al centro
   late final AnimationController _flyInCtrl;
-
-  // Fase 2: SUSPENSO — temblor continuo mientras "procesa"
-  late final AnimationController _suspenseCtrl;   // repite rápido → temblor
-  late final AnimationController _sparkleCtrl;    // repite lento  → lucecitas pulsan
-
-  // Fase 3: reacción
+  late final AnimationController _suspenseCtrl;
+  late final AnimationController _sparkleCtrl;
   late final AnimationController _reactionCtrl;
   late final Animation<double>   _bounce;
   late final Animation<double>   _glow;
-
-  // Shake para error
   late final AnimationController _shakeCtrl;
-
-  // Fase 4: regresa
   late final AnimationController _flyOutCtrl;
-
-  // Banner superior: desliza desde arriba
   late final AnimationController _bannerCtrl;
   late final Animation<Offset>   _bannerSlide;
 
-  _Expression _expr        = _Expression.excited;
-  bool        _showBubble  = false;
-  bool        _isSuspense  = false;   // activa temblor + lucecitas
+  _Expression _expr       = _Expression.excited;
+  bool        _showBubble = false;
+  bool        _isSuspense = false;
 
-  // Posiciones fijas de las lucecitas relativas al centro del vampirito
   static const _sparkleOffsets = [
     Offset(-28,  -8), Offset( 28, -12), Offset(-22,  18),
     Offset( 24,  14), Offset(  0, -32), Offset(-32,   4),
@@ -536,25 +528,21 @@ class _VampiritoExecutionAnimationState
   void initState() {
     super.initState();
 
-    // ── Fly in ──────────────────────────────────────────────────────────
     _flyInCtrl = AnimationController(
       vsync:    this,
       duration: const Duration(milliseconds: 600),
     );
 
-    // ── Suspenso: temblor muy rápido ────────────────────────────────────
     _suspenseCtrl = AnimationController(
       vsync:    this,
-      duration: const Duration(milliseconds: 90),   // ciclo rápido = vibración
+      duration: const Duration(milliseconds: 90),
     );
 
-    // ── Lucecitas: pulso más lento ──────────────────────────────────────
     _sparkleCtrl = AnimationController(
       vsync:    this,
       duration: const Duration(milliseconds: 500),
     );
 
-    // ── Reacción ────────────────────────────────────────────────────────
     _reactionCtrl = AnimationController(
       vsync:    this,
       duration: const Duration(milliseconds: 800),
@@ -568,19 +556,16 @@ class _VampiritoExecutionAnimationState
       CurvedAnimation(parent: _reactionCtrl, curve: Curves.easeOut),
     );
 
-    // ── Shake error ─────────────────────────────────────────────────────
     _shakeCtrl = AnimationController(
       vsync:    this,
       duration: const Duration(milliseconds: 550),
     );
 
-    // ── Fly out ─────────────────────────────────────────────────────────
     _flyOutCtrl = AnimationController(
       vsync:    this,
       duration: const Duration(milliseconds: 500),
     );
 
-    // ── Banner superior ──────────────────────────────────────────────────
     _bannerCtrl = AnimationController(
       vsync:    this,
       duration: const Duration(milliseconds: 420),
@@ -594,11 +579,9 @@ class _VampiritoExecutionAnimationState
   }
 
   Future<void> _runSequence() async {
-    // ── Fase 1: vuela al centro ──────────────────────────────────────────
     setState(() => _expr = _Expression.excited);
     await _flyInCtrl.forward();
 
-    // ── Fase 2: SUSPENSO (2.8 s de tensión) ─────────────────────────────
     setState(() {
       _isSuspense = true;
       _expr       = _Expression.excited;
@@ -612,13 +595,12 @@ class _VampiritoExecutionAnimationState
     _sparkleCtrl.stop();
     setState(() => _isSuspense = false);
 
-    // ── Fase 3: REACCIÓN — banner baja desde arriba ───────────────────────
     await Future.delayed(const Duration(milliseconds: 80));
     setState(() {
-      _expr      = widget.success ? _Expression.happy : _Expression.confused;
+      _expr       = widget.success ? _Expression.happy : _Expression.confused;
       _showBubble = true;
     });
-    _bannerCtrl.forward();   // banner entra desde arriba
+    _bannerCtrl.forward();
 
     if (widget.success) {
       await _reactionCtrl.forward();
@@ -627,11 +609,9 @@ class _VampiritoExecutionAnimationState
       await Future.delayed(const Duration(milliseconds: 200));
     }
 
-    // Mantener banner visible
     await Future.delayed(const Duration(milliseconds: 1400));
 
-    // ── Fase 4: banner sube, luego vampirito regresa ──────────────────────
-    await _bannerCtrl.reverse();          // banner sale hacia arriba
+    await _bannerCtrl.reverse();
     setState(() => _showBubble = false);
     await Future.delayed(const Duration(milliseconds: 100));
     await _flyOutCtrl.forward();
@@ -651,35 +631,31 @@ class _VampiritoExecutionAnimationState
     super.dispose();
   }
 
-  // Temblor de suspenso: sacudida fina en X e Y
   double get _suspenseTrembleX =>
       _isSuspense ? math.sin(_suspenseCtrl.value * math.pi) * 3.5 : 0;
   double get _suspenseTrembleY =>
       _isSuspense ? math.cos(_suspenseCtrl.value * math.pi * 2) * 2 : 0;
 
-  // Shake de error
   double get _shakeX =>
       math.sin(_shakeCtrl.value * math.pi * 6) * 12 * (1 - _shakeCtrl.value);
 
-  // Lucecitas: cada una tiene un desfase de fase para que pulsen escalonadas
   List<Widget> _buildSparkles() {
     return List.generate(_sparkleOffsets.length, (i) {
-      final phase    = i / _sparkleOffsets.length;
-      final rawT     = (_sparkleCtrl.value + phase) % 1.0;
-      final opacity  = math.sin(rawT * math.pi).clamp(0.0, 1.0);
-      final size     = 4.0 + opacity * 4.0;
-      final off      = _sparkleOffsets[i];
-      final color    = _sparkleColors[i];
+      final phase   = i / _sparkleOffsets.length;
+      final rawT    = (_sparkleCtrl.value + phase) % 1.0;
+      final opacity = math.sin(rawT * math.pi).clamp(0.0, 1.0);
+      final size    = 4.0 + opacity * 4.0;
+      final off     = _sparkleOffsets[i];
+      final color   = _sparkleColors[i];
 
       return Positioned(
-        // El vampirito mide 60×80; centramos en (30, 40)
-        left: 30 + off.dx - size / 2,
-        top:  40 + off.dy - size / 2,
+        left: 60.0 + off.dx - size / 2,
+        top:  80.0 + off.dy - size / 2,
         child: Opacity(
           opacity: opacity,
           child: Container(
-            width:      size,
-            height:     size,
+            width:  size,
+            height: size,
             decoration: BoxDecoration(
               color:     color,
               shape:     BoxShape.circle,
@@ -696,13 +672,25 @@ class _VampiritoExecutionAnimationState
     });
   }
 
+  // ── Imagen de Tita según expresión ────────────────────────────────────────
+
+  String _imagePath(_Expression expr) {
+    switch (expr) {
+      case _Expression.happy:    return 'assets/images/tita_happy.png';
+      case _Expression.confused: return 'assets/images/tita_confused.png';
+      case _Expression.excited:  return 'assets/images/tita_excited.png';
+      case _Expression.watching: return 'assets/images/tita_watching.png';
+      default:                   return 'assets/images/tita_neutral.png';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size    = MediaQuery.of(context).size;
 
-    final startX  = size.width  - 76.0;
-    final startY  = size.height - 120.0;
-    final centerX = size.width  / 2 - 50.0;
+    final startX  = size.width  - 140.0;
+    final startY  = size.height - 200.0;
+    final centerX = size.width  / 2 - 60.0;
     final centerY = size.height / 2 - 80.0;
 
     return AnimatedBuilder(
@@ -711,38 +699,35 @@ class _VampiritoExecutionAnimationState
         _reactionCtrl, _shakeCtrl, _flyOutCtrl, _bannerCtrl,
       ]),
       builder: (context, _) {
-        // ── Posición e interpolación ───────────────────────────────────
         double t, x, y, scale;
 
         if (!_flyOutCtrl.isAnimating && _flyOutCtrl.value == 0) {
           t     = CurvedAnimation(parent: _flyInCtrl, curve: Curves.easeOutBack).value;
           x     = lerpDouble(startX, centerX, t)!;
           y     = lerpDouble(startY, centerY, t)!;
-          scale = lerpDouble(1.0, 2.2, t)!;
+          scale = lerpDouble(1.0, 1.8, t)!;
         } else {
           t     = CurvedAnimation(parent: _flyOutCtrl, curve: Curves.easeInBack).value;
           x     = lerpDouble(centerX, startX, t)!;
           y     = lerpDouble(centerY, startY, t)!;
-          scale = lerpDouble(2.2, 1.0, t)!;
+          scale = lerpDouble(1.8, 1.0, t)!;
         }
 
-        // ── Offsets adicionales ────────────────────────────────────────
         final bounceOffset = _reactionCtrl.isAnimating ? _bounce.value : 0.0;
         final shakeOffset  = _shakeCtrl.isAnimating    ? _shakeX       : 0.0;
         final trembleX     = _suspenseTrembleX;
         final trembleY     = _suspenseTrembleY;
 
-        // ── Glow según fase ────────────────────────────────────────────
         final Color  glowColor;
         final double glowRadius;
 
         if (_isSuspense) {
           final pulse = math.sin(_sparkleCtrl.value * math.pi).abs();
           glowColor  = AppTheme.cyan;
-          glowRadius = 10.0 + pulse * 22.0;
+          glowRadius = 20.0 + pulse * 30.0;
         } else {
           glowColor  = widget.success ? AppTheme.green : AppTheme.red;
-          glowRadius = widget.success ? 10.0 + _glow.value * 30.0 : 14.0;
+          glowRadius = widget.success ? 20.0 + _glow.value * 40.0 : 22.0;
         }
 
         return Stack(
@@ -752,7 +737,7 @@ class _VampiritoExecutionAnimationState
             Positioned.fill(
               child: IgnorePointer(
                 child: ColoredBox(
-                  color: Colors.black.withOpacity(_flyInCtrl.value * 0.30),
+                  color: Colors.black.withOpacity(_flyInCtrl.value * 0.40),
                 ),
               ),
             ),
@@ -791,7 +776,6 @@ class _VampiritoExecutionAnimationState
                           ),
                           child: Row(
                             children: [
-                              // Icono
                               Container(
                                 width:  36,
                                 height: 36,
@@ -811,11 +795,10 @@ class _VampiritoExecutionAnimationState
                                 ),
                               ),
                               const SizedBox(width: 14),
-                              // Texto
                               Expanded(
                                 child: Text(
                                   widget.success
-                                      ? '¡Perfecto! 🦇✨  Todo salió bien.'
+                                      ? '¡Perfecto! 🌿✨ Todo salió bien.'
                                       : _cleanErrorText(widget.errorMessage),
                                   style: TextStyle(
                                     color:      widget.success
@@ -839,7 +822,7 @@ class _VampiritoExecutionAnimationState
                 ),
               ),
 
-            // ── VAMPIRITO + lucecitas (sin burbuja) ────────────────────
+            // ── TITA + lucecitas ───────────────────────────────────────
             Positioned(
               left: x + shakeOffset + trembleX,
               top:  y + bounceOffset + trembleY,
@@ -849,20 +832,23 @@ class _VampiritoExecutionAnimationState
                   Transform.scale(
                     scale: scale,
                     child: Container(
-                      width:  60,
-                      height: 80,
+                      width:  120,
+                      height: 160,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
                             color:        glowColor.withOpacity(
                                 _isSuspense ? 0.45 : 0.3 + _glow.value * 0.5),
                             blurRadius:   glowRadius,
-                            spreadRadius: 2,
+                            spreadRadius: 4,
                           ),
                         ],
                       ),
-                      child: CustomPaint(painter: _VampirePainter(_expr)),
+                      child: Image.asset(
+                        _imagePath(_expr),
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   if (_isSuspense) ..._buildSparkles(),
@@ -876,7 +862,6 @@ class _VampiritoExecutionAnimationState
     );
   }
 
-  /// Limpia el texto de error para mostrarlo sin prefijos ni saltos raros
   String _cleanErrorText(String? msg) {
     if (msg == null || msg.isEmpty) return '¡Hay un error!\nRevisa el código.';
     final firstLine = msg
@@ -889,381 +874,6 @@ class _VampiritoExecutionAnimationState
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PAINTER — Vampirito con 5 expresiones
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _VampirePainter extends CustomPainter {
-  final _Expression expr;
-  const _VampirePainter(this.expr);
-
-  static const _purple = AppTheme.purple;
-  static const _cape   = Color(0xFF6272a4);
-  static const _skin   = Color(0xFFe8d5f0);
-  static const _dark   = AppTheme.background;
-  static const _red    = AppTheme.red;
-  static const _white  = AppTheme.foreground;
-  static const _cyan   = AppTheme.cyan;
-  static const _green  = AppTheme.green;
-  static const _yellow = AppTheme.yellow;
-  static const _pink   = Color(0xFFffb3d1);
-
-  Paint _fill(Color c) => Paint()..color = c;
-  Paint _stroke(Color c, double w) => Paint()
-    ..color       = c
-    ..style       = PaintingStyle.stroke
-    ..strokeWidth = w
-    ..strokeCap   = StrokeCap.round
-    ..strokeJoin  = StrokeJoin.round;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    _drawBase(canvas, w, h);
-    _drawFace(canvas, w, h);
-    _drawChest(canvas, w, h);
-    _drawExtras(canvas, w, h);
-  }
-
-  // ── BASE ──────────────────────────────────────────────────────────────────
-
-  void _drawBase(Canvas canvas, double w, double h) {
-    // Capa
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.10, h * 0.35)
-        ..quadraticBezierTo(0, h * 0.65, w * 0.05, h)
-        ..lineTo(w * 0.95, h)
-        ..quadraticBezierTo(w, h * 0.65, w * 0.90, h * 0.35)
-        ..close(),
-      _fill(_cape),
-    );
-
-    // Alitas de la capa
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.05, h)
-        ..quadraticBezierTo(0, h * 0.84, 0, h * 0.70)
-        ..quadraticBezierTo(w * 0.08, h * 0.80, w * 0.18, h)
-        ..close(),
-      _fill(_dark),
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.95, h)
-        ..quadraticBezierTo(w, h * 0.84, w, h * 0.70)
-        ..quadraticBezierTo(w * 0.92, h * 0.80, w * 0.82, h)
-        ..close(),
-      _fill(_dark),
-    );
-
-    // Cuerpo
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.22, h * 0.48, w * 0.56, h * 0.44),
-        const Radius.circular(10),
-      ),
-      _fill(_purple),
-    );
-
-    // Cuello
-    canvas.drawRect(
-      Rect.fromLTWH(w * 0.38, h * 0.37, w * 0.24, h * 0.14),
-      _fill(_skin),
-    );
-
-    // Cabeza
-    canvas.drawOval(
-      Rect.fromLTWH(w * 0.18, h * 0.05, w * 0.64, h * 0.36),
-      _fill(_skin),
-    );
-
-    // Orejas puntiagudas
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.20, h * 0.15)
-        ..lineTo(w * 0.13, h * 0.02)
-        ..lineTo(w * 0.30, h * 0.11)
-        ..close(),
-      _fill(_skin),
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.80, h * 0.15)
-        ..lineTo(w * 0.87, h * 0.02)
-        ..lineTo(w * 0.70, h * 0.11)
-        ..close(),
-      _fill(_skin),
-    );
-  }
-
-  // ── CARA según expresión ──────────────────────────────────────────────────
-
-  void _drawFace(Canvas canvas, double w, double h) {
-    switch (expr) {
-      case _Expression.neutral:  _neutral(canvas, w, h);  break;
-      case _Expression.happy:    _happy(canvas, w, h);    break;
-      case _Expression.confused: _confused(canvas, w, h); break;
-      case _Expression.excited:  _excited(canvas, w, h);  break;
-      case _Expression.watching: _watching(canvas, w, h); break;
-    }
-  }
-
-  void _normalEyes(Canvas canvas, double w, double h, {double pdx = 0}) {
-    canvas.drawOval(Rect.fromLTWH(w * 0.28, h * 0.14, w * 0.18, h * 0.13), _fill(_white));
-    canvas.drawCircle(Offset(w * 0.37 + pdx, h * 0.21), w * 0.046, _fill(_red));
-
-    canvas.drawOval(Rect.fromLTWH(w * 0.54, h * 0.14, w * 0.18, h * 0.13), _fill(_white));
-    canvas.drawCircle(Offset(w * 0.63 + pdx, h * 0.21), w * 0.046, _fill(_red));
-  }
-
-  void _fangs(Canvas canvas, double w, double h, double yBase) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.43, yBase)
-        ..lineTo(w * 0.40, yBase + h * 0.055)
-        ..lineTo(w * 0.46, yBase)
-        ..close(),
-      _fill(_white),
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.57, yBase)
-        ..lineTo(w * 0.54, yBase + h * 0.055)
-        ..lineTo(w * 0.60, yBase)
-        ..close(),
-      _fill(_white),
-    );
-  }
-
-  // ── NEUTRAL ───────────────────────────────────────────────────────────────
-
-  void _neutral(Canvas canvas, double w, double h) {
-    canvas.drawLine(Offset(w * 0.28, h * 0.12), Offset(w * 0.43, h * 0.145),
-        _stroke(_purple, 2));
-    canvas.drawLine(Offset(w * 0.57, h * 0.145), Offset(w * 0.72, h * 0.12),
-        _stroke(_purple, 2));
-
-    _normalEyes(canvas, w, h);
-
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.37, h * 0.32)
-        ..quadraticBezierTo(w * 0.50, h * 0.295, w * 0.63, h * 0.32),
-      _stroke(_red.withOpacity(0.7), 1.5),
-    );
-    _fangs(canvas, w, h, h * 0.315);
-  }
-
-  // ── HAPPY ─────────────────────────────────────────────────────────────────
-
-  void _happy(Canvas canvas, double w, double h) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.28, h * 0.135)
-        ..quadraticBezierTo(w * 0.355, h * 0.078, w * 0.43, h * 0.135),
-      _stroke(_purple, 2),
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.57, h * 0.135)
-        ..quadraticBezierTo(w * 0.645, h * 0.078, w * 0.72, h * 0.135),
-      _stroke(_purple, 2),
-    );
-
-    canvas.drawArc(Rect.fromLTWH(w * 0.28, h * 0.10, w * 0.18, h * 0.14),
-        math.pi, math.pi, false, _stroke(_dark, 2.5));
-    canvas.drawArc(Rect.fromLTWH(w * 0.54, h * 0.10, w * 0.18, h * 0.14),
-        math.pi, math.pi, false, _stroke(_dark, 2.5));
-
-    canvas.drawOval(
-        Rect.fromLTWH(w * 0.18, h * 0.21, w * 0.13, h * 0.07),
-        _fill(_pink.withOpacity(0.65)));
-    canvas.drawOval(
-        Rect.fromLTWH(w * 0.69, h * 0.21, w * 0.13, h * 0.07),
-        _fill(_pink.withOpacity(0.65)));
-
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.30, h * 0.30)
-        ..quadraticBezierTo(w * 0.50, h * 0.395, w * 0.70, h * 0.30),
-      _stroke(_red.withOpacity(0.85), 2),
-    );
-    _fangs(canvas, w, h, h * 0.295);
-  }
-
-  // ── CONFUSED ──────────────────────────────────────────────────────────────
-
-  void _confused(Canvas canvas, double w, double h) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.28, h * 0.09)
-        ..quadraticBezierTo(w * 0.355, h * 0.052, w * 0.43, h * 0.095),
-      _stroke(_purple, 2),
-    );
-    canvas.drawLine(
-      Offset(w * 0.57, h * 0.155),
-      Offset(w * 0.72, h * 0.145),
-      _stroke(_purple, 2),
-    );
-
-    canvas.drawOval(Rect.fromLTWH(w * 0.27, h * 0.12, w * 0.20, h * 0.15), _fill(_white));
-    canvas.drawCircle(Offset(w * 0.37, h * 0.20), w * 0.052, _fill(_red));
-
-    canvas.drawOval(Rect.fromLTWH(w * 0.54, h * 0.14, w * 0.16, h * 0.12), _fill(_white));
-    canvas.drawCircle(Offset(w * 0.62, h * 0.205), w * 0.038, _fill(_red));
-
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.35, h * 0.30)
-        ..lineTo(w * 0.41, h * 0.335)
-        ..lineTo(w * 0.47, h * 0.30)
-        ..lineTo(w * 0.53, h * 0.335)
-        ..lineTo(w * 0.59, h * 0.30)
-        ..lineTo(w * 0.65, h * 0.335),
-      _stroke(_red.withOpacity(0.75), 1.5),
-    );
-  }
-
-  // ── EXCITED ───────────────────────────────────────────────────────────────
-
-  void _excited(Canvas canvas, double w, double h) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.27, h * 0.085)
-        ..quadraticBezierTo(w * 0.355, h * 0.045, w * 0.44, h * 0.095),
-      _stroke(_purple, 2),
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.56, h * 0.095)
-        ..quadraticBezierTo(w * 0.645, h * 0.045, w * 0.73, h * 0.085),
-      _stroke(_purple, 2),
-    );
-
-    canvas.drawOval(Rect.fromLTWH(w * 0.26, h * 0.12, w * 0.21, h * 0.15), _fill(_white));
-    canvas.drawCircle(Offset(w * 0.37, h * 0.20), w * 0.058, _fill(_red));
-    canvas.drawCircle(Offset(w * 0.395, h * 0.178), w * 0.020, _fill(_white));
-
-    canvas.drawOval(Rect.fromLTWH(w * 0.53, h * 0.12, w * 0.21, h * 0.15), _fill(_white));
-    canvas.drawCircle(Offset(w * 0.64, h * 0.20), w * 0.058, _fill(_red));
-    canvas.drawCircle(Offset(w * 0.665, h * 0.178), w * 0.020, _fill(_white));
-
-    canvas.drawOval(Rect.fromLTWH(w * 0.38, h * 0.28, w * 0.24, h * 0.10), _fill(_dark));
-    canvas.drawOval(Rect.fromLTWH(w * 0.38, h * 0.28, w * 0.24, h * 0.10),
-        _stroke(_red.withOpacity(0.6), 1.5));
-  }
-
-  // ── WATCHING ──────────────────────────────────────────────────────────────
-
-  void _watching(Canvas canvas, double w, double h) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.28, h * 0.125)
-        ..quadraticBezierTo(w * 0.355, h * 0.088, w * 0.43, h * 0.128),
-      _stroke(_purple, 2),
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.57, h * 0.118)
-        ..quadraticBezierTo(w * 0.645, h * 0.080, w * 0.72, h * 0.120),
-      _stroke(_purple, 2),
-    );
-
-    _normalEyes(canvas, w, h, pdx: w * 0.04);
-
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.38, h * 0.315)
-        ..quadraticBezierTo(w * 0.50, h * 0.325, w * 0.62, h * 0.315),
-      _stroke(_red.withOpacity(0.65), 1.5),
-    );
-    _fangs(canvas, w, h, h * 0.312);
-  }
-
-  // ── Icono en el pecho ─────────────────────────────────────────────────────
-
-  void _drawChest(Canvas canvas, double w, double h) {
-    String symbol;
-    Color  color;
-    switch (expr) {
-      case _Expression.happy:    symbol = '✓'; color = _green;  break;
-      case _Expression.confused: symbol = '!'; color = _yellow; break;
-      case _Expression.excited:  symbol = '▶'; color = _cyan;   break;
-      case _Expression.watching: symbol = '~'; color = _cyan;   break;
-      default:                   symbol = '?'; color = _cyan;   break;
-    }
-
-    final tp = TextPainter(
-      text: TextSpan(
-        text:  symbol,
-        style: TextStyle(
-          color:      color,
-          fontSize:   15,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, Offset(w * 0.50 - tp.width / 2, h * 0.575));
-  }
-
-  // ── Extras por expresión ──────────────────────────────────────────────────
-
-  void _drawExtras(Canvas canvas, double w, double h) {
-    switch (expr) {
-      case _Expression.happy:    _sparkles(canvas, w, h);     break;
-      case _Expression.confused: _sweatDrop(canvas, w, h);    break;
-      case _Expression.excited:  _excitedLines(canvas, w, h); break;
-      default: break;
-    }
-  }
-
-  void _sparkles(Canvas canvas, double w, double h) {
-    _star(canvas, Offset(w * 0.10, h * 0.08), w * 0.030, _yellow);
-    _star(canvas, Offset(w * 0.90, h * 0.06), w * 0.022, _cyan);
-    _star(canvas, Offset(w * 0.88, h * 0.19), w * 0.018, _yellow);
-  }
-
-  void _star(Canvas canvas, Offset center, double r, Color color) {
-    final path = Path();
-    for (int i = 0; i < 8; i++) {
-      final angle = i * math.pi / 4 - math.pi / 2;
-      final dist  = i.isEven ? r : r * 0.45;
-      final p     = Offset(
-        center.dx + dist * math.cos(angle),
-        center.dy + dist * math.sin(angle),
-      );
-      if (i == 0) path.moveTo(p.dx, p.dy); else path.lineTo(p.dx, p.dy);
-    }
-    path.close();
-    canvas.drawPath(path, _fill(color));
-  }
-
-  void _sweatDrop(Canvas canvas, double w, double h) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.83, h * 0.04)
-        ..quadraticBezierTo(w * 0.88, h * 0.10, w * 0.83, h * 0.135)
-        ..quadraticBezierTo(w * 0.78, h * 0.10, w * 0.83, h * 0.04)
-        ..close(),
-      _fill(AppTheme.cyan.withOpacity(0.85)),
-    );
-  }
-
-  void _excitedLines(Canvas canvas, double w, double h) {
-    final lp = _stroke(_cyan.withOpacity(0.7), 1.5);
-    canvas.drawLine(Offset(w * 0.04, h * 0.10), Offset(w * 0.14, h * 0.15), lp);
-    canvas.drawLine(Offset(w * 0.04, h * 0.17), Offset(w * 0.14, h * 0.19), lp);
-    canvas.drawLine(Offset(w * 0.96, h * 0.10), Offset(w * 0.86, h * 0.15), lp);
-    canvas.drawLine(Offset(w * 0.96, h * 0.17), Offset(w * 0.86, h * 0.19), lp);
-  }
-
-  @override
-  bool shouldRepaint(_VampirePainter old) => old.expr != expr;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
 // PAINTER — Cola del globo apuntando hacia abajo
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1273,7 +883,7 @@ class _DownTailPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final fill   = Paint()..color = AppTheme.currentLine;
+    final fill = Paint()..color = AppTheme.currentLine;
     final border = Paint()
       ..color       = color
       ..style       = PaintingStyle.stroke
@@ -1282,11 +892,11 @@ class _DownTailPainter extends CustomPainter {
     final path = Path()
       ..moveTo(0,                0)
       ..lineTo(size.width,       0)
-      ..lineTo(size.width * 0.6, size.height)
+      ..lineTo(size.width * 0.8, size.height)
       ..close();
 
-    canvas.drawPath(path, border);
     canvas.drawPath(path, fill);
+    canvas.drawPath(path, border);
   }
 
   @override

@@ -280,7 +280,7 @@ class IDEDrawer extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 4),
-          const Text('Versión 1.0.5',
+          const Text('Versión 1.1.0',
               style: TextStyle(color: AppTheme.comment, fontSize: 11)),
         ],
       ),

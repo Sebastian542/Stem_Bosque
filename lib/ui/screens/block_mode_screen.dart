@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class BlockModeScreen extends StatefulWidget {
-  const BlockModeScreen({super.key});
+  final List<Map<String, dynamic>> initialObstacles;
+  const BlockModeScreen({super.key, this.initialObstacles = const []});
 
   @override
   State<BlockModeScreen> createState() => _BlockModeScreenState();
@@ -19,12 +20,53 @@ class _BlockModeScreenState extends State<BlockModeScreen> {
   final List<PlacedComponent> _placedComponents = [];
 
   @override
+  void initState() {
+    super.initState();
+    _loadInitialObstacles();
+  }
+
+  void _loadInitialObstacles() {
+    for (var data in widget.initialObstacles) {
+      final type = data['type'];
+      final x = (data['x'] as num).toDouble();
+      final y = (data['y'] as num).toDouble();
+
+      final component = _components.firstWhere(
+        (c) => c.name == type,
+        orElse: () => _components[0],
+      );
+
+      _placedComponents.add(PlacedComponent(
+        component: component,
+        position: Offset(x, y),
+      ));
+    }
+  }
+
+  List<Map<String, dynamic>> _serializeObstacles() {
+    return _placedComponents.map((pc) => {
+      'type': pc.component.name,
+      'x': pc.position.dx,
+      'y': pc.position.dy,
+    }).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Modo Bloque - Simulación'),
         backgroundColor: AppTheme.currentLine,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check, color: AppTheme.green),
+            tooltip: 'Confirmar y Guardar',
+            onPressed: () {
+              Navigator.pop(context, _serializeObstacles());
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

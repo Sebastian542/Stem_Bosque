@@ -13,7 +13,8 @@ import '../widgets/toolbar.dart';
 import '../widgets/ide_drawer.dart';
 import '../widgets/confetti_widget.dart';
 import 'simulation_screen.dart';
-import '../widgets/vampirito_pet.dart';
+import '../widgets/tita.dart';
+import 'block_mode_screen.dart';
 import 'dart:async';
 
 class IDEScreen extends StatefulWidget {
@@ -36,10 +37,13 @@ class _IDEScreenState extends State<IDEScreen> {
   OverlayEntry? _vampiritoOverlay;
   bool          _vampiritoAnimating = false;
   List<String> _compiledLines   = [];
+  List<Map<String, dynamic>> _currentObstacles = [];
   String?      _compiledFilePath;
   String?      _lastErrorMessage;
   bool _isTyping = false;
   Timer? _typingTimer;
+  List<String> _customCommands = [];
+  StreamSubscription? _commandsSub;
 
   // ── Bluetooth UI ─────────────────────────────────────────────
   bool _bluetoothEnabled   = false;
@@ -84,6 +88,19 @@ FIN PROGRAMA''';
     _bt.init(_btCallbacks);
     _loadAutoSaved();
     _codeController.addListener(_onCodeChanged);
+    _listenToCustomCommands();
+  }
+
+  void _listenToCustomCommands() {
+    _commandsSub = DatabaseService().getCustomCommands().listen((snapshot) {
+      if (mounted) {
+        setState(() {
+          _customCommands = snapshot.docs
+              .map((doc) => doc['name'].toString().toUpperCase())
+              .toList();
+        });
+      }
+    });
   }
 
   void _onCodeChanged() {
@@ -110,6 +127,7 @@ FIN PROGRAMA''';
     _codeController.removeListener(_onCodeChanged);
     _typingTimer?.cancel();
     _vampiritoOverlay?.remove();
+    _commandsSub?.cancel();
     super.dispose();
   }
 
@@ -245,7 +263,7 @@ FIN PROGRAMA''';
             await DatabaseService().saveProject(
               name: fullName,
               code: _codeController.text,
-              obstacles: [], // TODO: Pasar obstáculos reales del Modo Bloque
+              obstacles: _currentObstacles,
             );
             cloudSaved = true;
           } catch (e) {
@@ -492,7 +510,8 @@ FIN PROGRAMA''';
     setState(() => _isRunning = true);
 
     try {
-      final r        = Compilador().compilar(_codeController.text);
+      final r        = Compilador(comandosPersonalizados: _customCommands)
+          .compilar(_codeController.text);
       final compiled = r.exito
           ? (r.salidaEjecucion ?? [])
           .where((l) =>
@@ -579,11 +598,23 @@ FIN PROGRAMA''';
             const SnackBar(content: Text('Bluetooth no soportado en esta plataforma')),
           );
         }),
-        onOpenBlockMode: () {
-          // TODO: Implementar apertura de Modo Bloque
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Modo Bloque en desarrollo...")),
+        onOpenBlockMode: () async {
+          final result = await Navigator.push<List<Map<String, dynamic>>>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BlockModeScreen(
+                initialObstacles: _currentObstacles,
+              ),
+            ),
           );
+          if (result != null && mounted) {
+            setState(() {
+              _currentObstacles = result;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Obstáculos del Modo Bloque actualizados")),
+            );
+          }
         },
       ),
       body: Stack(
@@ -620,6 +651,7 @@ FIN PROGRAMA''';
                 Expanded(
                   child: ValidatedCodeEditor(
                     controller: _codeController,
+                    customCommands: _customCommands,
                     onValidityChanged: (isValid, errorMsg) => setState(() {
                       _codeIsValid      = isValid;
                       _lastErrorMessage = errorMsg;

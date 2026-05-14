@@ -9,6 +9,7 @@ class ErrorLexico implements Exception {
 
 class AnalizadorLexico {
   final String fuente;
+  final List<String> comandosPersonalizados;
   int _pos = 0;
   int _linea = 1;
 
@@ -24,9 +25,12 @@ class AnalizadorLexico {
     'SEN':  TipoToken.SEN,
     'COS':  TipoToken.COS,
     'TANG': TipoToken.TANG,
+    'AND':  TipoToken.AND,
+    'OR':   TipoToken.OR,
+    'NOT':  TipoToken.NOT,
   };
 
-  AnalizadorLexico(this.fuente);
+  AnalizadorLexico(this.fuente, {this.comandosPersonalizados = const []});
 
   List<Token> tokenizar() {
     final tokens = <Token>[];
@@ -200,9 +204,15 @@ class AnalizadorLexico {
     }
     final palabra = fuente.substring(inicio, _pos);
     final enMayusculas = palabra.toUpperCase();
+    
     if (_palabrasClave.containsKey(enMayusculas)) {
       return Token(_palabrasClave[enMayusculas]!, enMayusculas, _linea);
     }
+    
+    if (comandosPersonalizados.contains(enMayusculas)) {
+      return Token(TipoToken.COMANDO_CUSTOM, enMayusculas, _linea);
+    }
+
     return Token(TipoToken.IDENTIFICADOR, palabra, _linea);
   }
 

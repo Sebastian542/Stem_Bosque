@@ -44,4 +44,9 @@ class DatabaseService {
         .orderBy('updatedAt', descending: true)
         .snapshots();
   }
+
+  /// Obtiene los comandos personalizados globales o del usuario
+  Stream<QuerySnapshot> getCustomCommands() {
+    return _db.collection('custom_commands').snapshots();
+  }
 }

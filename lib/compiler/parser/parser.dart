@@ -87,6 +87,7 @@ class Parser {
       case TipoToken.AVANZAR:
       case TipoToken.SI:
       case TipoToken.REPETIR:
+      case TipoToken.COMANDO_CUSTOM:
         return true;
       default:
         return false;
@@ -117,9 +118,25 @@ class Parser {
       case TipoToken.AVANZAR:       return parseAvanzar();
       case TipoToken.SI:            return parseCondicional();
       case TipoToken.REPETIR:       return parseCiclo();
+      case TipoToken.COMANDO_CUSTOM: return parseCustom();
       default:
         throw ErrorSintactico('😕 Línea ${_actual.linea}: No reconozco la instrucción "${_actual.valor}".');
     }
+  }
+
+  NodoCustom parseCustom() {
+    final token = _consumir(TipoToken.COMANDO_CUSTOM);
+    NodoExpArit? arg;
+    
+    // Si el siguiente token puede ser una expresión aritmética, lo parseamos como argumento
+    if (_es(TipoToken.NUMERO) || 
+        _es(TipoToken.IDENTIFICADOR) || 
+        _es(TipoToken.PARENTESIS_IZQ) ||
+        _es(TipoToken.SEN) || _es(TipoToken.COS) || _es(TipoToken.TANG)) {
+      arg = _parseExpArit();
+    }
+    
+    return NodoCustom(token.valor, argumento: arg);
   }
 
   NodoAsignacion parseAsignacion() {

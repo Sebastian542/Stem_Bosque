@@ -128,6 +128,9 @@ class Interprete {
       for (var i = 0; i < veces; i++) {
         _ejecutarLista(nodo.instrucciones);
       }
+    } else if (nodo is NodoCustom) {
+      final arg = nodo.argumento != null ? _evaluarExp(nodo.argumento!) : null;
+      salida.add('${nodo.nombre}${arg != null ? ' ${_formatear(arg)}' : ''}');
     }
   }
 }

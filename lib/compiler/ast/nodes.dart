@@ -152,3 +152,12 @@ class NodoCiclo extends Nodo {
       '${s}Repetir:\n${expresion.mostrar('$s  ')}\n'
           '${instrucciones.mostrar('$s  ')}';
 }
+
+class NodoCustom extends Nodo {
+  final String nombre;
+  final NodoExpArit? argumento;
+  NodoCustom(this.nombre, {this.argumento});
+  @override
+  String mostrar(String s) =>
+      '${s}ComandoCustom: $nombre${argumento != null ? '\n${argumento!.mostrar('$s  ')}' : ''}';
+}

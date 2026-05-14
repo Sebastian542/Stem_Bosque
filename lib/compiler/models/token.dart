@@ -31,6 +31,12 @@ enum TipoToken {
   TANG,
   PARENTESIS_IZQ,
   PARENTESIS_DER,
+  // Operadores Lógicos
+  AND,
+  OR,
+  NOT,
+  // Comandos personalizados de Firebase
+  COMANDO_CUSTOM,
   // Fin de archivo
   FIN_ARCHIVO,
 }
