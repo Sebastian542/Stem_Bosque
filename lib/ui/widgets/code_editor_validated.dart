@@ -390,9 +390,9 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                   duration: const Duration(milliseconds: 150),
                   decoration: BoxDecoration(
                     color: isError
-                        ? AppTheme.red.withOpacity(0.12)
+                        ? AppTheme.red.withValues(alpha: 0.12)
                         : isCurrent
-                        ? AppTheme.cyan.withOpacity(0.08)
+                        ? AppTheme.cyan.withValues(alpha: 0.08)
                         : Colors.transparent,
                     border: isCurrent
                         ? const Border(
@@ -525,7 +525,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
       decoration: BoxDecoration(
         color: AppTheme.currentLine,
         border: Border(
-          bottom: BorderSide(color: AppTheme.cyan.withOpacity(0.3)),
+          bottom: BorderSide(color: AppTheme.cyan.withValues(alpha: 0.3)),
         ),
       ),
       child: ListView.separated(
@@ -542,9 +542,9 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color:        chipColor.withOpacity(0.12),
+                color:        chipColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6),
-                border:       Border.all(color: chipColor.withOpacity(0.5)),
+                border:       Border.all(color: chipColor.withValues(alpha: 0.5)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
