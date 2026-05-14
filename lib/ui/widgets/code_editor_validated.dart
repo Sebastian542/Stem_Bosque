@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../compiler/syntax_validator.dart';
 import '../theme/app_theme.dart';
@@ -117,17 +116,16 @@ class ValidatedCodeEditor extends StatefulWidget {
   final void Function(bool isValid, String? errorMessage) onValidityChanged;
 
   const ValidatedCodeEditor({
-    Key? key,
+    super.key,
     required this.controller,
     required this.onValidityChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ValidatedCodeEditor> createState() => _ValidatedCodeEditorState();
 }
 
-class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
-    with SingleTickerProviderStateMixin {
+class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   final _validator        = SyntaxValidator();
   final _focusNode        = FocusNode();
   final _scrollController = ScrollController();
@@ -142,10 +140,6 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
   static const double _maxFontSize  = 28.0;
   static const double _lineHeight   = 1.5;
   double get _lineH => _fontSize * _lineHeight;
-
-  // ── Mascota animación ─────────────────────────────────────────────────────
-  late final AnimationController _mascotBounceCtrl;
-  late final Animation<double>    _mascotBounce;
 
   static const _fontFamily = 'monospace';
   static const _padding    = 8.0;
@@ -244,8 +238,6 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
 
   @override
   Widget build(BuildContext context) {
-    final hasError = !_result.isValid && _result.errorMessage != null;
-
     return Column(
       children: [
         _buildStatusBar(),
@@ -343,9 +335,9 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
                   duration: const Duration(milliseconds: 150),
                   decoration: BoxDecoration(
                     color: isError
-                        ? AppTheme.red.withOpacity(0.12)
+                        ? AppTheme.red.withValues(alpha: 0.12)
                         : isCurrent
-                        ? AppTheme.cyan.withOpacity(0.08)
+                        ? AppTheme.cyan.withValues(alpha: 0.08)
                         : Colors.transparent,
                     border: isCurrent
                         ? const Border(
@@ -385,7 +377,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
     final isValid = _result.isValid;
 
     return Container(
-      height:  28,
+      height:  32,
       color:   AppTheme.currentLine,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
@@ -408,7 +400,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
                   ? 'Sin errores — listo para ejecutar'
                   : 'Error${_result.errorLine != null ? ' — línea ${_result.errorLine}' : ''}',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 color: isEmpty  ? AppTheme.comment
                     : isValid ? AppTheme.green
                     : AppTheme.red,
@@ -478,7 +470,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
       decoration: BoxDecoration(
         color: AppTheme.currentLine,
         border: Border(
-          bottom: BorderSide(color: AppTheme.cyan.withOpacity(0.3)),
+          bottom: BorderSide(color: AppTheme.cyan.withValues(alpha: 0.3)),
         ),
       ),
       child: ListView.separated(
@@ -495,9 +487,9 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color:        chipColor.withOpacity(0.12),
+                color:        chipColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6),
-                border:       Border.all(color: chipColor.withOpacity(0.5)),
+                border:       Border.all(color: chipColor.withValues(alpha: 0.5)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -520,66 +512,5 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
         },
       ),
     );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// _HighlightedText — conservado por compatibilidad
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _HighlightedText extends StatelessWidget {
-  final String text;
-  final int?   errorLine;
-  final double fontSize;
-  final double lineHeight;
-  final String fontFamily;
-
-  const _HighlightedText({
-    required this.text,
-    required this.errorLine,
-    required this.fontSize,
-    required this.lineHeight,
-    required this.fontFamily,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (errorLine == null) {
-      return Text(
-        text,
-        style: TextStyle(
-          fontFamily: fontFamily,
-          fontSize:   fontSize,
-          height:     lineHeight,
-          color:      AppTheme.foreground,
-        ),
-      );
-    }
-
-    final lines  = text.split('\n');
-    final spans  = <TextSpan>[];
-    final errIdx = errorLine! - 1;
-
-    for (int i = 0; i < lines.length; i++) {
-      final lineText = i < lines.length - 1 ? '${lines[i]}\n' : lines[i];
-      spans.add(TextSpan(
-        text: lineText,
-        style: TextStyle(
-          fontFamily:          fontFamily,
-          fontSize:            fontSize,
-          height:              lineHeight,
-          color:               i == errIdx ? AppTheme.red : AppTheme.foreground,
-          decoration:          i == errIdx ? TextDecoration.underline : null,
-          decorationColor:     i == errIdx ? AppTheme.red : null,
-          decorationStyle:     i == errIdx ? TextDecorationStyle.wavy : null,
-          decorationThickness: i == errIdx ? 2 : null,
-        ),
-      ));
-    }
-
-    return RichText(text: TextSpan(children: spans));
   }
 }
