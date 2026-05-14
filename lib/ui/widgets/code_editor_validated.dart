@@ -17,7 +17,7 @@ class _Token {
   _Token(this.text, this.kind);
 }
 
-List<_Token> _tokenizeLine(String line) {
+List<_Token> _tokenizeLine(String line, List<String> customCommands) {
   final commentIdx = line.indexOf('//');
   final code    = commentIdx >= 0 ? line.substring(0, commentIdx) : line;
   final comment = commentIdx >= 0 ? line.substring(commentIdx) : null;
@@ -26,13 +26,13 @@ List<_Token> _tokenizeLine(String line) {
   final re = RegExp(r'"[^"]*"|[0-9]+(?:\.[0-9]+)?|[A-Za-z_][A-Za-z0-9_]*|[^\s]|\s+');
 
   for (final m in re.allMatches(code)) {
-    tokens.add(_Token(m.group(0)!, _classifyToken(m.group(0)!)));
+    tokens.add(_Token(m.group(0)!, _classifyToken(m.group(0)!, customCommands)));
   }
   if (comment != null) tokens.add(_Token(comment, _TokenKind.comment));
   return tokens;
 }
 
-_TokenKind _classifyToken(String t) {
+_TokenKind _classifyToken(String t, List<String> customCommands) {
   const structureKw = {'PROGRAMA', 'FIN', 'SI', 'ENTONCES', 'REPETIR', 'VECES'};
   const commandKw   = {'GIRAR', 'AVANZAR'};
   const trigKw      = {'SEN', 'COS', 'TANG'};
@@ -41,10 +41,10 @@ _TokenKind _classifyToken(String t) {
 
   if (t.startsWith('"'))                                return _TokenKind.string;
   if (RegExp(r'^[0-9]+(?:\.[0-9]+)?$').hasMatch(t))    return _TokenKind.number;
-  if (structureKw.contains(up) && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.keyword;
-  if (commandKw.contains(up)   && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.command;
-  if (trigKw.contains(up)      && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.trig;
-  if (boolKw.contains(up)      && RegExp(r'^[A-Za-z_]+$').hasMatch(t)) return _TokenKind.boolean;
+  if (structureKw.contains(up)) return _TokenKind.keyword;
+  if (commandKw.contains(up) || customCommands.contains(up)) return _TokenKind.command;
+  if (trigKw.contains(up))      return _TokenKind.trig;
+  if (boolKw.contains(up))      return _TokenKind.boolean;
   if (RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(t)) return _TokenKind.identifier;
   return _TokenKind.other;
 }
@@ -68,6 +68,8 @@ Color _colorFor(_TokenKind kind) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 class CodeEditorController extends TextEditingController {
+  List<String> customCommands = [];
+
   @override
   TextSpan buildTextSpan({
     required BuildContext context,
@@ -78,7 +80,7 @@ class CodeEditorController extends TextEditingController {
     final children = <TextSpan>[];
 
     for (int i = 0; i < lines.length; i++) {
-      final tks = _tokenizeLine(lines[i]);
+      final tks = _tokenizeLine(lines[i], customCommands);
       children.add(TextSpan(
         children: tks.map((tk) {
           final bold = tk.kind == _TokenKind.keyword || tk.kind == _TokenKind.command;
@@ -113,21 +115,22 @@ const _palabrasClave = [
 // ═══════════════════════════════════════════════════════════════════════════
 
 class ValidatedCodeEditor extends StatefulWidget {
-  final TextEditingController controller;
+  final CodeEditorController controller;
+  final List<String> customCommands;
   final void Function(bool isValid, String? errorMessage) onValidityChanged;
 
   const ValidatedCodeEditor({
-    Key? key,
+    super.key,
     required this.controller,
+    this.customCommands = const [],
     required this.onValidityChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ValidatedCodeEditor> createState() => _ValidatedCodeEditorState();
 }
 
-class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
-    with SingleTickerProviderStateMixin {
+class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   final _validator        = SyntaxValidator();
   final _focusNode        = FocusNode();
   final _scrollController = ScrollController();
@@ -143,18 +146,42 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
   static const double _lineHeight   = 1.5;
   double get _lineH => _fontSize * _lineHeight;
 
-  // ── Mascota animación ─────────────────────────────────────────────────────
-  late final AnimationController _mascotBounceCtrl;
-  late final Animation<double>    _mascotBounce;
-
   static const _fontFamily = 'monospace';
   static const _padding    = 8.0;
 
   @override
   void initState() {
     super.initState();
+    // Sincronizar comandos iniciales y normalizar a mayúsculas para el resaltador
+    widget.controller.customCommands = widget.customCommands.map((c) => c.toUpperCase()).toList();
     widget.controller.addListener(_onTextChanged);
     _scrollController.addListener(_syncLineScroll);
+    
+    // Validación inicial tras el primer frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onTextChanged();
+    });
+  }
+
+  @override
+  void didUpdateWidget(ValidatedCodeEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    bool syncNeeded = false;
+    
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onTextChanged);
+      widget.controller.addListener(_onTextChanged);
+      syncNeeded = true;
+    }
+    
+    if (oldWidget.customCommands != widget.customCommands) {
+      syncNeeded = true;
+    }
+    
+    if (syncNeeded) {
+      widget.controller.customCommands = widget.customCommands.map((c) => c.toUpperCase()).toList();
+      _onTextChanged();
+    }
   }
 
   @override
@@ -169,9 +196,15 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
   // ── Lógica ────────────────────────────────────────────────────────────────
 
   void _onTextChanged() {
-    final result = _validator.validate(widget.controller.text);
+    final result = _validator.validate(
+      widget.controller.text, 
+      comandosPersonalizados: widget.customCommands
+    );
+    
     if (mounted) {
-      setState(() => _result = result);
+      setState(() {
+        _result = result;
+      });
       widget.onValidityChanged(result.isValid, result.isValid ? null : result.errorMessage);
     }
     _actualizarSugerencias();
@@ -179,45 +212,59 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
 
   void _actualizarSugerencias() {
     final text      = widget.controller.text;
-    final cursorPos = widget.controller.selection.baseOffset;
+    final selection = widget.controller.selection;
+    final cursorPos = selection.baseOffset;
+    
     if (cursorPos < 0 || cursorPos > text.length) {
-      setState(() => _sugerencias = []);
+      if (_sugerencias.isNotEmpty) setState(() => _sugerencias = []);
       return;
     }
+    
     final textHastaCursor = text.substring(0, cursorPos);
-    final match = RegExp(r'[A-Za-z_]+$').firstMatch(textHastaCursor);
+    final match = RegExp(r'[A-Za-z0-9_]+$').firstMatch(textHastaCursor);
+    
     if (match == null || match.group(0)!.length < 2) {
-      setState(() => _sugerencias = []);
+      if (_sugerencias.isNotEmpty) setState(() => _sugerencias = []);
       return;
     }
+    
     final palabraActual = match.group(0)!.toUpperCase();
-    setState(() {
-      _sugerencias = _palabrasClave
-          .where((k) => k.startsWith(palabraActual) && k != palabraActual)
-          .toList();
-    });
+    final todasLasPalabras = {
+      ..._palabrasClave,
+      ...widget.customCommands.map((c) => c.toUpperCase())
+    };
+    
+    final filtradas = todasLasPalabras
+        .where((k) => k.startsWith(palabraActual) && k != palabraActual)
+        .toList();
+    
+    if (filtradas.length != _sugerencias.length || 
+        filtradas.any((e) => !_sugerencias.contains(e))) {
+      setState(() => _sugerencias = filtradas);
+    }
   }
 
   void _aplicarSugerencia(String sugerencia) {
     final text      = widget.controller.text;
-    final cursorPos = widget.controller.selection.baseOffset;
+    final selection = widget.controller.selection;
+    final cursorPos = selection.baseOffset;
     if (cursorPos < 0) return;
 
-    int inicio = cursorPos - 1;
-    while (inicio >= 0 && text[inicio] != ' ' && text[inicio] != '\n') {
-      inicio--;
-    }
-    inicio++;
+    final textHastaCursor = text.substring(0, cursorPos);
+    final match = RegExp(r'[A-Za-z0-9_]+$').firstMatch(textHastaCursor);
+    if (match == null) return;
 
-    final nuevoTexto =
-        text.substring(0, inicio) + sugerencia + text.substring(cursorPos);
+    final inicio = match.start;
+    final nuevoTexto = text.replaceRange(inicio, cursorPos, sugerencia);
     final nuevoCursor = inicio + sugerencia.length;
+    
     widget.controller.value = TextEditingValue(
       text:      nuevoTexto,
       selection: TextSelection.collapsed(offset: nuevoCursor),
     );
     setState(() => _sugerencias = []);
   }
+
 
   void _syncLineScroll() {
     if (_lineScrollCtrl.hasClients) {
@@ -488,7 +535,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
         separatorBuilder: (_, __) => const SizedBox(width: 6),
         itemBuilder: (_, i) {
           final s         = _sugerencias[i];
-          final kind      = _classifyToken(s.split(' ').first);
+          final kind      = _classifyToken(s.split(' ').first, widget.customCommands);
           final chipColor = _colorFor(kind);
           return GestureDetector(
             onTap: () => _aplicarSugerencia(s),
@@ -521,9 +568,6 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor>
       ),
     );
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

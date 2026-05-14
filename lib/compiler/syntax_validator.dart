@@ -18,10 +18,10 @@ class SyntaxValidator {
 
   SyntaxValidator({this.customCommands = const []});
 
-  ValidationResult validate(String source) {
+  ValidationResult validate(String source, {List<String> comandosPersonalizados = const []}) {
     if (source.trim().isEmpty) return const ValidationResult.valid();
     try {
-      final tokens = AnalizadorLexico(source, comandosPersonalizados: customCommands).tokenizar();
+      final tokens = AnalizadorLexico(source, comandosPersonalizados: comandosPersonalizados).tokenizar();
       Parser(tokens).parsePrograma();
       return const ValidationResult.valid();
     } catch (e) {
