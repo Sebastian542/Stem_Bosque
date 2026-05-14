@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/database_service.dart';
+import '../../models/project_model.dart';
+import 'cloud_explorer_screen.dart';
 import '../../bluetooth/bluetooth_manager.dart';
 import '../../compiler/compiler.dart';
 import '../../services/file_manager.dart';
@@ -288,6 +290,33 @@ FIN PROGRAMA''';
           duration: const Duration(seconds: 2),
         ));
       }
+    }
+  }
+
+  Future<void> _openFromCloud() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicia sesión para abrir desde la nube')),
+      );
+      return;
+    }
+
+    final ProjectModel? selected = await Navigator.push<ProjectModel>(
+      context,
+      MaterialPageRoute(builder: (context) => const CloudExplorerScreen()),
+    );
+
+    if (selected != null && mounted) {
+      setState(() {
+        _codeController.text = selected.code;
+        _currentObstacles = selected.obstacles;
+        // No actualizamos _fm.currentFilePath porque es un archivo remoto, 
+        // pero podríamos simular un "estado remoto" si fuera necesario.
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Proyecto "${selected.name}" cargado desde la nube ☁️')),
+      );
     }
   }
 
@@ -590,6 +619,7 @@ FIN PROGRAMA''';
         bluetoothEnabled:  _bluetoothEnabled,
         currentFilePath:   _fm.currentFilePath,
         onOpenFile:        _openFile,
+        onOpenCloud:       _openFromCloud,
         onSaveFile:        _saveWithName,
         onClearCode:       _clearCode,
         onShareFile:       _shareFile,

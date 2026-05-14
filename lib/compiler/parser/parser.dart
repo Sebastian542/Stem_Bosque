@@ -230,6 +230,39 @@ class Parser {
   }
 
   NodoExpBool _parseExpBool() {
+    return _parseOr();
+  }
+
+  NodoExpBool _parseOr() {
+    NodoExpBool nodo = _parseAnd();
+    while (_es(TipoToken.OR)) {
+      _pos++;
+      final der = _parseAnd();
+      nodo = NodoOr(nodo, der);
+    }
+    return nodo;
+  }
+
+  NodoExpBool _parseAnd() {
+    NodoExpBool nodo = _parseNot();
+    while (_es(TipoToken.AND)) {
+      _pos++;
+      final der = _parseNot();
+      nodo = NodoAnd(nodo, der);
+    }
+    return nodo;
+  }
+
+  NodoExpBool _parseNot() {
+    if (_es(TipoToken.NOT)) {
+      _pos++;
+      final exp = _parseNot();
+      return NodoNot(exp);
+    }
+    return _parseComparacion();
+  }
+
+  NodoExpBool _parseComparacion() {
     final izq = _parseExpArit();
     final comp = _parseComparador();
     final der = _parseExpArit();

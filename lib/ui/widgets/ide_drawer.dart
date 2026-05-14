@@ -15,6 +15,7 @@ class IDEDrawer extends StatelessWidget {
   final String? currentFilePath;
 
   final VoidCallback onOpenFile;
+  final VoidCallback onOpenCloud;
   final VoidCallback onSaveFile;
   final VoidCallback onClearCode;
   final VoidCallback onShareFile;
@@ -29,6 +30,7 @@ class IDEDrawer extends StatelessWidget {
     //required this.showBluetoothPanel,
     required this.currentFilePath,
     required this.onOpenFile,
+    required this.onOpenCloud,
     required this.onSaveFile,
     required this.onClearCode,
     required this.onShareFile,
@@ -49,9 +51,17 @@ class IDEDrawer extends StatelessWidget {
               children: [
                 _buildItem(
                   context,
+                  icon: Icons.cloud_download_rounded,
+                  title: 'Abrir desde la Nube',
+                  subtitle: 'Sincronizar proyectos guardados',
+                  color: AppTheme.purple,
+                  onTap: onOpenCloud,
+                ),
+                _buildItem(
+                  context,
                   icon: Icons.folder_open,
-                  title: 'Abrir archivo',
-                  subtitle: 'Cargar código desde archivo',
+                  title: 'Abrir archivo local',
+                  subtitle: 'Cargar código desde el dispositivo',
                   color: AppTheme.cyan,
                   onTap: onOpenFile,
                 ),
