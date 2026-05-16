@@ -32,6 +32,9 @@ class BluetoothManager {
   static final BluetoothManager instance = BluetoothManager._internal();
   BluetoothManager._internal();
 
+  // ── Callbacks persistentes para la UI ────────────────────────
+  BluetoothCallbacks? _cb;
+
   // ── Estado interno ───────────────────────────────────────────
   BluetoothAdapterState _bleState = BluetoothAdapterState.unknown;
   classic.BluetoothConnection? _classicConnection;
@@ -60,17 +63,32 @@ class BluetoothManager {
   // ── Init y dispose ──────────────────────────────────────────
 
   Future<void> init(BluetoothCallbacks cb) async {
-    await _requestPermissions();
+    _cb = cb;
+    if (!kIsWeb) {
+      await _requestPermissions();
+    }
 
-    // BLE
+    // BLE (Soportado en Web vía Web Bluetooth)
     _bleSubscription = FlutterBluePlus.adapterState.listen((state) {
       _bleState = state;
       _bluetoothEnabled = state == BluetoothAdapterState.on;
       cb.onBluetoothStateChanged(_bluetoothEnabled);
     });
-    _bleState = await FlutterBluePlus.adapterState.first;
+    
+    try {
+      _bleState = await FlutterBluePlus.adapterState.first;
+      _bluetoothEnabled = _bleState == BluetoothAdapterState.on;
+    } catch (_) {
+      // En algunos navegadores puede fallar el primer acceso
+      _bluetoothEnabled = true; // Asumimos habilitado en Web para mostrar la UI
+    }
 
-    // Clásico
+    if (kIsWeb) {
+      cb.onBluetoothStateChanged(_bluetoothEnabled);
+      return;
+    }
+
+    // Clásico (Solo Android)
     _classicSubscription =
         classic.FlutterBluetoothSerial.instance.onStateChanged().listen((state) {
           _bluetoothEnabled = state == classic.BluetoothState.STATE_ON;
@@ -111,7 +129,17 @@ class BluetoothManager {
 
   Future<void> toggleBluetooth({required VoidCallback onUnsupported}) async {
     if (kIsWeb) {
-      onUnsupported();
+      // En la Web, no podemos "encender" el Bluetooth por código (seguridad del navegador).
+      // Forzamos el estado a enabled para permitir que el usuario vea el botón de BUSCAR
+      // y lanzamos un log informativo según el dispositivo.
+      _bluetoothEnabled = true;
+      _cb?.onBluetoothStateChanged(true);
+      
+      String tipoDispositivo = (defaultTargetPlatform == TargetPlatform.android || 
+                               defaultTargetPlatform == TargetPlatform.iOS) 
+                               ? 'celular' : 'computadora';
+      
+      _cb?.onLog('🌐 Estás en la Web: activa el Bluetooth de tu $tipoDispositivo manualmente para poder escanear.', false);
       return;
     }
 
@@ -147,44 +175,46 @@ class BluetoothManager {
     cb.onLog('🔍 Escaneando dispositivos Bluetooth...', false);
 
     try {
-      // Vinculados clásicos
-      final bonded =
-      await classic.FlutterBluetoothSerial.instance.getBondedDevices();
-      for (final d in bonded) {
-        cb.onDeviceFound(UnifiedBluetoothDevice(
-          name: d.name ?? '',
-          address: d.address,
-          type: BluetoothDeviceType.classic,
-          classicDevice: d,
-        ));
-      }
-      cb.onLog('✓ ${bonded.length} dispositivos clásicos vinculados', false);
-
-      // Descubrimiento clásico
-      cb.onLog('⏳ Buscando dispositivos cercanos...', false);
-      StreamSubscription<classic.BluetoothDiscoveryResult>? discoverySub;
-      discoverySub = classic.FlutterBluetoothSerial.instance
-          .startDiscovery()
-          .listen((result) {
-        final exists = currentDevices
-            .any((d) => d.address == result.device.address);
-        if (!exists) {
-          final device = UnifiedBluetoothDevice(
-            name: result.device.name ?? '',
-            address: result.device.address,
+      if (!kIsWeb) {
+        // Vinculados clásicos (Solo Android)
+        final bonded =
+        await classic.FlutterBluetoothSerial.instance.getBondedDevices();
+        for (final d in bonded) {
+          cb.onDeviceFound(UnifiedBluetoothDevice(
+            name: d.name ?? '',
+            address: d.address,
             type: BluetoothDeviceType.classic,
-            rssi: result.rssi,
-            classicDevice: result.device,
-          );
-          cb.onDeviceFound(device);
-          cb.onLog('  → ${device.displayName}', false);
+            classicDevice: d,
+          ));
         }
-      });
+        cb.onLog('✓ ${bonded.length} dispositivos clásicos vinculados', false);
 
-      await Future.delayed(const Duration(seconds: 12));
-      await discoverySub.cancel();
+        // Descubrimiento clásico (Solo Android)
+        cb.onLog('⏳ Buscando dispositivos cercanos...', false);
+        StreamSubscription<classic.BluetoothDiscoveryResult>? discoverySub;
+        discoverySub = classic.FlutterBluetoothSerial.instance
+            .startDiscovery()
+            .listen((result) {
+          final exists = currentDevices
+              .any((d) => d.address == result.device.address);
+          if (!exists) {
+            final device = UnifiedBluetoothDevice(
+              name: result.device.name ?? '',
+              address: result.device.address,
+              type: BluetoothDeviceType.classic,
+              rssi: result.rssi,
+              classicDevice: result.device,
+            );
+            cb.onDeviceFound(device);
+            cb.onLog('  → ${device.displayName}', false);
+          }
+        });
 
-      // BLE
+        await Future.delayed(const Duration(seconds: 12));
+        await discoverySub.cancel();
+      }
+
+      // BLE (Soportado en Web y Móvil)
       _bleScanSubscription?.cancel();
       _bleScanSubscription =
           FlutterBluePlus.scanResults.listen((results) {
