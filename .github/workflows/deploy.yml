@@ -99,15 +99,22 @@ jobs:
           pod install
           cd ..
 
-      # GENERA IPA SIN FIRMA
+      # GENERA IPA SIN FIRMA (Manual)
       - name: 5. Build IPA
-        run: flutter build ipa --release --no-codesign
+        run: |
+          flutter build ios --release --no-codesign
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r Runner.ipa Payload
+          rm -rf Payload
 
       - name: 6. Guardar IPA
         uses: actions/upload-artifact@v4
         with:
           name: flutter-ipa
-          path: build/ios/ipa/*.ipa
+          path: build/ios/ipa/Runner.ipa
+          if-no-files-found: error
 
   # ==========================================
   # DEPLOY WEB + RELEASES

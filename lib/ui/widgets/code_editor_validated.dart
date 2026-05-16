@@ -87,7 +87,10 @@ class CodeEditorController extends TextEditingController {
       final tks = _tokenizeLine(lines[i], customCommands);
       children.add(TextSpan(
         children: tks.map((tk) {
-          final isBold = tk.kind == _TokenKind.keyword || tk.kind == _TokenKind.command;
+          final isBold = tk.kind == _TokenKind.keyword || 
+                         tk.kind == _TokenKind.command || 
+                         tk.kind == _TokenKind.boolean || 
+                         tk.kind == _TokenKind.trig;
           return TextSpan(
             text: tk.text,
             style: TextStyle(
@@ -458,9 +461,11 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
 
   Widget _buildLegend() {
     const items = [
-      ('KW',  AppTheme.pink),
-      ('CMD', AppTheme.cyan),
-      ('VAR', AppTheme.green),
+      ('KW',   AppTheme.pink),
+      ('CMD',  AppTheme.cyan),
+      ('LOG',  AppTheme.purple),
+      ('TRIG', AppTheme.orange),
+      ('VAR',  AppTheme.green),
     ];
     return Row(
       mainAxisSize: MainAxisSize.min,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/login_screen.dart';
@@ -90,6 +91,19 @@ class IDEDrawer extends StatelessWidget {
                   subtitle: 'Enviar por Bluetooth u otra app',
                   color: AppTheme.cyan,
                   onTap: onShareFile,
+                ),
+                _buildItem(
+                  context,
+                  icon: Icons.apple,
+                  title: 'Descargar iOS (IPA)',
+                  subtitle: 'Instalación manual para iPhone',
+                  color: AppTheme.comment,
+                  onTap: () async {
+                    final url = Uri.parse('https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app.ipa');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
                 ),
                 const Divider(color: AppTheme.currentLine, height: 1),
                 _buildItem(
