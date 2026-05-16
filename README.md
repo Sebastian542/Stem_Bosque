@@ -2,10 +2,11 @@
 
 > **Un lenguaje de programación educativo para robótica**, diseñado para que niños y jóvenes aprendan lógica computacional controlando un robot virtual en español.
 
-🚀 **¡Pruébalo ahora!**  
-| Web | Android |
-| :---: | :---: |
-| [🌐 Abrir en el Navegador](https://sebastian542.github.io/Stem_Bosque/) | [🤖 Descargar APK (Actualizado)](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk) |
+🚀 **¡Pruébalo ahora!**
+
+| Web | Android | iPhone |
+| :---: | :---: | :---: |
+| [🌐 Abrir en el Navegador](https://sebastian542.github.io/Stem_Bosque/) | [🤖 Descargar APK](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk) | [🍎 Descargar IPA](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app.ipa) |
 
 ---
 
@@ -19,73 +20,152 @@ La versión web está optimizada para ejecutarse **100% en el navegador**, con u
 
 ## ✨ Características Actualizadas
 
-| Característica              | Descripción                                                                                   |
-|-----------------------------|-----------------------------------------------------------------------------------------------|
-| 🧠 **Compilador Potente**   | Ahora soporta expresiones aritméticas recursivas y funciones trigonométricas.                 |
-| 📐 **Matemáticas Avanzadas**| Evaluación interna basada en `double`. Soporte para `+`, `-`, `*`, `/`, `SEN`, `COS` y `TANG`. |
-| 🧩 **Modo Bloque**          | Nueva interfaz para configurar obstáculos y desafíos en la simulación (En desarrollo).        |
-| 🎨 **Tema Dracula**         | Interfaz visual refinada basada en la paleta Dracula para reducir la fatiga visual.           |
-| 🛡️ **Estabilidad**          | Protección contra ciclos infinitos (>400 repeticiones) y división por cero.                    |
-| 🔵 **Bluetooth Dual**       | Gestión optimizada mediante Singletons para Bluetooth Clásico (SPP) y BLE.                    |
-| ⚙️ **CI/CD Automatizado**   | Despliegue continuo via GitHub Actions con compatibilidad Web/Android asegurada.              |
+| Característica              | Descripción |
+|-----------------------------|-------------|
+| 🧠 **Compilador Potente**   | Soporta expresiones aritméticas recursivas y funciones trigonométricas. |
+| 📐 **Matemáticas Avanzadas**| Soporte para `+`, `-`, `*`, `/`, `SEN`, `COS` y `TANG`. |
+| 🧩 **Modo Bloque**          | Configuración visual de obstáculos y desafíos (En desarrollo). |
+| 🎨 **Tema Dracula**         | Interfaz visual refinada y cómoda para largas sesiones. |
+| 🛡️ **Estabilidad**          | Protección contra ciclos infinitos y división por cero. |
+| 🔵 **Bluetooth Dual**       | Compatibilidad BLE y Bluetooth clásico optimizada. |
+| ⚙️ **CI/CD Automatizado**   | Builds automáticos para Web, Android e iOS mediante GitHub Actions. |
 
 ---
 
-## 📖 Sintaxis del Lenguaje (Novedades)
+## 📖 Sintaxis del Lenguaje
 
-El lenguaje ha evolucionado para permitir lógica más compleja:
+### Ejemplo
 
-### Ejemplo de Expresiones y Trigonometría
-```
+```stembosque
 PROGRAMA "Círculo Matemático"
   RADIO = 50
   ANGULO = 0
+
   REPETIR [36] VECES:
     PASO = 2 * 3.1416 * RADIO / 36
     AVANZAR PASO
     GIRAR 10
   FIN REPETIR
+
 FIN PROGRAMA
 ```
 
 ### Comandos Soportados
-- **Estructura**: `PROGRAMA "nombre" ... FIN PROGRAMA`
-- **Movimiento**: `AVANZAR [expresión]`, `GIRAR [expresión]`
-- **Control**: `SI [condición] ENTONCES ... FIN SI`, `REPETIR [veces] VECES: ... FIN REPETIR`
-- **Variables**: `MI_VAR = 10 + (5 * SEN(45))`
+
+- **Estructura**:
+  - `PROGRAMA`
+  - `FIN PROGRAMA`
+
+- **Movimiento**:
+  - `AVANZAR [expresión]`
+  - `GIRAR [expresión]`
+
+- **Control**:
+  - `SI [condición] ENTONCES`
+  - `FIN SI`
+  - `REPETIR [veces] VECES`
+
+- **Variables**:
+  - `MI_VAR = 10 + (5 * SEN(45))`
 
 ---
 
 ## 🚀 Cómo usar
 
 ### 🌐 Versión Web
-Simplemente entra a: **[sebastian542.github.io/Stem_Bosque/](https://sebastian542.github.io/Stem_Bosque/)**
-- Soporta todas las funciones de programación y simulación.
-- **Nota**: El soporte Bluetooth en Web es experimental (requiere navegador compatible con Web Bluetooth).
 
-### 📱 App Móvil (Android)
-**[📥 Descargar APK](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk)**
-- Control total de robots físicos vía Bluetooth.
-- Gestión de archivos locales para guardar tus proyectos.
+👉 https://sebastian542.github.io/Stem_Bosque/
+
+- Simulación completa en navegador.
+- Compatible con escritorio y móviles.
+- Bluetooth Web experimental.
+
+---
+
+### 📱 Android
+
+👉 Descarga el APK:
+
+https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk
+
+- Compatible con Bluetooth clásico.
+- Instalación directa mediante APK.
+
+---
+
+### 🍎 iPhone / iOS
+
+👉 Descarga el IPA:
+
+https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app.ipa
+
+> Requiere instalación mediante TestFlight, AltStore o firma manual en iOS.
 
 ---
 
 ## 🏗️ Arquitectura Técnica
 
-- **Patrón Singleton**: Acceso unificado a recursos mediante `BluetoothManager.instance` y `FileManager.instance`.
-- **AST Refactorizado**: Los nodos del árbol sintáctico ahora son dinámicos, permitiendo que cualquier comando acepte una expresión matemática en lugar de solo valores fijos.
-- **Compatibilidad**: Manejo de parámetros `onUnsupported` para evitar crashes en plataformas sin APIs específicas (como Bluetooth en Web).
+- **Singleton Pattern**
+  - `BluetoothManager.instance`
+  - `FileManager.instance`
+
+- **AST Dinámico**
+  - Expresiones matemáticas en cualquier nodo sintáctico.
+
+- **Compatibilidad Multiplataforma**
+  - Manejo de APIs no soportadas sin crashes.
 
 ---
 
-## 🔧 Contribución y Desarrollo
+## 🔧 Desarrollo
 
-1. Clona el repo: `git clone https://github.com/Sebastian542/Stem_Bosque.git`
-2. Instala dependencias: `flutter pub get`
-3. Ejecuta en modo debug: `flutter run`
+### Clonar proyecto
 
-*Nota para builds Web: Usar `flutter build web --release --no-wasm-dry-run` para evitar advertencias de incompatibilidad de librerías nativas con WebAssembly.*
+```bash
+git clone https://github.com/Sebastian542/Stem_Bosque.git
+```
+
+### Instalar dependencias
+
+```bash
+flutter pub get
+```
+
+### Ejecutar
+
+```bash
+flutter run
+```
+
+### Build Web
+
+```bash
+flutter build web --release
+```
+
+### Build Android
+
+```bash
+flutter build apk --release
+```
+
+### Build iOS
+
+```bash
+flutter build ipa
+```
 
 ---
 
-© 2024 STEMBosque - Desarrollado con ❤️ para la educación tecnológica.
+## ⚙️ CI/CD
+
+El proyecto utiliza:
+
+- GitHub Actions
+- GitHub Pages
+- Releases automáticos
+- Build multiplataforma Flutter
+
+---
+
+© 2026 STEMBosque — Desarrollado con ❤️ para la educación tecnológica.
