@@ -1,4 +1,4 @@
-name: CI/CD Flutter Web & Android
+name: CI/CD Flutter Web Android iOS
 
 on:
   push:
@@ -16,19 +16,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+
+  # ==========================================
+  # BUILD WEB + ANDROID
+  # ==========================================
+  build-android-web:
     runs-on: ubuntu-latest
+
     steps:
       - name: 1. Checkout del código
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 2. Sincronizar Sebastian con main (Solo si el push fue en Sebastian)
+      - name: 2. Sincronizar RamaDeJulio con main
         if: github.ref == 'refs/heads/RamaDeJulio'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
           git checkout main
           git merge -X theirs RamaDeJulio
           git push origin main
@@ -38,45 +44,89 @@ jobs:
       - name: 3. Configurar Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: zulu
           java-version: '17'
-          cache: 'gradle'
+          cache: gradle
 
       - name: 4. Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
           cache: true
 
       - name: 5. Instalar dependencias
         run: flutter pub get
 
-      - name: 6. Construir Flutter Web
+      - name: 6. Build Web
         run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
 
-      - name: 7. Construir APK de Android
+      - name: 7. Build APK
         run: flutter build apk --release --android-skip-build-dependency-validation
 
-      - name: 8. Subir Artefacto Web (Pre-despliegue)
+      - name: 8. Subir artefacto Web
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./build/web
 
-      - name: 9. Guardar APK para Release
+      - name: 9. Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: flutter-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
+  # ==========================================
+  # BUILD IOS
+  # ==========================================
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: 1. Checkout del código
+        uses: actions/checkout@v4
+
+      - name: 2. Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: 3. Instalar dependencias
+        run: flutter pub get
+
+      - name: 4. Instalar CocoaPods
+        run: |
+          cd ios
+          pod install
+          cd ..
+
+      # GENERA IPA SIN FIRMA
+      - name: 5. Build IPA
+        run: flutter build ipa --release --no-codesign
+
+      - name: 6. Guardar IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-ipa
+          path: build/ios/ipa/*.ipa
+
+  # ==========================================
+  # DEPLOY WEB + RELEASES
+  # ==========================================
   deploy:
-    needs: build
+    needs:
+      - build-android-web
+      - build-ios
+
     if: github.ref == 'refs/heads/main'
+
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
-      - name: 1. Desplegar Web a GitHub Pages
+      - name: 1. Desplegar Web
         id: deployment
         uses: actions/deploy-pages@v4
 
@@ -85,13 +135,29 @@ jobs:
         with:
           name: flutter-apk
 
-      - name: 3. Publicar APK en Release "latest"
+      - name: 3. Descargar IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: flutter-ipa
+          path: ios-release
+
+      - name: 4. Publicar Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app-release.apk
           tag_name: latest
-          name: "StemBosque APK (Última Versión)"
-          body: "Esta versión se compila automáticamente con cada cambio en la rama main. ."
+          name: "STEMBosque Release"
+          body: |
+            🚀 Última versión automática de STEMBosque DSL
+
+            Incluye:
+            - 🌐 Flutter Web
+            - 🤖 APK Android
+            - 🍎 IPA iOS
+
+          files: |
+            app-release.apk
+            ios-release/*.ipa
+
           draft: false
           prerelease: false
           make_latest: true
