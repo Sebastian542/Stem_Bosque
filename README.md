@@ -1,171 +1,91 @@
-# 🤖 STEMBosque DSL (v1.0.0+1)
+# 🤖 STEMBosque DSL (v1.1.0)
 
-> **Un lenguaje de programación educativo para robótica**, diseñado para que niños y jóvenes aprendan lógica computacional controlando un robot virtual en español.
+### ✍️ Autores
+- **Sebastian** ([@Sebastian542](https://github.com/Sebastian542))
+- **Alejandra** ([@Aleja2](https://github.com/aleja2))
+
+> **Un entorno de desarrollo integrado (IDE) para robótica educativa**, diseñado para que niños y jóvenes aprendan lógica computacional mediante un lenguaje natural (DSL) en español y una simulación interactiva.
 
 🚀 **¡Pruébalo ahora!**
 
-| Web | Android | iPhone |
+| Web (Wasm) | Android (APK) | iPhone (IPA) |
 | :---: | :---: | :---: |
-| [🌐 Abrir en el Navegador](https://sebastian542.github.io/Stem_Bosque/) | [🤖 Descargar APK](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk) | [🍎 Descargar IPA](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app.ipa) |
+| [🌐 Abrir IDE Web](https://sebastian542.github.io/Stem_Bosque/) | [🤖 Descargar APK](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk) | [🍎 Descargar IPA](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app.ipa) |
 
 ---
 
-## 🌟 ¿Qué es STEMBosque DSL?
+## 🌟 ¿Qué es STEMBosque?
 
-**STEMBosque DSL** es un *Domain-Specific Language* (Lenguaje de Dominio Específico) desarrollado con **Flutter**. Permite escribir programas en **español natural** para controlar un robot animado, facilitando el aprendizaje de variables, ciclos, condicionales y matemáticas de forma visual.
-
-La versión web está optimizada para ejecutarse **100% en el navegador**, con un intérprete capaz de evaluar expresiones matemáticas complejas en tiempo real.
+**STEMBosque** es una plataforma educativa multiplataforma desarrollada con **Flutter**. Su núcleo es un **lenguaje de dominio específico (DSL)** que permite programar un robot virtual utilizando sintaxis en español. El proyecto integra persistencia en la nube mediante **Firebase**, sincronización en tiempo real y capacidades de comunicación via **Bluetooth**.
 
 ---
 
-## ✨ Características Actualizadas
+## ✨ Características Principales
 
 | Característica              | Descripción |
 |-----------------------------|-------------|
-| 🧠 **Compilador Potente**   | Soporta expresiones aritméticas recursivas y funciones trigonométricas. |
-| 📐 **Matemáticas Avanzadas**| Soporte para `+`, `-`, `*`, `/`, `SEN`, `COS` y `TANG`. |
-| 🧩 **Modo Bloque**          | Configuración visual de obstáculos y desafíos (En desarrollo). |
-| 🎨 **Tema Dracula**         | Interfaz visual refinada y cómoda para largas sesiones. |
-| 🛡️ **Estabilidad**          | Protección contra ciclos infinitos y división por cero. |
-| 🔵 **Bluetooth Dual**       | Compatibilidad BLE y Bluetooth clásico optimizada. |
-| ⚙️ **CI/CD Automatizado**   | Builds automáticos para Web, Android e iOS mediante GitHub Actions. |
+| 🧠 **Intérprete Avanzado**  | Evaluación de expresiones matemáticas, trigonométricas y lógicas (`AND`, `OR`, `NOT`). |
+| ☁️ **Sincronización Cloud**  | Persistencia de programas y configuración de obstáculos mediante Firestore. |
+| 🧩 **Modo Bloque & DSL**    | Edición dual: escribe código o coloca obstáculos visualmente en la simulación. |
+| 🎨 **Editor Inteligente**   | Resaltado de sintaxis dinámico, sugerencias automáticas y validación en tiempo real. |
+| 🔵 **Bluetooth Dual**       | Soporte para Bluetooth Clásico (Android) y BLE (Web/Móvil) para conectar con hardware real. |
+| 🕹️ **Control Remoto**       | Interfaz de mando directo para el robot integrada en la app. |
+| ⚙️ **CI/CD Robusto**        | Despliegue automatizado a GitHub Pages y generación de instaladores para todas las plataformas. |
 
 ---
 
-## 📖 Sintaxis del Lenguaje
+## 📖 El Lenguaje DSL
 
-### Ejemplo
+La sintaxis está diseñada para ser legible y educativa:
 
 ```stembosque
-PROGRAMA "Círculo Matemático"
-  RADIO = 50
-  ANGULO = 0
-
-  REPETIR [36] VECES:
-    PASO = 2 * 3.1416 * RADIO / 36
-    AVANZAR PASO
-    GIRAR 10
+PROGRAMA "Prueba Logica"
+  SI DISTANCIA < 20 AND NOT OBSTACULO ENTONCES
+    GIRAR 90
+    AVANZAR 50
+  FIN SI
+  
+  REPETIR 4 VECES:
+    AVANZAR 100
+    GIRAR 90
   FIN REPETIR
-
 FIN PROGRAMA
 ```
 
-### Comandos Soportados
-
-- **Estructura**:
-  - `PROGRAMA`
-  - `FIN PROGRAMA`
-
-- **Movimiento**:
-  - `AVANZAR [expresión]`
-  - `GIRAR [expresión]`
-
-- **Control**:
-  - `SI [condición] ENTONCES`
-  - `FIN SI`
-  - `REPETIR [veces] VECES`
-
-- **Variables**:
-  - `MI_VAR = 10 + (5 * SEN(45))`
+### Funciones Disponibles
+- **Movimiento**: `AVANZAR`, `GIRAR`.
+- **Matemáticas**: `+`, `-`, `*`, `/`, `SEN()`, `COS()`, `TANG()`.
+- **Lógica**: `AND`, `OR`, `NOT`, `>`, `<`, `=`, `!=`.
+- **Sensores Virtuales**: `DISTANCIA`, `OBSTACULO`, `PISO`.
 
 ---
 
-## 🚀 Cómo usar
+## 🛠️ Tecnologías
 
-### 🌐 Versión Web
-
-👉 https://sebastian542.github.io/Stem_Bosque/
-
-- Simulación completa en navegador.
-- Compatible con escritorio y móviles.
-- Bluetooth Web experimental.
+- **Lenguaje**: Dart / Flutter
+- **Backend**: Firebase (Auth & Firestore)
+- **Compilación**: Web (Wasm/CanvasKit), Android, iOS.
+- **Librerías Clave**: `flutter_blue_plus`, `share_plus` (v10+), `google_fonts`, `flutter_animate`.
 
 ---
 
-### 📱 Android
+## 🔧 Configuración de Desarrollo
 
-👉 Descarga el APK:
-
-https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk
-
-- Compatible con Bluetooth clásico.
-- Instalación directa mediante APK.
+1. **Clonar**: `git clone https://github.com/Sebastian542/Stem_Bosque.git`
+2. **Dependencias**: `flutter pub get`
+3. **Ejecutar**: `flutter run` (Compatible con Windows, Web, Android e iOS).
 
 ---
 
-### 🍎 iPhone / iOS
+## ⚙️ CI/CD (GitHub Actions)
 
-👉 Descarga el IPA:
-
-https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app.ipa
-
-> Requiere instalación mediante TestFlight, AltStore o firma manual en iOS.
-
----
-
-## 🏗️ Arquitectura Técnica
-
-- **Singleton Pattern**
-  - `BluetoothManager.instance`
-  - `FileManager.instance`
-
-- **AST Dinámico**
-  - Expresiones matemáticas en cualquier nodo sintáctico.
-
-- **Compatibilidad Multiplataforma**
-  - Manejo de APIs no soportadas sin crashes.
+El proyecto cuenta con un flujo automatizado que:
+1. Sincroniza ramas de desarrollo (`aleja2` -> `main`).
+2. Compila la versión **Web** y la despliega en GitHub Pages.
+3. Genera el **APK** de Android.
+4. Genera el **IPA** de iOS (sin firma, empaquetado manual).
+5. Crea un **Release** automático con todos los artefactos.
 
 ---
 
-## 🔧 Desarrollo
-
-### Clonar proyecto
-
-```bash
-git clone https://github.com/Sebastian542/Stem_Bosque.git
-```
-
-### Instalar dependencias
-
-```bash
-flutter pub get
-```
-
-### Ejecutar
-
-```bash
-flutter run
-```
-
-### Build Web
-
-```bash
-flutter build web --release
-```
-
-### Build Android
-
-```bash
-flutter build apk --release
-```
-
-### Build iOS
-
-```bash
-flutter build ipa
-```
-
----
-
-## ⚙️ CI/CD
-
-El proyecto utiliza:
-
-- GitHub Actions
-- GitHub Pages
-- Releases automáticos
-- Build multiplataforma Flutter
-
----
-
-© 2026 STEMBosque — Desarrollado con ❤️ para la educación tecnológica.
+© 2026 STEMBosque — Innovación en Educación Tecnológica.

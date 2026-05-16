@@ -106,14 +106,14 @@ jobs:
           mkdir -p build/ios/ipa/Payload
           cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
-          zip -r Runner.ipa Payload
+          zip -r app.ipa Payload
           rm -rf Payload
 
       - name: 6. Guardar IPA
         uses: actions/upload-artifact@v4
         with:
           name: flutter-ipa
-          path: build/ios/ipa/Runner.ipa
+          path: build/ios/ipa/app.ipa
           if-no-files-found: error
 
   # ==========================================
