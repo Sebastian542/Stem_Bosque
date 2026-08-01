@@ -93,14 +93,10 @@ jobs:
       - name: 3. Instalar dependencias
         run: flutter pub get
 
-      - name: 4. Instalar CocoaPods
-        run: |
-          cd ios
-          pod install
-          cd ..
-
+      # `flutter build ios` genera el Podfile y ejecuta `pod install`
+      # automaticamente, por eso no hay un paso manual de CocoaPods.
       # GENERA IPA SIN FIRMA (Manual)
-      - name: 5. Build IPA
+      - name: 4. Build IPA
         run: |
           flutter build ios --release --no-codesign
           mkdir -p build/ios/ipa/Payload
@@ -109,7 +105,7 @@ jobs:
           zip -r app.ipa Payload
           rm -rf Payload
 
-      - name: 6. Guardar IPA
+      - name: 5. Guardar IPA
         uses: actions/upload-artifact@v4
         with:
           name: flutter-ipa
