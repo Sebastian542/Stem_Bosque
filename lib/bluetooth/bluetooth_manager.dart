@@ -121,7 +121,6 @@ class BluetoothManager {
       Permission.bluetoothConnect,
       Permission.locationWhenInUse,
       Permission.bluetooth,
-      Permission.storage,
     ].request();
   }
 
@@ -295,8 +294,9 @@ class BluetoothManager {
       cb.onLog('🔌 Conectando a ${device.displayName}...', false);
 
       if (device.type == BluetoothDeviceType.ble) {
-        await device.bleDevice!
-            .connect(timeout: const Duration(seconds: 15));
+        await device.bleDevice!.connect(
+            license: License.nonprofit,
+            timeout: const Duration(seconds: 15));
         _connectedDevice = device;
         cb.onConnectionChanged(device);
         cb.onLog('✓ Conectado (BLE): ${device.displayName}', false);
@@ -536,7 +536,7 @@ class BluetoothManager {
     if (_connectedDevice == null) return;
 
     try {
-      final bytes = utf8.encode(command + '\n');
+      final bytes = utf8.encode('$command\n');
       if (_connectedDevice!.type == BluetoothDeviceType.ble) {
         // En BLE buscamos la característica de escritura rápidamente
         final services = await _connectedDevice!.bleDevice!.discoverServices();

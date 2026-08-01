@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'ui/screens/ide_screen.dart';
-import 'ui/screens/login_screen.dart';
 import 'ui/theme/app_theme.dart';
 import 'ui/widgets/permission_request_screen.dart';
+import 'ui/utils/app_scaler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +30,7 @@ class StemBosqueApp extends StatelessWidget {
       title: 'StemBosque - DSL para Robótica',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => AppScaler(child: child ?? const SizedBox()),
       home: const IDEScreen(),
     );
 

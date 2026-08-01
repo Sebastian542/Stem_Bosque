@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive.dart';
 
 class BlockModeScreen extends StatefulWidget {
   final List<Map<String, dynamic>> initialObstacles;
@@ -53,6 +54,9 @@ class _BlockModeScreenState extends State<BlockModeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
+    final paletteHeight = r.isLandscape ? 80.0 : (r.isCompact ? 88.0 : 100.0);
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -72,8 +76,8 @@ class _BlockModeScreenState extends State<BlockModeScreen> {
         children: [
           // Área de herramientas
           Container(
-            height: 100,
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            height: paletteHeight,
+            padding: EdgeInsets.symmetric(vertical: r.verticalPadding * 0.6),
             color: AppTheme.currentLine.withAlpha(50),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,

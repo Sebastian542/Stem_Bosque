@@ -17,7 +17,7 @@ class FileUtils {
       }
 
       // OPCIÓN 1: Intentar con file_picker (puede tener limitaciones en Android)
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['txt', 'sb'], // Permitir .txt y .sb
         dialogTitle: 'Seleccionar programa',

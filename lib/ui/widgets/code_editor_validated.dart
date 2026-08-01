@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../compiler/syntax_validator.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SISTEMA DE TOKENS — solo visual, no toca el compilador
@@ -138,6 +139,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
 
   double _fontSize = 14.0;
   double _fontSizeOnScaleStart = 14.0;
+  bool _fontSizeInitialized = false;
   static const double _minFontSize = 9.0;
   static const double _maxFontSize = 28.0;
   static const double _lineHeight = 1.5;
@@ -178,6 +180,15 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_fontSizeInitialized) {
+      _fontSize = context.responsive.codeFontSize;
+      _fontSizeInitialized = true;
+    }
+  }
+
+  @override
   void dispose() {
     _focusNode.dispose();
     _scrollController.dispose();
@@ -196,7 +207,14 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
     
     if (mounted) {
       setState(() => _result = result);
-      widget.onValidityChanged(result.isValid, result.isValid ? null : result.errorMessage);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.onValidityChanged(
+            result.isValid,
+            result.isValid ? null : result.errorMessage,
+          );
+        }
+      });
     }
     _actualizarSugerencias();
   }
@@ -309,10 +327,12 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   }
 
   Widget _buildTextField() {
+    final minEditorWidth = MediaQuery.sizeOf(context).width * 1.5;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SizedBox(
-        width: 2000,
+        width: minEditorWidth.clamp(600, 2000),
         child: TextField(
           controller:       widget.controller,
           focusNode:        _focusNode,
@@ -342,8 +362,10 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
   }
 
   Widget _buildLineNumbers() {
+    final gutter = context.responsive.gutterWidth;
+
     return SizedBox(
-      width: 44,
+      width: gutter,
       child: ValueListenableBuilder<TextEditingValue>(
         valueListenable: widget.controller,
         builder: (context, value, _) {

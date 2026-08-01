@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive.dart';
 
 class HelpDialog extends StatelessWidget {
   const HelpDialog({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
+
     return DefaultTabController(
       length: 2,
       child: AlertDialog(
         backgroundColor: AppTheme.background,
         surfaceTintColor: AppTheme.purple,
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: r.isCompact ? 16 : 24,
+          vertical: 24,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: AppTheme.purple, width: 1),
@@ -41,8 +48,8 @@ class HelpDialog extends StatelessWidget {
           ],
         ),
         content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
+          width: r.dialogMaxWidth,
+          height: r.dialogListHeight,
           child: TabBarView(
             children: [
               _buildConceptosTab(),

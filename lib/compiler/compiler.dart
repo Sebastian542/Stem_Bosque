@@ -1,7 +1,6 @@
 import 'interpreter/interpreter.dart';
 import 'models/token.dart';
 import 'lexer/lexer.dart';
-import 'ast/nodes.dart';
 import 'parser/parser.dart';
 import 'codegen/code_generator.dart';
 

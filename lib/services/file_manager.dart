@@ -43,7 +43,7 @@ class FileManager {
         // En PC, intentamos abrir el selector de carpetas
         String? selectedDirectory;
         try {
-          selectedDirectory = await FilePicker.platform.getDirectoryPath(
+          selectedDirectory = await FilePicker.getDirectoryPath(
             dialogTitle: 'Selecciona la carpeta para guardar tu programa',
           );
         } catch (e) {
@@ -96,15 +96,15 @@ class FileManager {
 
   /// Abre un selector de archivos (Windows Explorer / Web) y devuelve el contenido.
   Future<String?> pickAndReadFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    FilePickerResult? result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['sb', 'txt'],
     );
 
     if (result != null) {
       if (kIsWeb) {
-        // En Web leemos los bytes directamente
-        return utf8.decode(result.files.first.bytes!);
+        final bytes = await result.files.first.readAsBytes();
+        return utf8.decode(bytes);
       } else {
         // En PC leemos desde el path
         final file = File(result.files.single.path!);
@@ -144,7 +144,12 @@ class FileManager {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/${fileName ?? 'programa.txt'}');
       await file.writeAsString(content);
-      await Share.shareXFiles([XFile(file.path)], subject: 'Programa StemBosque');
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Programa StemBosque',
+        ),
+      );
     } catch (e) {
       debugPrint('Error al compartir: $e');
     }

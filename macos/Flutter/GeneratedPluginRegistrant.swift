@@ -9,7 +9,7 @@ import cloud_firestore
 import file_picker
 import firebase_auth
 import firebase_core
-import flutter_blue_plus
+import flutter_blue_plus_darwin
 import local_auth_darwin
 import share_plus
 import url_launcher_macos

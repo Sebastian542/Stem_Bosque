@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../utils/responsive.dart';
 
 /// Widget que solicita permisos BLE al iniciar la app
 class PermissionRequestScreen extends StatefulWidget {
@@ -182,58 +183,62 @@ class _PermissionRequestScreenState extends State<PermissionRequestScreen> {
     }
 
     if (!_permissionsGranted) {
+      final r = context.responsive;
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
+            child: ResponsiveCenter(
+              maxWidth: 520,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.bluetooth_searching,
-                    size: 80,
+                    size: r.scale(80),
                     color: Colors.blue,
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
+                  SizedBox(height: r.verticalPadding),
+                  Text(
                     'Permisos necesarios',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: r.isCompact ? 20 : 24,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
+                  SizedBox(height: r.verticalPadding * 0.75),
+                  Text(
                     'StemBosque necesita acceso a Bluetooth y Ubicación para '
                         'conectarse con la Raspberry Pi.',
-                    style: TextStyle(fontSize: 16, height: 1.5),
+                    style: TextStyle(fontSize: r.isCompact ? 14 : 16, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: r.verticalPadding * 2),
                   _buildPermissionItem(
                     Icons.bluetooth,
                     'Bluetooth',
                     'Para buscar y conectar con dispositivos',
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: r.verticalPadding),
                   _buildPermissionItem(
                     Icons.location_on,
                     'Ubicación',
                     'Requerida por Android para escaneo BLE',
                   ),
-                  const SizedBox(height: 48),
+                  SizedBox(height: r.verticalPadding * 3),
                   SizedBox(
                     width: double.infinity,
-                    height: 50,
+                    height: r.isCompact ? 48 : 50,
                     child: ElevatedButton.icon(
                       onPressed: _requestPermissions,
-                      icon: const Icon(Icons.check_circle, size: 24),
-                      label: const Text(
+                      icon: Icon(Icons.check_circle, size: r.iconSize),
+                      label: Text(
                         'Conceder permisos',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: r.isCompact ? 14 : 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,

@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../utils/responsive.dart';
 
 // ══════════════════════════════════════════════════════════════
 //  SimulationScreen
@@ -265,74 +266,118 @@ class _SimulationScreenState extends State<SimulationScreen>
   }
 
   Widget _buildControlPanel() {
-    return Container(
-      color: const Color(0xFF1e1f29),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Barra de progreso
-          LinearProgressIndicator(
-            value: widget.commands.isEmpty
-                ? 0
-                : _cmdIndex / widget.commands.length,
-            backgroundColor: const Color(0xFF44475a),
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF50fa7b)),
-            minHeight: 4,
-            borderRadius: BorderRadius.circular(2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final r = context.responsive;
+        final narrow = constraints.maxWidth < 480;
+
+        return Container(
+          color: const Color(0xFF1e1f29),
+          padding: EdgeInsets.symmetric(
+            horizontal: r.horizontalPadding,
+            vertical: r.verticalPadding * 0.75,
           ),
-          const SizedBox(height: 10),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Status
-              Text(
-                _isDone
-                    ? '✓ Simulación completa'
-                    : _isPlaying
-                    ? '▶ Ejecutando...'
-                    : _cmdIndex == 0
-                    ? 'Listo para simular'
-                    : '⏸ Pausado (cmd $_cmdIndex/${widget.commands.length})',
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  color: _isDone
-                      ? const Color(0xFF50fa7b)
-                      : _isPlaying
-                      ? const Color(0xFF8be9fd)
-                      : const Color(0xFF6272a4),
-                ),
+              LinearProgressIndicator(
+                value: widget.commands.isEmpty
+                    ? 0
+                    : _cmdIndex / widget.commands.length,
+                backgroundColor: const Color(0xFF44475a),
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF50fa7b)),
+                minHeight: 4,
+                borderRadius: BorderRadius.circular(2),
               ),
-
-              // Botones
-              Row(
-                children: [
-                  // Reset
-                  _CtrlButton(
-                    icon: Icons.replay,
-                    color: const Color(0xFFff5555),
-                    tooltip: 'Reiniciar',
-                    onPressed: _reset,
-                  ),
-                  const SizedBox(width: 10),
-                  // Play / Pause
-                  _CtrlButton(
-                    icon: _isPlaying ? Icons.pause : Icons.play_arrow,
-                    color: const Color(0xFF50fa7b),
-                    tooltip: _isPlaying ? 'Pausar' : 'Reproducir',
-                    onPressed: _isDone
-                        ? null
-                        : _isPlaying ? _pause : _play,
-                    large: true,
-                  ),
-                ],
-              ),
+              SizedBox(height: r.verticalPadding * 0.6),
+              narrow
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          _statusText(),
+                          textAlign: TextAlign.center,
+                          style: _statusStyle(),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _CtrlButton(
+                              icon: Icons.replay,
+                              color: const Color(0xFFff5555),
+                              tooltip: 'Reiniciar',
+                              onPressed: _reset,
+                            ),
+                            const SizedBox(width: 10),
+                            _CtrlButton(
+                              icon: _isPlaying ? Icons.pause : Icons.play_arrow,
+                              color: const Color(0xFF50fa7b),
+                              tooltip: _isPlaying ? 'Pausar' : 'Reproducir',
+                              onPressed: _isDone
+                                  ? null
+                                  : _isPlaying ? _pause : _play,
+                              large: true,
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _statusText(),
+                            style: _statusStyle(),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            _CtrlButton(
+                              icon: Icons.replay,
+                              color: const Color(0xFFff5555),
+                              tooltip: 'Reiniciar',
+                              onPressed: _reset,
+                            ),
+                            const SizedBox(width: 10),
+                            _CtrlButton(
+                              icon: _isPlaying ? Icons.pause : Icons.play_arrow,
+                              color: const Color(0xFF50fa7b),
+                              tooltip: _isPlaying ? 'Pausar' : 'Reproducir',
+                              onPressed: _isDone
+                                  ? null
+                                  : _isPlaying ? _pause : _play,
+                              large: true,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
             ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  String _statusText() {
+    if (_isDone) return '✓ Simulación completa';
+    if (_isPlaying) return '▶ Ejecutando...';
+    if (_cmdIndex == 0) return 'Listo para simular';
+    return '⏸ Pausado (cmd $_cmdIndex/${widget.commands.length})';
+  }
+
+  TextStyle _statusStyle() {
+    return TextStyle(
+      fontFamily: 'monospace',
+      fontSize: 12,
+      color: _isDone
+          ? const Color(0xFF50fa7b)
+          : _isPlaying
+          ? const Color(0xFF8be9fd)
+          : const Color(0xFF6272a4),
     );
   }
 }

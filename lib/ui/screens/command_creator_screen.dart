@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/database_service.dart';
 import '../theme/app_theme.dart';
 
 class CommandCreatorScreen extends StatefulWidget {
@@ -13,6 +13,7 @@ class _CommandCreatorScreenState extends State<CommandCreatorScreen> {
   final _keywordController = TextEditingController();
   final _descController = TextEditingController();
   final _scriptController = TextEditingController();
+  final _db = DatabaseService();
   bool _isSaving = false;
 
   Future<void> _saveCommand() async {
@@ -25,17 +26,18 @@ class _CommandCreatorScreenState extends State<CommandCreatorScreen> {
 
     setState(() => _isSaving = true);
     try {
-      await FirebaseFirestore.instance.collection('custom_commands').add({
-        'keyword': _keywordController.text.trim().toUpperCase(),
-        'description': _descController.text.trim(),
-        'script': _scriptController.text.trim(), // Guardamos el bloque de código
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      await _db.saveCustomCommand(
+        keyword: _keywordController.text,
+        description: _descController.text,
+        script: _scriptController.text,
+      );
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -85,9 +87,9 @@ class _CommandCreatorScreenState extends State<CommandCreatorScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _saveCommand,
-                child: _isSaving 
-                  ? const CircularProgressIndicator() 
-                  : const Text('GUARDAR MACRO-COMANDO'),
+                child: _isSaving
+                    ? const CircularProgressIndicator()
+                    : const Text('GUARDAR MACRO-COMANDO'),
               ),
             ),
           ],

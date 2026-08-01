@@ -45,8 +45,29 @@ class DatabaseService {
         .snapshots();
   }
 
-  /// Obtiene los comandos personalizados globales o del usuario
+  /// Obtiene los comandos personalizados globales (requiere sesión iniciada).
   Stream<QuerySnapshot> getCustomCommands() {
+    if (_userId == null) return const Stream.empty();
+
     return _db.collection('custom_commands').snapshots();
+  }
+
+  /// Guarda un comando personalizado en Firestore.
+  Future<void> saveCustomCommand({
+    required String keyword,
+    required String description,
+    required String script,
+  }) async {
+    if (_userId == null) {
+      throw Exception('Debes iniciar sesión para crear comandos personalizados');
+    }
+
+    await _db.collection('custom_commands').add({
+      'keyword': keyword.trim().toUpperCase(),
+      'description': description.trim(),
+      'script': script.trim(),
+      'createdBy': _userId,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -96,6 +97,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -105,35 +108,34 @@ class _LoginScreenState extends State<LoginScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo
-                Image.asset(
-                  'assets/images/logo.png',
-                  height: 100,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.code, size: 80, color: AppTheme.cyan),
-                ).animate().fadeIn(duration: 600.ms).scale(),
-                
-                const SizedBox(height: 20),
-                Text(
-                  'StemBosque IDE',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppTheme.purple,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const Text(
-                  'Portal de Robótica Educativa',
-                  style: TextStyle(color: AppTheme.comment),
-                ),
-                const SizedBox(height: 40),
+      body: ResponsiveCenter(
+        maxWidth: r.maxFormWidth,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/logo.png',
+              height: r.scale(100),
+              errorBuilder: (context, error, stackTrace) =>
+                  Icon(Icons.code, size: r.scale(80), color: AppTheme.cyan),
+            ).animate().fadeIn(duration: 600.ms).scale(),
+            
+            SizedBox(height: r.verticalPadding),
+            Text(
+              'StemBosque IDE',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: AppTheme.purple,
+                    fontWeight: FontWeight.bold,
+                    fontSize: r.isCompact ? 22 : 28,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const Text(
+              'Portal de Robótica Educativa',
+              style: TextStyle(color: AppTheme.comment),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: r.isCompact ? 24 : 40),
                 
                 // Formulario dinámico con Autofill
                 AutofillGroup(
@@ -208,9 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );

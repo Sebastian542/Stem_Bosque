@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive.dart';
 import '../../bluetooth/bluetooth_manager.dart';
 
 class BluetoothPanel extends StatelessWidget {
@@ -35,8 +36,12 @@ class BluetoothPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
+    final panelHeight = r.useSidePanelLayout ? null : r.panelHeight;
+
     return Container(
-      height: 350,
+      height: panelHeight,
+      width: r.useSidePanelLayout ? double.infinity : null,
       decoration: BoxDecoration(
         color: AppTheme.background.withAlpha(245),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
@@ -55,7 +60,7 @@ class BluetoothPanel extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(context),
             if (connectedDevice != null) _buildConnectedBanner(),
             Expanded(child: _buildDeviceList(context)),
           ],
@@ -64,7 +69,8 @@ class BluetoothPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final r = context.responsive;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       color: AppTheme.currentLine.withAlpha(150),
@@ -77,11 +83,11 @@ class BluetoothPanel extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            'Panel de Control',
+            r.isPhone ? 'Bluetooth' : 'Panel de Control',
             style: TextStyle(
               color: bluetoothEnabled ? AppTheme.foreground : AppTheme.comment,
               fontWeight: FontWeight.w900,
-              fontSize: 18,
+              fontSize: r.isPhone ? 14 : 18,
               letterSpacing: 0.5,
             ),
           ),

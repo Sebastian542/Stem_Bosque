@@ -17,6 +17,7 @@ import '../widgets/confetti_widget.dart';
 import 'simulation_screen.dart';
 import '../widgets/tita.dart';
 import 'block_mode_screen.dart';
+import '../utils/responsive.dart';
 import 'dart:async';
 
 class IDEScreen extends StatefulWidget {
@@ -40,12 +41,12 @@ class _IDEScreenState extends State<IDEScreen> {
   bool          _vampiritoAnimating = false;
   List<String> _compiledLines   = [];
   List<Map<String, dynamic>> _currentObstacles = [];
-  String?      _compiledFilePath;
   String?      _lastErrorMessage;
   bool _isTyping = false;
   Timer? _typingTimer;
   List<String> _customCommands = [];
   StreamSubscription? _commandsSub;
+  StreamSubscription<User?>? _authSub;
 
   // ── Bluetooth UI ─────────────────────────────────────────────
   bool _bluetoothEnabled   = false;
@@ -90,19 +91,38 @@ FIN PROGRAMA''';
     _bt.init(_btCallbacks);
     _loadAutoSaved();
     _codeController.addListener(_onCodeChanged);
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((_) {
+      _commandsSub?.cancel();
+      if (mounted) {
+        setState(() => _customCommands = []);
+      }
+      _listenToCustomCommands();
+    });
     _listenToCustomCommands();
   }
 
   void _listenToCustomCommands() {
-    _commandsSub = DatabaseService().getCustomCommands().listen((snapshot) {
-      if (mounted) {
-        setState(() {
-          _customCommands = snapshot.docs
-              .map((doc) => doc['name'].toString().toUpperCase())
-              .toList();
-        });
-      }
-    });
+    _commandsSub?.cancel();
+    _commandsSub = DatabaseService().getCustomCommands().listen(
+      (snapshot) {
+        if (mounted) {
+          setState(() {
+            _customCommands = snapshot.docs
+                .map((doc) {
+                  final data = doc.data() as Map<String, dynamic>?;
+                  return (data?['keyword'] ?? data?['name'] ?? '')
+                      .toString()
+                      .toUpperCase();
+                })
+                .where((name) => name.isNotEmpty)
+                .toList();
+          });
+        }
+      },
+      onError: (Object error) {
+        debugPrint('No se pudieron cargar comandos personalizados: $error');
+      },
+    );
   }
 
   void _onCodeChanged() {
@@ -115,7 +135,6 @@ FIN PROGRAMA''';
       setState(() {
         _compiledSuccess  = false;
         _compiledLines    = [];
-        _compiledFilePath = null;
         _lastErrorMessage = null;
       });
     }
@@ -129,6 +148,7 @@ FIN PROGRAMA''';
     _codeController.removeListener(_onCodeChanged);
     _typingTimer?.cancel();
     _vampiritoOverlay?.remove();
+    _authSub?.cancel();
     _commandsSub?.cancel();
     super.dispose();
   }
@@ -352,6 +372,7 @@ FIN PROGRAMA''';
     final mutableFiles = List<File>.from(files);
 
     if (!mounted) return;
+    final r = context.responsive;
     final selected = await showDialog<File>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -363,8 +384,8 @@ FIN PROGRAMA''';
             Text('Abrir archivo', style: TextStyle(color: AppTheme.foreground)),
           ]),
           content: SizedBox(
-            width: double.maxFinite,
-            height: 350,
+            width: r.dialogMaxWidth,
+            height: r.dialogListHeight,
             child: mutableFiles.isEmpty
                 ? const Center(
                 child: Text('No hay archivos',
@@ -556,7 +577,7 @@ FIN PROGRAMA''';
 
       if (r.exito && _compiledLines.isNotEmpty) {
         await _fm.deleteCompiled();
-        _compiledFilePath = await _fm.saveCompiled(_compiledLines.join('\n'));
+        await _fm.saveCompiled(_compiledLines.join('\n'));
         _launchVampiritoAnimation(success: true);
       } else if (!r.exito) {
         _launchVampiritoAnimation(success: false, errorMsg: r.error);
@@ -583,9 +604,89 @@ FIN PROGRAMA''';
   // BUILD
   // ─────────────────────────────────────────────────────────────
 
+  Widget _buildBluetoothPanelWidget() {
+    return BluetoothPanel(
+      bluetoothEnabled:  _bluetoothEnabled,
+      isScanning:        _isScanning,
+      isConnecting:      _isConnecting,
+      devices:           _discoveredDevices,
+      connectedDevice:   _connectedDevice,
+      onToggle:          _toggleBluetoothPanel,
+      onToggleBluetooth: () => _bt.toggleBluetooth(onUnsupported: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bluetooth no soportado en esta plataforma')),
+        );
+      }),
+      onStartScan:       _startScan,
+      onStopScan:        _stopScan,
+      onOpenSettings:    () => _bt.openSettings(),
+      onDisconnect:      () => _bt.disconnect(_btCallbacks),
+      onConnect:         (d) => _bt.connect(d, _btCallbacks),
+    );
+  }
+
+  Widget _buildCodeEditor() {
+    return ValidatedCodeEditor(
+      controller: _codeController,
+      customCommands: _customCommands,
+      onValidityChanged: (isValid, errorMsg) => setState(() {
+        _codeIsValid      = isValid;
+        _lastErrorMessage = errorMsg;
+      }),
+    );
+  }
+
+  Widget _buildActionBar(Responsive r) {
+    if (!_compiledSuccess) return const SizedBox.shrink();
+
+    final simulateBtn = ElevatedButton.icon(
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SimulationScreen(commands: _compiledLines),
+        ),
+      ),
+      icon:  const Icon(Icons.play_circle_fill),
+      label: Text(r.isCompact ? 'SIMULAR' : 'SIMULAR'),
+      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.purple),
+    );
+
+    final sendBtn = ElevatedButton.icon(
+      onPressed: _sendProgram,
+      icon:  const Icon(Icons.send_rounded),
+      label: Text(r.isCompact ? 'ENVIAR' : 'ENVIAR'),
+      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.cyan),
+    );
+
+    return Container(
+      padding: EdgeInsets.all(r.isCompact ? 8 : 12),
+      color: AppTheme.currentLine.withAlpha(100),
+      child: r.isPhone && _bluetoothEnabled
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                simulateBtn,
+                const SizedBox(height: 8),
+                sendBtn,
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(child: simulateBtn),
+                if (_bluetoothEnabled) ...[
+                  SizedBox(width: r.isCompact ? 8 : 12),
+                  Expanded(child: sendBtn),
+                ],
+              ],
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final unsaved = _fm.hasUnsavedChanges(_codeController.text);
+    final r = context.responsive;
+    final useSidePanel = r.useSidePanelLayout && _showBluetoothPanel;
 
     return Scaffold(
       appBar: AppBar(
@@ -647,109 +748,81 @@ FIN PROGRAMA''';
           }
         },
       ),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              children: [
-                Toolbar(
-                  onRun:     _executeProgram,
-                  onClear:   _clearCode,
-                  onOpen:    _openFile,
-                  onSave:    _saveWithName,
-                  isRunning: _isRunning,
-                ),
-                if (_showBluetoothPanel)
-                  BluetoothPanel(
-                    bluetoothEnabled:  _bluetoothEnabled,
-                    isScanning:        _isScanning,
-                    isConnecting:      _isConnecting,
-                    devices:           _discoveredDevices,
-                    connectedDevice:   _connectedDevice,
-                    onToggle:          _toggleBluetoothPanel,
-                    onToggleBluetooth: () => _bt.toggleBluetooth(onUnsupported: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Bluetooth no soportado en esta plataforma')),
-                      );
-                    }),
-                    onStartScan:       _startScan,
-                    onStopScan:        _stopScan,
-                    onOpenSettings:    () => _bt.openSettings(),
-                    onDisconnect:      () => _bt.disconnect(_btCallbacks),
-                    onConnect:         (d) => _bt.connect(d, _btCallbacks),
-                  ),
-                Expanded(
-                  child: ValidatedCodeEditor(
-                    controller: _codeController,
-                    customCommands: _customCommands,
-                    onValidityChanged: (isValid, errorMsg) => setState(() {
-                      _codeIsValid      = isValid;
-                      _lastErrorMessage = errorMsg;
-                    }),
-                  ),
-                ),
-                if (_compiledSuccess)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    color: AppTheme.currentLine.withAlpha(100),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => SimulationScreen(commands: _compiledLines),
-                              ),
-                            ),
-                            icon:  const Icon(Icons.play_circle_fill),
-                            label: const Text('SIMULAR'),
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.purple),
-                          ),
-                        ),
-                        if (_bluetoothEnabled) ...[
-                          const SizedBox(width: 12),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              SafeArea(
+                child: useSidePanel
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                           Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _sendProgram,
-                              icon:  const Icon(Icons.send_rounded),
-                              label: const Text('ENVIAR'),
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.cyan),
+                            child: Column(
+                              children: [
+                                Toolbar(
+                                  onRun:     _executeProgram,
+                                  onClear:   _clearCode,
+                                  onOpen:    _openFile,
+                                  onSave:    _saveWithName,
+                                  isRunning: _isRunning,
+                                ),
+                                Expanded(child: _buildCodeEditor()),
+                                _buildActionBar(r),
+                              ],
                             ),
+                          ),
+                          SizedBox(
+                            width: r.sidePanelWidth,
+                            child: _buildBluetoothPanelWidget(),
                           ),
                         ],
-                      ],
+                      )
+                    : Column(
+                        children: [
+                          Toolbar(
+                            onRun:     _executeProgram,
+                            onClear:   _clearCode,
+                            onOpen:    _openFile,
+                            onSave:    _saveWithName,
+                            isRunning: _isRunning,
+                          ),
+                          if (_showBluetoothPanel) _buildBluetoothPanelWidget(),
+                          Expanded(child: _buildCodeEditor()),
+                          _buildActionBar(r),
+                        ],
+                      ),
+              ),
+              Positioned(
+                right:  r.isCompact ? 8 : 16,
+                bottom: _compiledSuccess
+                    ? (r.isCompact ? 72 : 88)
+                    : (r.isCompact ? 12 : 20),
+                child: Transform.scale(
+                  scale: r.vampiritoScale,
+                  alignment: Alignment.bottomRight,
+                  child: AnimatedOpacity(
+                    opacity:  _vampiritoAnimating ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: VampiritoPet(
+                      isTyping:     _isTyping,
+                      state:        _isRunning
+                          ? VampiritoState.running
+                          : _compiledSuccess
+                          ? VampiritoState.success
+                          : !_codeIsValid && _codeController.text.trim().isNotEmpty
+                          ? VampiritoState.error
+                          : _codeController.text.trim().isNotEmpty
+                          ? VampiritoState.watching
+                          : VampiritoState.idle,
+                      errorMessage: _lastErrorMessage,
                     ),
                   ),
-              ],
-            ),
-          ),
-
-          // ── Vampirito ─────────────────────────────────────────────
-          Positioned(
-            right:  16,
-            bottom: _compiledSuccess ? 88 : 20,
-            child: AnimatedOpacity(
-              opacity:  _vampiritoAnimating ? 0.0 : 1.0,
-              duration: const Duration(milliseconds: 200),
-              child: VampiritoPet(
-                isTyping:     _isTyping,
-                state:        _isRunning
-                    ? VampiritoState.running
-                    : _compiledSuccess
-                    ? VampiritoState.success
-                    : !_codeIsValid && _codeController.text.trim().isNotEmpty
-                    ? VampiritoState.error
-                    : _codeController.text.trim().isNotEmpty
-                    ? VampiritoState.watching
-                    : VampiritoState.idle,
-                errorMessage: _lastErrorMessage,
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
