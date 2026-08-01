@@ -31,6 +31,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
 
+# permission_handler_html 0.1.4+0 usa `isA()` sobre `Object`, disponible solo
+# en Dart 3.12+. Con Dart 3.11 fijamos la versión previa (compatible y
+# funcionalmente equivalente) para evitar el error de compilacion en web.
+dependency_overrides:
+  permission_handler_html: 0.1.3+5
+
 flutter:
   uses-material-design: true
   assets:
