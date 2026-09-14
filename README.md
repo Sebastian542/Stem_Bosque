@@ -327,3 +327,6 @@ El proyecto cuenta con un flujo automatizado que:
 ---
 
 © 2026 STEMBosque — Innovación en Educación Tecnológica.
+
+<!-- Documentación actualizada: 2026-09 -->
+
