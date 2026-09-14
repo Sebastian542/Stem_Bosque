@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/database_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive.dart';
 
 class CommandCreatorScreen extends StatefulWidget {
   const CommandCreatorScreen({super.key});
@@ -15,6 +16,14 @@ class _CommandCreatorScreenState extends State<CommandCreatorScreen> {
   final _scriptController = TextEditingController();
   final _db = DatabaseService();
   bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _keywordController.dispose();
+    _descController.dispose();
+    _scriptController.dispose();
+    super.dispose();
+  }
 
   Future<void> _saveCommand() async {
     if (_keywordController.text.isEmpty || _scriptController.text.isEmpty) {
@@ -45,14 +54,19 @@ class _CommandCreatorScreenState extends State<CommandCreatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Creador de Comandos (Admin)'),
+        title: const Text(
+          'Creador de Comandos (Admin)',
+          overflow: TextOverflow.ellipsis,
+        ),
         backgroundColor: AppTheme.currentLine,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      body: ResponsiveCenter(
+        maxWidth: r.maxFormWidth + 80,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -62,33 +76,40 @@ class _CommandCreatorScreenState extends State<CommandCreatorScreen> {
               style: const TextStyle(color: AppTheme.foreground),
               decoration: const InputDecoration(hintText: 'Ej: CUADRADO', hintStyle: TextStyle(color: AppTheme.comment)),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: r.verticalPadding),
             const Text('Descripción:', style: TextStyle(color: AppTheme.cyan)),
             TextField(
               controller: _descController,
               style: const TextStyle(color: AppTheme.foreground),
               decoration: const InputDecoration(hintText: 'Dibuja un cuadrado de 5x5'),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: r.verticalPadding),
             const Text('Script de ejecución:', style: TextStyle(color: AppTheme.green)),
             const Text('(Comandos básicos separados por líneas)', style: TextStyle(color: AppTheme.comment, fontSize: 12)),
             const SizedBox(height: 10),
             TextField(
               controller: _scriptController,
-              maxLines: 8,
-              style: AppTheme.codeStyle.copyWith(color: AppTheme.yellow),
-              decoration: InputDecoration(
+              maxLines: r.isCompact ? 6 : 8,
+              style: AppTheme.codeStyle.copyWith(
+                color: AppTheme.yellow,
+                fontSize: r.codeFontSize,
+              ),
+              decoration: const InputDecoration(
                 fillColor: AppTheme.currentLine,
                 hintText: 'AVANZAR 5\nGIRAR 90\nAVANZAR 5...',
               ),
             ),
-            const SizedBox(height: 30),
+            SizedBox(height: r.verticalPadding * 1.5),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _saveCommand,
                 child: _isSaving
-                    ? const CircularProgressIndicator()
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('GUARDAR MACRO-COMANDO'),
               ),
             ),

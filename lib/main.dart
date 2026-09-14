@@ -30,7 +30,12 @@ class StemBosqueApp extends StatelessWidget {
       title: 'StemBosque - DSL para Robótica',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
-      builder: (context, child) => AppScaler(child: child ?? const SizedBox()),
+      scrollBehavior: const AppScrollBehavior(),
+      builder: (context, child) {
+        return AppScaler(
+          child: child ?? const SizedBox(),
+        );
+      },
       home: const IDEScreen(),
     );
 

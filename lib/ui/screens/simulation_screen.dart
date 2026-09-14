@@ -199,6 +199,7 @@ class _SimulationScreenState extends State<SimulationScreen>
         foregroundColor: const Color(0xFFf8f8f2),
         title: const Text(
           'Simulación',
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontFamily: 'monospace',
             fontWeight: FontWeight.bold,
@@ -206,31 +207,32 @@ class _SimulationScreenState extends State<SimulationScreen>
           ),
         ),
         actions: [
-          // Botón Modo Edición
           IconButton(
             icon: Icon(_isEditMode ? Icons.layers : Icons.layers_outlined),
             color: _isEditMode ? const Color(0xFFffb86c) : const Color(0xFF6272a4),
             tooltip: 'Modo Bloque (Editar obstáculos)',
             onPressed: () => setState(() => _isEditMode = !_isEditMode),
           ),
-          // Info de comandos
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                '${widget.commands.length} comandos',
-                style: const TextStyle(
-                  color: Color(0xFF6272a4),
-                  fontFamily: 'monospace',
-                  fontSize: 12,
+          if (!context.responsive.isCompact)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text(
+                  '${widget.commands.length} comandos',
+                  style: const TextStyle(
+                    color: Color(0xFF6272a4),
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
 
-      body: Column(
+      body: SafeArea(
+        top: false,
+        child: Column(
         children: [
           // ── Canvas del robot ─────────────────────────────
           Expanded(
@@ -261,6 +263,7 @@ class _SimulationScreenState extends State<SimulationScreen>
           // ── Panel de controles ───────────────────────────
           _buildControlPanel(),
         ],
+      ),
       ),
     );
   }

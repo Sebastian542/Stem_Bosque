@@ -209,10 +209,11 @@ FIN PROGRAMA''';
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.currentLine,
+        insetPadding: ctx.responsive.dialogInsets,
         title: const Row(children: [
           Icon(Icons.save, color: AppTheme.purple),
           SizedBox(width: 12),
-          Text('Guardar archivo', style: TextStyle(color: AppTheme.foreground)),
+          Flexible(child: Text('Guardar archivo', style: TextStyle(color: AppTheme.foreground))),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -378,10 +379,11 @@ FIN PROGRAMA''';
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) => AlertDialog(
           backgroundColor: AppTheme.currentLine,
+          insetPadding: r.dialogInsets,
           title: const Row(children: [
             Icon(Icons.folder_open, color: AppTheme.cyan),
             SizedBox(width: 12),
-            Text('Abrir archivo', style: TextStyle(color: AppTheme.foreground)),
+            Flexible(child: Text('Abrir archivo', style: TextStyle(color: AppTheme.foreground))),
           ]),
           content: SizedBox(
             width: r.dialogMaxWidth,
@@ -661,7 +663,7 @@ FIN PROGRAMA''';
     return Container(
       padding: EdgeInsets.all(r.isCompact ? 8 : 12),
       color: AppTheme.currentLine.withAlpha(100),
-      child: r.isPhone && _bluetoothEnabled
+      child: r.denseControls && _bluetoothEnabled
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -690,11 +692,11 @@ FIN PROGRAMA''';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('StemBosque IDE'),
+        title: const Text('StemBosque IDE', overflow: TextOverflow.ellipsis),
         actions: [
           if (unsaved)
             Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: EdgeInsets.only(right: r.isCompact ? 8 : 16),
               child: Center(
                 child: Container(
                   padding:
@@ -704,8 +706,8 @@ FIN PROGRAMA''';
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppTheme.orange),
                   ),
-                  child: const Text('SIN GUARDAR',
-                      style: TextStyle(
+                  child: Text(r.isCompact ? '●' : 'SIN GUARDAR',
+                      style: const TextStyle(
                           color: AppTheme.orange,
                           fontSize: 10,
                           fontWeight: FontWeight.bold)),

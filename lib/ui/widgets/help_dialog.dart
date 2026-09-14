@@ -14,10 +14,7 @@ class HelpDialog extends StatelessWidget {
       child: AlertDialog(
         backgroundColor: AppTheme.background,
         surfaceTintColor: AppTheme.purple,
-        insetPadding: EdgeInsets.symmetric(
-          horizontal: r.isCompact ? 16 : 24,
-          vertical: 24,
-        ),
+        insetPadding: r.dialogInsets,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: AppTheme.purple, width: 1),

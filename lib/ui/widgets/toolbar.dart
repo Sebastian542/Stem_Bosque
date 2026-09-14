@@ -46,16 +46,16 @@ class Toolbar extends StatelessWidget {
             // Botón principal: Ejecutar
             _buildActionButton(
               label: isRunning
-                  ? (r.isPhone ? '...' : 'Ejecutando...')
-                  : (r.isPhone ? 'Run' : 'Ejecutar'),
+                  ? (r.denseControls ? '...' : 'Ejecutando...')
+                  : (r.denseControls ? 'Run' : 'Ejecutar'),
               icon: isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
               color: isRunning ? AppTheme.red : AppTheme.green,
               onPressed: onRun,
               isPrimary: true,
-              compact: r.isPhone,
+              compact: r.denseControls,
             ),
 
-            if (!r.isPhone) ...[
+            if (!r.denseControls) ...[
               const SizedBox(width: 12),
               const VerticalDivider(
                   color: AppTheme.currentLine, indent: 20, endIndent: 20),
@@ -70,7 +70,7 @@ class Toolbar extends StatelessWidget {
             _buildIconButton(Icons.delete_sweep_rounded, 'Limpiar',
                 AppTheme.orange, onClear, r),
 
-            SizedBox(width: r.isPhone ? 6 : 12),
+            SizedBox(width: r.denseControls ? 6 : 12),
 
             // Badge de versión
             Container(
@@ -133,7 +133,7 @@ class Toolbar extends StatelessWidget {
       IconData icon, String tooltip, Color color, VoidCallback? onPressed,
       Responsive r) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: r.isPhone ? 2 : 4),
+      padding: EdgeInsets.symmetric(horizontal: r.denseControls ? 2 : 4),
       child: Tooltip(
         message: tooltip,
         child: Material(
@@ -142,12 +142,12 @@ class Toolbar extends StatelessWidget {
             onTap: onPressed,
             borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding: EdgeInsets.all(r.isPhone ? 7 : 10),
+              padding: EdgeInsets.all(r.denseControls ? 7 : 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: color.withAlpha(50), width: 1),
               ),
-              child: Icon(icon, color: color, size: r.isPhone ? 18 : 22),
+              child: Icon(icon, color: color, size: r.denseControls ? 18 : 22),
             ),
           ),
         ),

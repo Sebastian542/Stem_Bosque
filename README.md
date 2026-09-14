@@ -3,7 +3,7 @@
 ### ✍️ Autores
 - **Sebastian** ([@Sebastian542](https://github.com/Sebastian542))
 - **Alejandra** ([@Aleja2](https://github.com/aleja2))
-- **Julio** ([@Julio123422](https://github.com/ProgramadorMermelada)
+- **Julio** ([@ProgramadorMermelada](https://github.com/ProgramadorMermelada))
   
 > **Un entorno de desarrollo integrado (IDE) para robótica educativa**, diseñado para que niños y jóvenes aprendan lógica computacional mediante un lenguaje natural (DSL) en español y una simulación interactiva.
 
@@ -24,6 +24,7 @@
 - [Estructura del Proyecto](#-estructura-del-proyecto)
 - [Módulos y Servicios](#-módulos-y-servicios)
 - [Pantallas de la Aplicación](#-pantallas-de-la-aplicación)
+- [Interfaz adaptativa](#-interfaz-adaptativa)
 - [Modelo de Datos (Firestore)](#-modelo-de-datos-firestore)
 - [Conectividad Bluetooth](#-conectividad-bluetooth)
 - [Tecnologías](#-tecnologías)
@@ -50,6 +51,7 @@
 | 🎨 **Editor Inteligente**   | Resaltado de sintaxis dinámico, sugerencias automáticas y validación en tiempo real. |
 | 🔵 **Bluetooth Dual**       | Soporte para Bluetooth Clásico (Android) y BLE (Web/Móvil) para conectar con hardware real. |
 | 🕹️ **Control Remoto**       | Interfaz de mando directo para el robot integrada en la app. |
+| 📱 **UI adaptativa**        | Layouts compact / medium / expanded / large según el ancho de ventana (móvil, tablet, escritorio y web). |
 | ⚙️ **CI/CD Robusto**        | Despliegue automatizado a GitHub Pages y generación de instaladores para todas las plataformas. |
 
 ---
@@ -178,8 +180,10 @@ Stem_Bosque/
 │   └── ui/                          # Capa de presentación
 │       ├── screens/                 # Pantallas de la app
 │       ├── widgets/                 # Componentes reutilizables
-│       ├── theme/app_theme.dart     # Tema visual (modo oscuro)
-│       └── utils/                   # Escalado y responsividad
+│       ├── theme/app_theme.dart     # Tema visual (Dracula / Material 3)
+│       └── utils/
+│           ├── responsive.dart      # Breakpoints por ancho de ventana
+│           └── app_scaler.dart      # Escala de texto en viewports pequeños
 │
 ├── assets/images/                   # Recursos (mascota "Tita", etc.)
 ├── android/ · ios/ · web/           # Proyectos nativos por plataforma
@@ -219,7 +223,32 @@ Ubicadas en `lib/ui/screens/`:
 | Explorador Cloud | `cloud_explorer_screen.dart` | Navegación y carga de proyectos guardados. |
 | Panel de Admin | `admin_panel_screen.dart` | Administración (gestión de usuarios/roles). |
 
-Componentes destacados (`lib/ui/widgets/`): editor con validación (`code_editor_validated.dart`), barra de herramientas (`toolbar.dart`), panel Bluetooth (`bluetooth_panel.dart`), consola de ejecución (`execution_console.dart`), asistente visual **Tita** (`tita.dart`), diálogos de ayuda y pantalla de permisos.
+Componentes destacados (`lib/ui/widgets/`): editor con validación y resaltado (`code_editor_validated.dart`), barra de herramientas (`toolbar.dart`), panel Bluetooth (`bluetooth_panel.dart`), menú lateral (`ide_drawer.dart`), consola de ejecución (`execution_console.dart`), asistente visual **Tita / Vampirito** (`tita.dart`), documentación DSL (`help_dialog.dart`) y pantalla de permisos BLE.
+
+---
+
+## 📱 Interfaz adaptativa
+
+La UI se adapta al **ancho real de la ventana**, no al tipo de dispositivo. Así funciona igual en celular, tablet, escritorio o una pestaña web redimensionada.
+
+Definido en `lib/ui/utils/responsive.dart` (clases de ventana de Material 3):
+
+| Clase | Ancho | Uso típico |
+|-------|-------|------------|
+| Compact | &lt; 600 dp | Teléfono en vertical, ventana estrecha |
+| Medium | 600–839 dp | Tablet, teléfono en horizontal |
+| Expanded | 840–1199 dp | Portátil, tablet ancha |
+| Large | ≥ 1200 dp | Monitor de escritorio |
+
+Comportamiento:
+- **IDE**: barra compacta y panel Bluetooth apilado en pantallas angostas; panel lateral cuando el ancho es ≥ 960 dp.
+- **Login / permisos / creador de comandos**: formulario centrado con ancho máximo.
+- **Nube / admin**: listas a todo el ancho en móvil y en rejilla o con tope de ancho en escritorio.
+- **Simulación y control remoto**: canvas y pad de mandos se ajustan al espacio disponible (`FittedBox` / `LayoutBuilder`).
+- **Modo Bloque**: paleta más baja en horizontal; la zona de drop usa coordenadas locales (sin offsets fijos de AppBar).
+- **Diálogos y drawer**: `insetPadding` y ancho del menú según el viewport.
+
+`AppScaler` (`lib/ui/utils/app_scaler.dart`) solo reduce un poco la escala de texto en pantallas muy estrechas (&lt; 380 dp). No usa `FittedBox` global para no distorsionar el layout. El scroll funciona con táctil, mouse y trackpad (`AppScrollBehavior` en `main.dart`).
 
 ---
 
@@ -317,12 +346,12 @@ flutter build ios --release --no-codesign
 
 ## ⚙️ CI/CD (GitHub Actions)
 
-El proyecto cuenta con un flujo automatizado que:
-1. Sincroniza ramas de desarrollo (`aleja2` -> `main`).
-2. Compila la versión **Web** y la despliega en GitHub Pages.
-3. Genera el **APK** de Android.
+Definido en `.github/workflows/deploy.yml`. Se dispara en push a `main` o `aleja2` y:
+1. Si el push es a `aleja2`, sincroniza esa rama hacia `main`.
+2. Compila la versión **Web** (`flutter build web --wasm`) y la despliega en GitHub Pages.
+3. Genera el **APK** de Android en modo release.
 4. Genera el **IPA** de iOS (sin firma, empaquetado manual).
-5. Crea un **Release** automático con todos los artefactos.
+5. Publica un **Release** `latest` con APK e IPA.
 
 ---
 

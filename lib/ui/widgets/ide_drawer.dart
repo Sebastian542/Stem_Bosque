@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive.dart';
 import '../screens/login_screen.dart';
 import '../screens/admin_panel_screen.dart';
 import '../screens/remote_control_screen.dart';
@@ -43,6 +44,7 @@ class IDEDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Drawer(
       backgroundColor: AppTheme.background,
+      width: context.responsive.drawerWidth,
       child: Column(
         children: [
           _buildHeader(),
@@ -245,29 +247,34 @@ class IDEDrawer extends StatelessWidget {
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 50, 16, 20),
-      decoration: const BoxDecoration(
-        color: AppTheme.currentLine,
-        border: Border(bottom: BorderSide(color: AppTheme.comment, width: 1)),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.code, size: 40, color: AppTheme.cyan),
-          SizedBox(height: 12),
-          Text('StemBosque IDE',
-              style: TextStyle(
-                color: AppTheme.foreground,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              )),
-          SizedBox(height: 4),
-          Text('Opciones del editor',
-              style: TextStyle(color: AppTheme.comment, fontSize: 13)),
-        ],
-      ),
+    return Builder(
+      builder: (context) {
+        final top = MediaQuery.paddingOf(context).top;
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.fromLTRB(16, top + 16, 16, 20),
+          decoration: const BoxDecoration(
+            color: AppTheme.currentLine,
+            border: Border(bottom: BorderSide(color: AppTheme.comment, width: 1)),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.code, size: 40, color: AppTheme.cyan),
+              SizedBox(height: 12),
+              Text('StemBosque IDE',
+                  style: TextStyle(
+                    color: AppTheme.foreground,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  )),
+              SizedBox(height: 4),
+              Text('Opciones del editor',
+                  style: TextStyle(color: AppTheme.comment, fontSize: 13)),
+            ],
+          ),
+        );
+      },
     );
   }
 

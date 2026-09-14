@@ -74,7 +74,6 @@ class _BlockModeScreenState extends State<BlockModeScreen> {
       ),
       body: Column(
         children: [
-          // Área de herramientas
           Container(
             height: paletteHeight,
             padding: EdgeInsets.symmetric(vertical: r.verticalPadding * 0.6),
@@ -85,12 +84,12 @@ class _BlockModeScreenState extends State<BlockModeScreen> {
               itemBuilder: (context, index) {
                 final component = _components[index];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.symmetric(horizontal: r.isCompact ? 8 : 12),
                   child: Draggable<DraggableComponent>(
                     data: component,
                     feedback: Material(
                       color: Colors.transparent,
-                      child: Icon(component.icon, size: 50, color: component.color.withAlpha(150)),
+                      child: Icon(component.icon, size: r.scale(50), color: component.color.withAlpha(150)),
                     ),
                     childWhenDragging: Opacity(
                       opacity: 0.5,
@@ -102,64 +101,79 @@ class _BlockModeScreenState extends State<BlockModeScreen> {
               },
             ),
           ),
-          
           const Divider(height: 1, color: AppTheme.comment),
-
-          // Área de simulación / Drop Zone
           Expanded(
-            child: DragTarget<DraggableComponent>(
-              onAcceptWithDetails: (details) {
-                final RenderBox renderBox = context.findRenderObject() as RenderBox;
-                final localOffset = renderBox.globalToLocal(details.offset);
-                // Ajustar offset por la altura de la AppBar y el área de herramientas
-                // En una app real usaríamos un LayoutBuilder para mayor precisión
-                setState(() {
-                  _placedComponents.add(PlacedComponent(
-                    component: details.data,
-                    position: localOffset,
-                  ));
-                });
-              },
-              builder: (context, candidateData, rejectedData) {
-                return Stack(
-                  children: [
-                    // Cuadrícula de fondo
-                    _buildGrid(),
-                    
-                    // Componentes colocados
-                    ..._placedComponents.map((pc) => Positioned(
-                      left: pc.position.dx - 20,
-                      top: pc.position.dy - 120, // Ajuste manual aproximado
-                      child: GestureDetector(
-                        onLongPress: () {
-                          setState(() {
-                            _placedComponents.remove(pc);
-                          });
-                        },
-                        child: Icon(pc.component.icon, size: 40, color: pc.component.color),
-                      ),
-                    )),
-
-                    if (candidateData.isNotEmpty)
-                      Container(
-                        color: AppTheme.cyan.withAlpha(30),
-                        child: const Center(
-                          child: Text('Suelta para colocar', style: TextStyle(color: AppTheme.cyan)),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return DragTarget<DraggableComponent>(
+                  onAcceptWithDetails: (details) {
+                    final box = context.findRenderObject() as RenderBox?;
+                    if (box == null) return;
+                    final localOffset = box.globalToLocal(details.offset);
+                    setState(() {
+                      _placedComponents.add(PlacedComponent(
+                        component: details.data,
+                        position: Offset(
+                          localOffset.dx.clamp(0, constraints.maxWidth - 24),
+                          localOffset.dy.clamp(0, constraints.maxHeight - 24),
                         ),
-                      ),
-                  ],
+                      ));
+                    });
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    return Stack(
+                      children: [
+                        _buildGrid(),
+                        ..._placedComponents.map((pc) => Positioned(
+                          left: pc.position.dx,
+                          top: pc.position.dy,
+                          child: GestureDetector(
+                            onLongPress: () {
+                              setState(() {
+                                _placedComponents.remove(pc);
+                              });
+                            },
+                            child: Icon(
+                              pc.component.icon,
+                              size: r.scale(40),
+                              color: pc.component.color,
+                            ),
+                          ),
+                        )),
+                        if (candidateData.isNotEmpty)
+                          Container(
+                            color: AppTheme.cyan.withAlpha(30),
+                            child: const Center(
+                              child: Text(
+                                'Suelta para colocar',
+                                style: TextStyle(color: AppTheme.cyan),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 );
               },
             ),
           ),
-          
-          // Ayuda
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: AppTheme.currentLine,
-            child: const Text(
-              'Arrastra elementos al escenario. Mantén presionado para eliminar.',
-              style: TextStyle(color: AppTheme.comment, fontSize: 12),
+          SafeArea(
+            top: false,
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: r.horizontalPadding,
+                vertical: 8,
+              ),
+              color: AppTheme.currentLine,
+              child: Text(
+                'Arrastra elementos al escenario. Mantén presionado para eliminar.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppTheme.comment,
+                  fontSize: r.isCompact ? 11 : 12,
+                ),
+              ),
             ),
           ),
         ],

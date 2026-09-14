@@ -20,6 +20,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
       scaffoldBackgroundColor: background,
       colorScheme: const ColorScheme.dark(
         primary: purple,

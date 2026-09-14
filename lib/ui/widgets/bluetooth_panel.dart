@@ -79,33 +79,43 @@ class BluetoothPanel extends StatelessWidget {
           Icon(
             bluetoothEnabled ? Icons.bluetooth_audio_rounded : Icons.bluetooth_disabled_rounded,
             color: bluetoothEnabled ? AppTheme.cyan : AppTheme.red,
-            size: 28,
+            size: r.denseControls ? 22 : 28,
           ),
-          const SizedBox(width: 12),
-          Text(
-            r.isPhone ? 'Bluetooth' : 'Panel de Control',
-            style: TextStyle(
-              color: bluetoothEnabled ? AppTheme.foreground : AppTheme.comment,
-              fontWeight: FontWeight.w900,
-              fontSize: r.isPhone ? 14 : 18,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const Spacer(),
-          
-          if (bluetoothEnabled) 
-            _buildActionChip(
-              onPressed: isScanning ? onStopScan : onStartScan,
-              label: isScanning ? 'DETENER' : 'BUSCAR',
-              color: isScanning ? AppTheme.orange : AppTheme.purple,
-              icon: isScanning ? Icons.stop_circle : Icons.radar,
-            ),
-            
           const SizedBox(width: 8),
-          
+          Expanded(
+            child: Text(
+              r.denseControls ? 'Bluetooth' : 'Panel de Control',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: bluetoothEnabled ? AppTheme.foreground : AppTheme.comment,
+                fontWeight: FontWeight.w900,
+                fontSize: r.denseControls ? 14 : 18,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          if (bluetoothEnabled)
+            r.denseControls
+                ? IconButton(
+                    onPressed: isScanning ? onStopScan : onStartScan,
+                    tooltip: isScanning ? 'Detener' : 'Buscar',
+                    icon: Icon(
+                      isScanning ? Icons.stop_circle : Icons.radar,
+                      color: isScanning ? AppTheme.orange : AppTheme.purple,
+                    ),
+                  )
+                : _buildActionChip(
+                    onPressed: isScanning ? onStopScan : onStartScan,
+                    label: isScanning ? 'DETENER' : 'BUSCAR',
+                    color: isScanning ? AppTheme.orange : AppTheme.purple,
+                    icon: isScanning ? Icons.stop_circle : Icons.radar,
+                  ),
           IconButton(
             onPressed: onToggle,
-            icon: const Icon(Icons.keyboard_arrow_up_rounded),
+            icon: Icon(r.useSidePanelLayout
+                ? Icons.close_rounded
+                : Icons.keyboard_arrow_up_rounded),
             style: IconButton.styleFrom(
               backgroundColor: AppTheme.background,
               hoverColor: AppTheme.red.withAlpha(50),
@@ -155,14 +165,17 @@ class BluetoothPanel extends StatelessWidget {
               ],
             ),
           ),
-          OutlinedButton(
-            onPressed: onDisconnect,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.red,
-              side: const BorderSide(color: AppTheme.red),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          Flexible(
+            child: OutlinedButton(
+              onPressed: onDisconnect,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.red,
+                side: const BorderSide(color: AppTheme.red),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+              child: const Text('DESCONECTAR', overflow: TextOverflow.ellipsis),
             ),
-            child: const Text('DESCONECTAR'),
           ),
         ],
       ),
