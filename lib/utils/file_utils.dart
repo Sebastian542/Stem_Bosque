@@ -17,15 +17,15 @@ class FileUtils {
       }
 
       // OPCIÓN 1: Intentar con file_picker (puede tener limitaciones en Android)
-      FilePickerResult? result = await FilePicker.pickFiles(
+      final files = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['txt', 'sb'], // Permitir .txt y .sb
+        allowedExtensions: ['txt', 'sb'],
         dialogTitle: 'Seleccionar programa',
-        initialDirectory: stemBosqueDir.path, // ESTO puede no funcionar en Android
+        initialDirectory: stemBosqueDir.path,
       );
 
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
+      if (files.isNotEmpty && files.single.path != null) {
+        final file = File(files.single.path!);
         final content = await file.readAsString();
         return content;
       }

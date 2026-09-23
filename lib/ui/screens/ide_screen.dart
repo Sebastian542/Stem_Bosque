@@ -17,6 +17,7 @@ import '../widgets/confetti_widget.dart';
 import 'simulation_screen.dart';
 import '../widgets/tita.dart';
 import 'block_mode_screen.dart';
+import 'login_screen.dart';
 import '../utils/responsive.dart';
 import 'dart:async';
 
@@ -91,14 +92,25 @@ FIN PROGRAMA''';
     _bt.init(_btCallbacks);
     _loadAutoSaved();
     _codeController.addListener(_onCodeChanged);
-    _authSub = FirebaseAuth.instance.authStateChanges().listen((_) {
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       _commandsSub?.cancel();
       if (mounted) {
         setState(() => _customCommands = []);
       }
       _listenToCustomCommands();
+      if (user != null) {
+        unawaited(_prepareCloud());
+      }
     });
     _listenToCustomCommands();
+  }
+
+  Future<void> _prepareCloud() async {
+    try {
+      await DatabaseService().ensureCollections();
+    } catch (error) {
+      debugPrint('No se pudieron preparar las colecciones: $error');
+    }
   }
 
   void _listenToCustomCommands() {
@@ -110,6 +122,7 @@ FIN PROGRAMA''';
             _customCommands = snapshot.docs
                 .map((doc) {
                   final data = doc.data() as Map<String, dynamic>?;
+                  if (data?['system'] == true) return '';
                   return (data?['keyword'] ?? data?['name'] ?? '')
                       .toString()
                       .toUpperCase();
@@ -592,14 +605,155 @@ FIN PROGRAMA''';
   }
 
   Future<void> _sendProgram() async {
-    if (_compiledLines.isEmpty) return;
-    
-    if (!_bluetoothEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enciende el Bluetooth primero')));
+    if (_codeController.text.trim().isEmpty) {
+      _showSnack('No hay programa para enviar');
       return;
     }
-    await _fm.share(_compiledLines.join('\n'), fileName: 'compilado.txt');
+
+    final loggedIn = FirebaseAuth.instance.currentUser != null;
+    if (loggedIn && _bluetoothEnabled) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.currentLine,
+          title: const Text('Enviar programa', style: TextStyle(color: AppTheme.foreground)),
+          content: const Text(
+            'Puedes mandarlo a otra cuenta o compartirlo por Bluetooth.',
+            style: TextStyle(color: AppTheme.foreground),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar', style: TextStyle(color: AppTheme.comment)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'bluetooth'),
+              child: const Text('Bluetooth', style: TextStyle(color: AppTheme.cyan)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'nube'),
+              child: const Text('Nube', style: TextStyle(color: AppTheme.green)),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || choice == null) return;
+      if (choice == 'nube') {
+        await _promptCloudSend();
+      } else {
+        await _fm.share(_codeController.text, fileName: _suggestedProgramName());
+      }
+      return;
+    }
+
+    if (loggedIn) {
+      await _promptCloudSend();
+      return;
+    }
+
+    if (_bluetoothEnabled) {
+      await _fm.share(_codeController.text, fileName: _suggestedProgramName());
+      return;
+    }
+
+    await _promptCloudSend();
+  }
+
+  String _suggestedProgramName() {
+    final path = _fm.currentFilePath;
+    if (path != null && path.isNotEmpty) {
+      return path.split(Platform.isWindows ? '\\' : '/').last;
+    }
+    return 'Programa';
+  }
+
+  Future<void> _promptCloudSend() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      _showSnack('Inicia sesión para enviar el programa por la nube');
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      if (!mounted || FirebaseAuth.instance.currentUser == null) return;
+    }
+
+    final emailCtrl = TextEditingController();
+    final nameCtrl = TextEditingController(text: _suggestedProgramName());
+    var sending = false;
+
+    final sent = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          backgroundColor: AppTheme.currentLine,
+          title: const Text('Enviar por la nube', style: TextStyle(color: AppTheme.foreground)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'El programa llegará a la cuenta que tenga este correo.',
+                style: TextStyle(color: AppTheme.comment),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                style: const TextStyle(color: AppTheme.foreground),
+                decoration: const InputDecoration(labelText: 'Nombre del programa'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(color: AppTheme.foreground),
+                decoration: const InputDecoration(labelText: 'Correo de quien lo recibe'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar', style: TextStyle(color: AppTheme.comment)),
+            ),
+            ElevatedButton(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      setLocal(() => sending = true);
+                      try {
+                        final recipient = await DatabaseService().sendProgramToEmail(
+                          toEmail: emailCtrl.text,
+                          name: nameCtrl.text,
+                          code: _codeController.text,
+                          obstacles: _currentObstacles,
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx, true);
+                        if (mounted) {
+                          _showSnack('Programa enviado a $recipient');
+                        }
+                      } catch (e) {
+                        setLocal(() => sending = false);
+                        final message = e.toString().replaceFirst('Exception: ', '');
+                        if (mounted) _showSnack(message);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.cyan),
+              child: Text(sending ? 'Enviando...' : 'Enviar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    emailCtrl.dispose();
+    nameCtrl.dispose();
+    if (sent == true) return;
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -663,7 +817,7 @@ FIN PROGRAMA''';
     return Container(
       padding: EdgeInsets.all(r.isCompact ? 8 : 12),
       color: AppTheme.currentLine.withAlpha(100),
-      child: r.denseControls && _bluetoothEnabled
+      child: r.denseControls
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -675,10 +829,8 @@ FIN PROGRAMA''';
           : Row(
               children: [
                 Expanded(child: simulateBtn),
-                if (_bluetoothEnabled) ...[
-                  SizedBox(width: r.isCompact ? 8 : 12),
-                  Expanded(child: sendBtn),
-                ],
+                SizedBox(width: r.isCompact ? 8 : 12),
+                Expanded(child: sendBtn),
               ],
             ),
     );
@@ -723,6 +875,7 @@ FIN PROGRAMA''';
         currentFilePath:   _fm.currentFilePath,
         onOpenFile:        _openFile,
         onOpenCloud:       _openFromCloud,
+        onSendCloud:       _promptCloudSend,
         onSaveFile:        _saveWithName,
         onClearCode:       _clearCode,
         onShareFile:       _shareFile,

@@ -27,14 +27,23 @@ class ProjectModel {
     };
   }
 
+  static DateTime _asDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return DateTime.now();
+  }
+
   factory ProjectModel.fromMap(Map<String, dynamic> map, String documentId) {
     return ProjectModel(
       id: documentId,
       name: map['name'] ?? 'Sin nombre',
       code: map['code'] ?? '',
-      obstacles: List<Map<String, dynamic>>.from(map['obstacles'] ?? []),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      obstacles: [
+        for (final item in (map['obstacles'] as List<dynamic>? ?? const []))
+          Map<String, dynamic>.from(item as Map),
+      ],
+      createdAt: _asDate(map['createdAt']),
+      updatedAt: _asDate(map['updatedAt'] ?? map['createdAt']),
     );
   }
 }

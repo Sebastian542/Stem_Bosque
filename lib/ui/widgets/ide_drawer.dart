@@ -18,6 +18,7 @@ class IDEDrawer extends StatelessWidget {
 
   final VoidCallback onOpenFile;
   final VoidCallback onOpenCloud;
+  final VoidCallback onSendCloud;
   final VoidCallback onSaveFile;
   final VoidCallback onClearCode;
   final VoidCallback onShareFile;
@@ -33,6 +34,7 @@ class IDEDrawer extends StatelessWidget {
     required this.currentFilePath,
     required this.onOpenFile,
     required this.onOpenCloud,
+    required this.onSendCloud,
     required this.onSaveFile,
     required this.onClearCode,
     required this.onShareFile,
@@ -56,9 +58,17 @@ class IDEDrawer extends StatelessWidget {
                   context,
                   icon: Icons.cloud_download_rounded,
                   title: 'Abrir desde la Nube',
-                  subtitle: 'Sincronizar proyectos guardados',
+                  subtitle: 'Tus proyectos y los que te enviaron',
                   color: AppTheme.purple,
                   onTap: onOpenCloud,
+                ),
+                _buildItem(
+                  context,
+                  icon: Icons.cloud_upload_rounded,
+                  title: 'Enviar por la nube',
+                  subtitle: 'Mandar este programa a otra cuenta',
+                  color: AppTheme.cyan,
+                  onTap: onSendCloud,
                 ),
                 _buildItem(
                   context,

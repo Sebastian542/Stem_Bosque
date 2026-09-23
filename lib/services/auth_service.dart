@@ -79,6 +79,7 @@ class AuthService {
           'uid': uid,
           'name': name,
           'email': email,
+          'emailLower': email.toLowerCase(),
           'role': 'nuevo usuario',
           'createdAt': FieldValue.serverTimestamp(),
           'lastLogin': FieldValue.serverTimestamp(),

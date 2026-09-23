@@ -96,25 +96,26 @@ class FileManager {
 
   /// Abre un selector de archivos (Windows Explorer / Web) y devuelve el contenido.
   Future<String?> pickAndReadFile() async {
-    FilePickerResult? result = await FilePicker.pickFiles(
+    final files = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['sb', 'txt'],
     );
 
-    if (result != null) {
-      if (kIsWeb) {
-        final bytes = await result.files.first.readAsBytes();
-        return utf8.decode(bytes);
-      } else {
-        // En PC leemos desde el path
-        final file = File(result.files.single.path!);
-        currentFilePath = file.path;
-        final content = await file.readAsString();
-        lastSavedContent = content;
-        return content;
-      }
+    if (files.isEmpty) return null;
+
+    final picked = files.first;
+    if (kIsWeb) {
+      final bytes = await picked.readAsBytes();
+      return utf8.decode(bytes);
     }
-    return null;
+
+    final path = picked.path;
+    if (path == null) return null;
+    final file = File(path);
+    currentFilePath = file.path;
+    final content = await file.readAsString();
+    lastSavedContent = content;
+    return content;
   }
 
   Future<List<File>> listFiles() async {
