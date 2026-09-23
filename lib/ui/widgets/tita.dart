@@ -246,9 +246,13 @@ class _VampiritoPetState extends State<VampiritoPet>
   );
 
   Widget _buildCharacter() {
+    final shortest = MediaQuery.sizeOf(context).shortestSide;
+    final width = (shortest * 0.20).clamp(72.0, 108.0);
+    final height = width * 4 / 3;
+
     return Container(
-      width:  120,
-      height: 160,
+      width:  width,
+      height: height,
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
@@ -288,6 +292,11 @@ class _VampiritoPetState extends State<VampiritoPet>
 
   Widget _buildBubble() {
     final c = _bubbleContent();
+    final maxBubble = math.min(250.0, MediaQuery.sizeOf(context).width * 0.72);
+    final bubbleConstraints = BoxConstraints(
+      maxWidth: maxBubble,
+      minWidth: math.min(110.0, maxBubble),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -296,7 +305,7 @@ class _VampiritoPetState extends State<VampiritoPet>
 
         // ── Burbuja principal ──────────────────────────────────────────
         Container(
-          constraints: const BoxConstraints(maxWidth: 250, minWidth: 110),
+          constraints: bubbleConstraints,
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           decoration: BoxDecoration(
             color:        AppTheme.currentLine,
@@ -336,7 +345,7 @@ class _VampiritoPetState extends State<VampiritoPet>
         if (c.tip != null) ...[
           const SizedBox(height: 6),
           Container(
-            constraints: const BoxConstraints(maxWidth: 250, minWidth: 110),
+            constraints: bubbleConstraints,
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
             decoration: BoxDecoration(
               color:        AppTheme.currentLine,
@@ -687,11 +696,18 @@ class _VampiritoExecutionAnimationState
   @override
   Widget build(BuildContext context) {
     final size    = MediaQuery.of(context).size;
+    final charW   = (size.shortestSide * 0.20).clamp(72.0, 108.0);
+    final charH   = charW * 4 / 3;
+    final maxScale = math.min(
+      (size.width * 0.72) / charW,
+      (size.height * 0.42) / charH,
+    ).clamp(1.0, 1.8);
 
-    final startX  = size.width  - 140.0;
-    final startY  = size.height - 200.0;
-    final centerX = size.width  / 2 - 60.0;
-    final centerY = size.height / 2 - 80.0;
+    final navBottom = MediaQuery.viewPaddingOf(context).bottom;
+    final startX  = size.width  - charW - 16;
+    final startY  = size.height - charH - navBottom - 16;
+    final centerX = size.width  / 2 - charW / 2;
+    final centerY = size.height / 2 - charH / 2;
 
     return AnimatedBuilder(
       animation: Listenable.merge([
@@ -705,12 +721,12 @@ class _VampiritoExecutionAnimationState
           t     = CurvedAnimation(parent: _flyInCtrl, curve: Curves.easeOutBack).value;
           x     = lerpDouble(startX, centerX, t)!;
           y     = lerpDouble(startY, centerY, t)!;
-          scale = lerpDouble(1.0, 1.8, t)!;
+          scale = lerpDouble(1.0, maxScale, t)!;
         } else {
           t     = CurvedAnimation(parent: _flyOutCtrl, curve: Curves.easeInBack).value;
           x     = lerpDouble(centerX, startX, t)!;
           y     = lerpDouble(centerY, startY, t)!;
-          scale = lerpDouble(1.8, 1.0, t)!;
+          scale = lerpDouble(maxScale, 1.0, t)!;
         }
 
         final bounceOffset = _reactionCtrl.isAnimating ? _bounce.value : 0.0;
@@ -832,8 +848,8 @@ class _VampiritoExecutionAnimationState
                   Transform.scale(
                     scale: scale,
                     child: Container(
-                      width:  120,
-                      height: 160,
+                      width:  charW,
+                      height: charH,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [

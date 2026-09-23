@@ -316,7 +316,12 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                 children: [
                   _buildLineNumbers(),
                   Container(width: 1, color: AppTheme.currentLine),
-                  Expanded(child: _buildTextField()),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) =>
+                          _buildTextField(constraints.maxWidth),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -326,13 +331,20 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
     );
   }
 
-  Widget _buildTextField() {
-    final minEditorWidth = MediaQuery.sizeOf(context).width * 1.5;
+  Widget _buildTextField(double availableWidth) {
+    final screen = MediaQuery.sizeOf(context).width;
+    final compact = screen < 600;
+    final wideCanvas = (screen * 1.5).clamp(600.0, 2000.0);
+    final width = !availableWidth.isFinite || availableWidth <= 0
+        ? screen
+        : compact
+            ? availableWidth
+            : (availableWidth > wideCanvas ? availableWidth : wideCanvas);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SizedBox(
-        width: minEditorWidth.clamp(600, 2000),
+        width: width,
         child: TextField(
           controller:       widget.controller,
           focusNode:        _focusNode,
@@ -409,7 +421,7 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
                     '$num',
                     style: TextStyle(
                       fontFamily: _fontFamily,
-                      fontSize:   12,
+                      fontSize:   _fontSize * 0.8,
                       color: isError
                           ? AppTheme.red
                           : isCurrent
@@ -465,8 +477,10 @@ class _ValidatedCodeEditorState extends State<ValidatedCodeEditor> {
             ),
           ),
           const Spacer(),
-          _buildLegend(),
-          const SizedBox(width: 12),
+          if (!context.responsive.isCompact) ...[
+            _buildLegend(),
+            const SizedBox(width: 12),
+          ],
           Text(
             '${_fontSize.round()}px',
             style: const TextStyle(fontSize: 10, color: AppTheme.comment),

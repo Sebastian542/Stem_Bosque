@@ -797,9 +797,10 @@ FIN PROGRAMA''';
               ),
               Positioned(
                 right:  r.isCompact ? 8 : 16,
-                bottom: _compiledSuccess
-                    ? (r.isCompact ? 72 : 88)
-                    : (r.isCompact ? 12 : 20),
+                bottom: MediaQuery.viewPaddingOf(context).bottom +
+                    (_compiledSuccess
+                        ? (r.isCompact ? 72 : 88)
+                        : (r.isCompact ? 12 : 20)),
                 child: Transform.scale(
                   scale: r.vampiritoScale,
                   alignment: Alignment.bottomRight,

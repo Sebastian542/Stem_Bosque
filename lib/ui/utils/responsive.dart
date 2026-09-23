@@ -117,17 +117,18 @@ class Responsive {
   }
 
   double get codeFontSize {
-    if (isCompact) return 12;
-    if (isMedium) return 13.5;
+    if (isCompact) return 16;
+    if (isMedium) return 16;
     return 15;
   }
 
-  double get gutterWidth => isCompact ? 28 : isMedium ? 36 : 44;
+  double get gutterWidth => isCompact ? 36 : isMedium ? 36 : 44;
 
+  /// Escala de Tita. En el teléfono queda contenida para no tapar el editor.
   double get vampiritoScale {
-    if (isLandscapePhone) return 0.45;
-    if (isCompact) return 0.55;
-    if (isMedium) return 0.8;
+    if (isLandscapePhone) return 0.55;
+    if (isCompact) return 0.85;
+    if (isMedium) return 0.85;
     return 1.0;
   }
 

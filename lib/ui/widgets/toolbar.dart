@@ -43,11 +43,8 @@ class Toolbar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            // Botón principal: Ejecutar
             _buildActionButton(
-              label: isRunning
-                  ? (r.denseControls ? '...' : 'Ejecutando...')
-                  : (r.denseControls ? 'Run' : 'Ejecutar'),
+              label: isRunning ? 'Compilando...' : 'Compilar',
               icon: isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
               color: isRunning ? AppTheme.red : AppTheme.green,
               onPressed: onRun,
