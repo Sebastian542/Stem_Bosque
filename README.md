@@ -3,7 +3,7 @@
 ### ✍️ Autores
 - **Sebastian** ([@Sebastian542](https://github.com/Sebastian542))
 - **Alejandra** ([@Aleja2](https://github.com/aleja2))
-- **Julio** ([@ProgramadorMermelada](https://github.com/ProgramadorMermelada))
+- **Julio** ([@JulioSalazar](https://github.com/ProgramadorMermelada))
   
 > **Un entorno de desarrollo integrado (IDE) para robótica educativa**, diseñado para que niños y jóvenes aprendan lógica computacional mediante un lenguaje natural (DSL) en español y una simulación interactiva.
 
