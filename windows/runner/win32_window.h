@@ -71,10 +71,10 @@ class Win32Window {
   // Called when Destroy is called.
   virtual void OnDestroy();
 
+ private:
   // Destroys the native window without calling virtual subclass hooks.
   void ReleaseNativeWindow();
 
- private:
   friend class WindowClassRegistrar;
 
   // OS callback called by message pump. Handles the WM_NCCREATE message which
