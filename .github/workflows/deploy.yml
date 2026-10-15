@@ -54,6 +54,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.41.5'
           cache: true
 
       - name: 5. Instalar dependencias
@@ -92,6 +93,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.41.5'
           cache: true
 
       - name: 3. Instalar dependencias
