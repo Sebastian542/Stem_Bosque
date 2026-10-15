@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
@@ -12,43 +12,17 @@
   <link rel="manifest" href="manifest.json?v=4">
 
   <!-- Configuración de Pantalla -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="StemBosque">
   <meta name="theme-color" content="#21222c">
 
-  <!-- CSP: Optimizada para Flutter Web y Firebase -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://www.google.com; connect-src 'self' blob: https://www.gstatic.com https://*.firebaseio.com https://*.googleapis.com https://*.firebase.com wss://*.firebaseio.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: blob: https://*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://stembosque.firebaseapp.com https://stembosque.web.app; worker-src 'self' blob:; object-src 'none';">
+  <!-- CSP sin unsafe-inline, unsafe-eval ni comodines. El nonce lo aplica el motor de Flutter. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-stembosque' 'wasm-unsafe-eval' https://www.gstatic.com https://apis.google.com https://www.google.com; connect-src 'self' blob: https://www.gstatic.com https://www.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://stembosque.firebasestorage.app https://stembosque.firebaseapp.com https://stembosque.web.app https://accounts.google.com https://apis.google.com https://www.google.com https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: blob: https://www.gstatic.com https://lh3.googleusercontent.com; style-src 'self' 'nonce-stembosque' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://stembosque.firebaseapp.com https://stembosque.web.app https://accounts.google.com https://apis.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'">
 
+  <link rel="stylesheet" href="splash.css">
   <title>StemBosque IDE</title>
-
-  <style>
-    body {
-      background-color: #282a36;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      color: #f8f8f2;
-      font-family: sans-serif;
-    }
-    .loader {
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(255, 255, 255, 0.1);
-      border-top: 4px solid #bd93f9;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
 </head>
 <body>
   <div class="loader"></div>

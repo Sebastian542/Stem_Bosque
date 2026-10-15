@@ -1,5 +1,6 @@
 #include "win32_window.h"
 
+#include <cstring>
 #include <dwmapi.h>
 #include <flutter_windows.h>
 
@@ -27,9 +28,31 @@ constexpr const wchar_t kGetPreferredBrightnessRegKey[] =
 constexpr const wchar_t kGetPreferredBrightnessRegValue[] = L"AppsUseLightTheme";
 
 // The number of Win32Window objects that currently exist.
-static int g_active_window_count = 0;
+int& ActiveWindowCount() {
+  static int count = 0;
+  return count;
+}
 
 using EnableNonClientDpiScaling = BOOL __stdcall(HWND hwnd);
+
+template <typename T>
+T* PointerFromAddress(LONG_PTR address) {
+  T* pointer = nullptr;
+  static_assert(sizeof(pointer) == sizeof(address));
+  std::memcpy(&pointer, &address, sizeof(address));
+  return pointer;
+}
+
+EnableNonClientDpiScaling* LoadEnableNonClientDpiScaling(HMODULE module) {
+  FARPROC proc = GetProcAddress(module, "EnableNonClientDpiScaling");
+  if (proc == nullptr) {
+    return nullptr;
+  }
+  EnableNonClientDpiScaling* function = nullptr;
+  static_assert(sizeof(function) == sizeof(proc));
+  std::memcpy(&function, &proc, sizeof(proc));
+  return function;
+}
 
 // Scale helper to convert logical scaler values to physical using passed in
 // scale factor
@@ -44,10 +67,9 @@ void EnableFullDpiSupportIfAvailable(HWND hwnd) {
   if (!user32_module) {
     return;
   }
-  auto enable_non_client_dpi_scaling =
-      reinterpret_cast<EnableNonClientDpiScaling*>(
-          GetProcAddress(user32_module, "EnableNonClientDpiScaling"));
-  if (enable_non_client_dpi_scaling != nullptr) {
+  if (auto* enable_non_client_dpi_scaling =
+          LoadEnableNonClientDpiScaling(user32_module);
+      enable_non_client_dpi_scaling != nullptr) {
     enable_non_client_dpi_scaling(hwnd);
   }
   FreeLibrary(user32_module);
@@ -62,10 +84,8 @@ class WindowClassRegistrar {
 
   // Returns the singleton registrar instance.
   static WindowClassRegistrar* GetInstance() {
-    if (!instance_) {
-      instance_ = new WindowClassRegistrar();
-    }
-    return instance_;
+    static WindowClassRegistrar instance;
+    return &instance;
   }
 
   // Returns the name of the window class, registering the class if it hasn't
@@ -79,12 +99,8 @@ class WindowClassRegistrar {
  private:
   WindowClassRegistrar() = default;
 
-  static WindowClassRegistrar* instance_;
-
   bool class_registered_ = false;
 };
-
-WindowClassRegistrar* WindowClassRegistrar::instance_ = nullptr;
 
 const wchar_t* WindowClassRegistrar::GetWindowClass() {
   if (!class_registered_) {
@@ -96,8 +112,8 @@ const wchar_t* WindowClassRegistrar::GetWindowClass() {
     window_class.cbWndExtra = 0;
     window_class.hInstance = GetModuleHandle(nullptr);
     window_class.hIcon =
-        LoadIcon(window_class.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
-    window_class.hbrBackground = 0;
+        LoadIcon(window_class.hInstance, MAKEINTRESOURCE(kAppIconId));
+    window_class.hbrBackground = nullptr;
     window_class.lpszMenuName = nullptr;
     window_class.lpfnWndProc = Win32Window::WndProc;
     RegisterClass(&window_class);
@@ -112,12 +128,12 @@ void WindowClassRegistrar::UnregisterWindowClass() {
 }
 
 Win32Window::Win32Window() {
-  ++g_active_window_count;
+  ++ActiveWindowCount();
 }
 
 Win32Window::~Win32Window() {
-  --g_active_window_count;
-  Destroy();
+  --ActiveWindowCount();
+  ReleaseNativeWindow();
 }
 
 bool Win32Window::Create(const std::wstring& title,
@@ -159,7 +175,7 @@ LRESULT CALLBACK Win32Window::WndProc(HWND const window,
                                       WPARAM const wparam,
                                       LPARAM const lparam) noexcept {
   if (message == WM_NCCREATE) {
-    auto window_struct = reinterpret_cast<CREATESTRUCT*>(lparam);
+    auto window_struct = PointerFromAddress<CREATESTRUCT>(lparam);
     SetWindowLongPtr(window, GWLP_USERDATA,
                      reinterpret_cast<LONG_PTR>(window_struct->lpCreateParams));
 
@@ -188,7 +204,7 @@ Win32Window::MessageHandler(HWND hwnd,
       return 0;
 
     case WM_DPICHANGED: {
-      auto newRectSize = reinterpret_cast<RECT*>(lparam);
+      auto newRectSize = PointerFromAddress<RECT>(lparam);
       LONG newWidth = newRectSize->right - newRectSize->left;
       LONG newHeight = newRectSize->bottom - newRectSize->top;
 
@@ -223,19 +239,21 @@ Win32Window::MessageHandler(HWND hwnd,
 
 void Win32Window::Destroy() {
   OnDestroy();
+  ReleaseNativeWindow();
+}
 
+void Win32Window::ReleaseNativeWindow() {
   if (window_handle_) {
     DestroyWindow(window_handle_);
     window_handle_ = nullptr;
   }
-  if (g_active_window_count == 0) {
+  if (ActiveWindowCount() == 0) {
     WindowClassRegistrar::GetInstance()->UnregisterWindowClass();
   }
 }
 
 Win32Window* Win32Window::GetThisFromHandle(HWND const window) noexcept {
-  return reinterpret_cast<Win32Window*>(
-      GetWindowLongPtr(window, GWLP_USERDATA));
+  return PointerFromAddress<Win32Window>(GetWindowLongPtr(window, GWLP_USERDATA));
 }
 
 void Win32Window::SetChildContent(HWND content) {

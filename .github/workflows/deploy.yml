@@ -7,9 +7,7 @@ on:
       - main
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: "pages-${{ github.ref }}"
@@ -22,6 +20,8 @@ jobs:
   # ==========================================
   build-android-web:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: 1. Checkout del código
@@ -55,7 +55,7 @@ jobs:
           cache: true
 
       - name: 5. Instalar dependencias
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       - name: 6. Build Web
         run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
@@ -79,6 +79,8 @@ jobs:
   # ==========================================
   build-ios:
     runs-on: macos-latest
+    permissions:
+      contents: read
 
     steps:
       - name: 1. Checkout del código
@@ -91,7 +93,7 @@ jobs:
           cache: true
 
       - name: 3. Instalar dependencias
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       # `flutter build ios` genera el Podfile y ejecuta `pod install`
       # automaticamente, por eso no hay un paso manual de CocoaPods.
@@ -123,6 +125,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
 
     environment:
       name: github-pages
@@ -178,7 +184,7 @@ jobs:
         if: ${{ env.FIREBASE_SA != '' }}
         run: |
           printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/firebase-sa.json"
-          npm install -g firebase-tools
+          npm install -g firebase-tools@15.34.0 --ignore-scripts
           firebase deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID" --non-interactive
         env:
           FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

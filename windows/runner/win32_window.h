@@ -1,7 +1,7 @@
 #ifndef RUNNER_WIN32_WINDOW_H_
 #define RUNNER_WIN32_WINDOW_H_
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <functional>
 #include <memory>
@@ -70,6 +70,9 @@ class Win32Window {
 
   // Called when Destroy is called.
   virtual void OnDestroy();
+
+  // Destroys the native window without calling virtual subclass hooks.
+  void ReleaseNativeWindow();
 
  private:
   friend class WindowClassRegistrar;
