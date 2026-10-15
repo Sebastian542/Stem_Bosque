@@ -14,20 +14,20 @@ class AnalizadorLexico {
   int _linea = 1;
 
   static const Map<String, TipoToken> _palabrasClave = {
-    'PROGRAMA': TipoToken.PROGRAMA,
-    'FIN':      TipoToken.FIN,
-    'GIRAR':    TipoToken.GIRAR,
-    'AVANZAR':  TipoToken.AVANZAR,
-    'SI':       TipoToken.SI,
-    'ENTONCES': TipoToken.ENTONCES,
-    'REPETIR':  TipoToken.REPETIR,
-    'VECES':    TipoToken.VECES,
-    'SEN':  TipoToken.SEN,
-    'COS':  TipoToken.COS,
-    'TANG': TipoToken.TANG,
-    'AND':  TipoToken.AND,
-    'OR':   TipoToken.OR,
-    'NOT':  TipoToken.NOT,
+    'PROGRAMA': TipoToken.programa,
+    'FIN':      TipoToken.fin,
+    'GIRAR':    TipoToken.girar,
+    'AVANZAR':  TipoToken.avanzar,
+    'SI':       TipoToken.si,
+    'ENTONCES': TipoToken.entonces,
+    'REPETIR':  TipoToken.repetir,
+    'VECES':    TipoToken.veces,
+    'SEN':  TipoToken.sen,
+    'COS':  TipoToken.cos,
+    'TANG': TipoToken.tang,
+    'AND':  TipoToken.and,
+    'OR':   TipoToken.or,
+    'NOT':  TipoToken.not,
   };
 
   AnalizadorLexico(this.fuente, {this.comandosPersonalizados = const []});
@@ -49,7 +49,9 @@ class AnalizadorLexico {
 
       if (ch == '/' && _pos + 1 < fuente.length) {
         if (fuente[_pos + 1] == '/') {
-          while (_pos < fuente.length && fuente[_pos] != '\n') _pos++;
+          while (_pos < fuente.length && fuente[_pos] != '\n') {
+            _pos++;
+          }
           continue;
         }
         if (fuente[_pos + 1] == '*') {
@@ -88,7 +90,7 @@ class AnalizadorLexico {
 
       switch (ch) {
         case '+':
-          tokens.add(Token(TipoToken.MAS, '+', _linea));
+          tokens.add(Token(TipoToken.mas, '+', _linea));
           _pos++;
           break;
         case '-':
@@ -96,53 +98,53 @@ class AnalizadorLexico {
           if (_pos + 1 < fuente.length && _esDigito(fuente[_pos + 1])) {
             tokens.add(_leerNumero(negativo: true));
           } else {
-            tokens.add(Token(TipoToken.MENOS, '-', _linea));
+            tokens.add(Token(TipoToken.menos, '-', _linea));
             _pos++;
           }
           break;
         case '*':
-          tokens.add(Token(TipoToken.MULTIPLICACION, '*', _linea));
+          tokens.add(Token(TipoToken.multiplicacion, '*', _linea));
           _pos++;
           break;
         case '/':
-          tokens.add(Token(TipoToken.DIVISION, '/', _linea));
+          tokens.add(Token(TipoToken.division, '/', _linea));
           _pos++;
           break;
         case '=':
           if (_pos + 1 < fuente.length && fuente[_pos + 1] == '=') {
-            tokens.add(Token(TipoToken.IGUAL, '==', _linea));
+            tokens.add(Token(TipoToken.igual, '==', _linea));
             _pos += 2;
           } else {
-            tokens.add(Token(TipoToken.ASIGNACION, '=', _linea));
+            tokens.add(Token(TipoToken.asignacion, '=', _linea));
             _pos++;
           }
           break;
         case '>':
-          tokens.add(Token(TipoToken.MAYOR, '>', _linea));
+          tokens.add(Token(TipoToken.mayor, '>', _linea));
           _pos++;
           break;
         case '<':
-          tokens.add(Token(TipoToken.MENOR, '<', _linea));
+          tokens.add(Token(TipoToken.menor, '<', _linea));
           _pos++;
           break;
         case ':':
-          tokens.add(Token(TipoToken.DOS_PUNTOS, ':', _linea));
+          tokens.add(Token(TipoToken.dosPuntos, ':', _linea));
           _pos++;
           break;
         case '[':
-          tokens.add(Token(TipoToken.CORCHETE_IZQ, '[', _linea));
+          tokens.add(Token(TipoToken.corcheteIzq, '[', _linea));
           _pos++;
           break;
         case ']':
-          tokens.add(Token(TipoToken.CORCHETE_DER, ']', _linea));
+          tokens.add(Token(TipoToken.corcheteDer, ']', _linea));
           _pos++;
           break;
         case '(':
-          tokens.add(Token(TipoToken.PARENTESIS_IZQ, '(', _linea));
+          tokens.add(Token(TipoToken.parentesisIzq, '(', _linea));
           _pos++;
           break;
         case ')':
-          tokens.add(Token(TipoToken.PARENTESIS_DER, ')', _linea));
+          tokens.add(Token(TipoToken.parentesisDer, ')', _linea));
           _pos++;
           break;
         default:
@@ -153,7 +155,7 @@ class AnalizadorLexico {
       }
     }
 
-    tokens.add(Token(TipoToken.FIN_ARCHIVO, '', _linea));
+    tokens.add(Token(TipoToken.finArchivo, '', _linea));
     return tokens;
   }
 
@@ -179,19 +181,23 @@ class AnalizadorLexico {
       throw ErrorLexico('❌ Línea $_linea: Abriste comillas " pero nunca las cerraste.');
     }
     _pos++;
-    return Token(TipoToken.TEXTO, sb.toString(), _linea);
+    return Token(TipoToken.texto, sb.toString(), _linea);
   }
 
   Token _leerNumero({bool negativo = false}) {
     final inicio = _pos;
     if (negativo) _pos++;
-    while (_pos < fuente.length && _esDigito(fuente[_pos])) _pos++;
+    while (_pos < fuente.length && _esDigito(fuente[_pos])) {
+      _pos++;
+    }
     if (_pos < fuente.length && fuente[_pos] == '.') {
       _pos++;
-      while (_pos < fuente.length && _esDigito(fuente[_pos])) _pos++;
+      while (_pos < fuente.length && _esDigito(fuente[_pos])) {
+      _pos++;
+    }
     }
     final raw = fuente.substring(inicio, _pos);
-    return Token(TipoToken.NUMERO, raw, _linea);
+    return Token(TipoToken.numero, raw, _linea);
   }
 
   Token _leerPalabra() {
@@ -210,10 +216,10 @@ class AnalizadorLexico {
     }
     
     if (comandosPersonalizados.contains(enMayusculas)) {
-      return Token(TipoToken.COMANDO_CUSTOM, enMayusculas, _linea);
+      return Token(TipoToken.comandoCustom, enMayusculas, _linea);
     }
 
-    return Token(TipoToken.IDENTIFICADOR, palabra, _linea);
+    return Token(TipoToken.identificador, palabra, _linea);
   }
 
   bool _esDigito(String c) =>

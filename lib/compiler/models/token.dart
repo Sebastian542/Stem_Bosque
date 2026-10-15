@@ -1,44 +1,44 @@
 enum TipoToken {
   // Palabras clave
-  PROGRAMA,
-  FIN,
-  GIRAR,
-  AVANZAR,
-  SI,
-  ENTONCES,
-  REPETIR,
-  VECES,
+  programa,
+  fin,
+  girar,
+  avanzar,
+  si,
+  entonces,
+  repetir,
+  veces,
   // Literales
-  IDENTIFICADOR,
-  NUMERO,
-  TEXTO,
+  identificador,
+  numero,
+  texto,
   // Operadores
-  ASIGNACION,   // =
-  IGUAL,        // ==
-  MAYOR,        // >
-  MENOR,        // <
-  MAS,          // +
-  MENOS,        // -
-  MULTIPLICACION, // *
-  DIVISION,     // /
+  asignacion, // =
+  igual, // ==
+  mayor, // >
+  menor, // <
+  mas, // +
+  menos, // -
+  multiplicacion, // *
+  division, // /
   // Puntuación
-  DOS_PUNTOS,
-  CORCHETE_IZQ,
-  CORCHETE_DER,
-  //Expresiones aritmeticas
-  SEN,
-  COS,
-  TANG,
-  PARENTESIS_IZQ,
-  PARENTESIS_DER,
-  // Operadores Lógicos
-  AND,
-  OR,
-  NOT,
+  dosPuntos,
+  corcheteIzq,
+  corcheteDer,
+  // Expresiones aritmeticas
+  sen,
+  cos,
+  tang,
+  parentesisIzq,
+  parentesisDer,
+  // Operadores lógicos
+  and,
+  or,
+  not,
   // Comandos personalizados de Firebase
-  COMANDO_CUSTOM,
+  comandoCustom,
   // Fin de archivo
-  FIN_ARCHIVO,
+  finArchivo,
 }
 
 class Token {

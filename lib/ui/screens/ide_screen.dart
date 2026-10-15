@@ -282,32 +282,34 @@ FIN PROGRAMA''';
       nameCtrl.dispose();
     });
 
-    if (confirmed == true && name.isNotEmpty && mounted) {
-      final fullName = name.endsWith('.txt') ? name : '$name.txt';
-      final saved = await _fm.saveToFile(
-        _codeController.text,
-        customFileName: fullName,
-      );
-      if (mounted) setState(() {});
-      if (mounted) {
-        // --- GUARDADO EN LA NUBE (FIREBASE) ---
-        final user = FirebaseAuth.instance.currentUser;
-        bool cloudSaved = false;
-        
-        if (user != null) {
-          try {
-            await DatabaseService().saveProject(
-              name: fullName,
-              code: _codeController.text,
-              obstacles: _currentObstacles,
-            );
-            cloudSaved = true;
-          } catch (e) {
-            debugPrint("Error guardando en la nube: $e");
-          }
-        }
+    if (confirmed != true || name.isEmpty || !mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    final fullName = name.endsWith('.txt') ? name : '$name.txt';
+    final saved = await _fm.saveToFile(
+      _codeController.text,
+      customFileName: fullName,
+    );
+    if (!mounted) return;
+    setState(() {});
+
+    final user = FirebaseAuth.instance.currentUser;
+    var cloudSaved = false;
+
+    if (user != null) {
+      try {
+        await DatabaseService().saveProject(
+          name: fullName,
+          code: _codeController.text,
+          obstacles: _currentObstacles,
+        );
+        cloudSaved = true;
+      } catch (e) {
+        debugPrint("Error guardando en la nube: $e");
+      }
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Row(children: [
             Icon(saved ? Icons.check_circle : Icons.error,
                 color: saved ? AppTheme.green : AppTheme.red),
@@ -323,8 +325,6 @@ FIN PROGRAMA''';
           backgroundColor: AppTheme.currentLine,
           duration: const Duration(seconds: 2),
         ));
-      }
-    }
   }
 
   Future<void> _openFromCloud() async {
@@ -417,7 +417,7 @@ FIN PROGRAMA''';
                     color: AppTheme.background,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: AppTheme.comment.withOpacity(0.3)),
+                        color: AppTheme.comment.withValues(alpha: 0.3)),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -893,7 +893,7 @@ FIN PROGRAMA''';
               ),
             ),
           );
-          if (result != null && mounted) {
+          if (result != null && context.mounted) {
             setState(() {
               _currentObstacles = result;
             });

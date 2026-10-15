@@ -39,11 +39,11 @@ class VampiritoPet extends StatefulWidget {
   final bool           isTyping;
 
   const VampiritoPet({
-    Key? key,
+    super.key,
     required this.state,
     this.errorMessage,
     this.isTyping = false,
-  }) : super(key: key);
+  });
 
   @override
   State<VampiritoPet> createState() => _VampiritoPetState();
@@ -56,8 +56,6 @@ class _VampiritoPetState extends State<VampiritoPet>
   late final Animation<double>   _floatY;
   late final AnimationController _shakeCtrl;
   late final AnimationController _jumpCtrl;
-  late final AnimationController _bubbleCtrl;
-  late final Animation<double>   _bubbleScale;
 
   _Expression _expr       = _Expression.neutral;
   bool        _showBubble = false;
@@ -84,15 +82,6 @@ class _VampiritoPetState extends State<VampiritoPet>
       duration: const Duration(milliseconds: 750),
     );
 
-    _bubbleCtrl = AnimationController(
-      vsync:    this,
-      duration: const Duration(milliseconds: 280),
-    );
-    _bubbleScale = CurvedAnimation(
-      parent: _bubbleCtrl,
-      curve:  Curves.easeOutBack,
-    );
-
     _applyState(widget.state, initial: true);
   }
 
@@ -110,7 +99,6 @@ class _VampiritoPetState extends State<VampiritoPet>
     _floatCtrl.dispose();
     _shakeCtrl.dispose();
     _jumpCtrl.dispose();
-    _bubbleCtrl.dispose();
     super.dispose();
   }
 
@@ -151,8 +139,7 @@ class _VampiritoPetState extends State<VampiritoPet>
         _jumpCtrl.forward(from: 0);
         Future.delayed(const Duration(seconds: 4), () {
           if (mounted && widget.state == VampiritoState.success) {
-            _bubbleCtrl.reverse();
-            if (mounted) setState(() => _showBubble = false);
+            setState(() => _showBubble = false);
           }
         });
         break;
@@ -168,11 +155,6 @@ class _VampiritoPetState extends State<VampiritoPet>
       });
     }
 
-    if (bubble) {
-      _bubbleCtrl.forward(from: 0);
-    } else if (!initial) {
-      _bubbleCtrl.reverse();
-    }
   }
 
   void _setFloatSpeed(int ms) {
@@ -256,7 +238,7 @@ class _VampiritoPetState extends State<VampiritoPet>
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color:        _glowColor.withOpacity(0.45),
+            color:        _glowColor.withValues(alpha: 0.45),
             blurRadius:   25,
             spreadRadius: 4,
           ),
@@ -310,10 +292,10 @@ class _VampiritoPetState extends State<VampiritoPet>
           decoration: BoxDecoration(
             color:        AppTheme.currentLine,
             borderRadius: BorderRadius.circular(14),
-            border:       Border.all(color: c.color.withOpacity(0.6), width: 1.5),
+            border:       Border.all(color: c.color.withValues(alpha: 0.6), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color:      c.color.withOpacity(0.18),
+                color:      c.color.withValues(alpha: 0.18),
                 blurRadius: 14,
                 offset:     const Offset(0, 4),
               ),
@@ -351,10 +333,10 @@ class _VampiritoPetState extends State<VampiritoPet>
               color:        AppTheme.currentLine,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: AppTheme.yellow.withOpacity(0.5), width: 1.5),
+                  color: AppTheme.yellow.withValues(alpha: 0.5), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color:      AppTheme.yellow.withOpacity(0.12),
+                  color:      AppTheme.yellow.withValues(alpha: 0.12),
                   blurRadius: 10,
                   offset:     const Offset(0, 3),
                 ),
@@ -390,7 +372,7 @@ class _VampiritoPetState extends State<VampiritoPet>
         Padding(
           padding: const EdgeInsets.only(right: 18),
           child: CustomPaint(
-            painter: _DownTailPainter(c.color.withOpacity(0.55)),
+            painter: _DownTailPainter(c.color.withValues(alpha: 0.55)),
             size:    const Size(14, 10),
           ),
         ),
@@ -492,11 +474,11 @@ class VampiritoExecutionAnimation extends StatefulWidget {
   final VoidCallback onComplete;
 
   const VampiritoExecutionAnimation({
-    Key? key,
+    super.key,
     required this.success,
     required this.onComplete,
     this.errorMessage,
-  }) : super(key: key);
+  });
 
   @override
   State<VampiritoExecutionAnimation> createState() =>
@@ -670,7 +652,7 @@ class _VampiritoExecutionAnimationState
               shape:     BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color:      color.withOpacity(0.7),
+                  color:      color.withValues(alpha: 0.7),
                   blurRadius: size * 1.5,
                 ),
               ],
@@ -753,7 +735,7 @@ class _VampiritoExecutionAnimationState
             Positioned.fill(
               child: IgnorePointer(
                 child: ColoredBox(
-                  color: Colors.black.withOpacity(_flyInCtrl.value * 0.40),
+                  color: Colors.black.withValues(alpha: _flyInCtrl.value * 0.40),
                 ),
               ),
             ),
@@ -779,12 +761,12 @@ class _VampiritoExecutionAnimationState
                             color:        AppTheme.currentLine,
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                              color: glowColor.withOpacity(0.75),
+                              color: glowColor.withValues(alpha: 0.75),
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color:      glowColor.withOpacity(0.30),
+                                color:      glowColor.withValues(alpha: 0.30),
                                 blurRadius: 20,
                                 offset:     const Offset(0, 6),
                               ),
@@ -796,10 +778,10 @@ class _VampiritoExecutionAnimationState
                                 width:  36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color:  glowColor.withOpacity(0.15),
+                                  color:  glowColor.withValues(alpha: 0.15),
                                   shape:  BoxShape.circle,
                                   border: Border.all(
-                                      color: glowColor.withOpacity(0.5),
+                                      color: glowColor.withValues(alpha: 0.5),
                                       width: 1.5),
                                 ),
                                 child: Icon(
@@ -854,8 +836,9 @@ class _VampiritoExecutionAnimationState
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color:        glowColor.withOpacity(
-                                _isSuspense ? 0.45 : 0.3 + _glow.value * 0.5),
+                            color: glowColor.withValues(
+                              alpha: _isSuspense ? 0.45 : 0.3 + _glow.value * 0.5,
+                            ),
                             blurRadius:   glowRadius,
                             spreadRadius: 4,
                           ),

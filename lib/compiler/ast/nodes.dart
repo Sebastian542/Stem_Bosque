@@ -66,7 +66,7 @@ class NodoComparacion extends NodoExpBool {
       '${s}Comparacion($comparador):\n${izq.mostrar('$s  ')}\n${der.mostrar('$s  ')}';
 }
 
-/// NOT <expresión>
+/// NOT `<expresión>`
 class NodoNot extends NodoExpBool {
   final NodoExpBool expresion;
   NodoNot(this.expresion);
@@ -74,7 +74,7 @@ class NodoNot extends NodoExpBool {
   String mostrar(String s) => '${s}NOT:\n${expresion.mostrar('$s  ')}';
 }
 
-/// <izq> AND <der>
+/// `<izq>` AND `<der>`
 class NodoAnd extends NodoExpBool {
   final NodoExpBool izq, der;
   NodoAnd(this.izq, this.der);
@@ -83,7 +83,7 @@ class NodoAnd extends NodoExpBool {
       '${s}AND:\n${izq.mostrar('$s  ')}\n${der.mostrar('$s  ')}';
 }
 
-/// <izq> OR <der>
+/// `<izq>` OR `<der>`
 class NodoOr extends NodoExpBool {
   final NodoExpBool izq, der;
   NodoOr(this.izq, this.der);

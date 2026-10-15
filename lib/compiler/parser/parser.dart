@@ -31,18 +31,18 @@ class Parser {
         : '"${encontrado.valor}"';
 
     switch (esperado) {
-      case TipoToken.PROGRAMA:
+      case TipoToken.programa:
         return '❌ Línea $linea: El programa no empieza con PROGRAMA.\n'
             '👉 La primera línea siempre debe ser:\n'
             '   PROGRAMA "nombre de tu programa"';
 
-      case TipoToken.TEXTO:
+      case TipoToken.texto:
         return '❌ Línea $linea: Después de PROGRAMA falta el nombre entre comillas.\n'
             '👉 Escribe el nombre de tu programa entre comillas dobles:\n'
             '   PROGRAMA "Mi robot"';
 
-      case TipoToken.FIN:
-        if (encontrado.tipo == TipoToken.FIN_ARCHIVO) {
+      case TipoToken.fin:
+        if (encontrado.tipo == TipoToken.finArchivo) {
           return '❌ Línea $linea: El programa nunca se cerró.\n'
               '👉 Al final de todo tu código debes escribir:\n'
               '   FIN PROGRAMA';
@@ -51,28 +51,28 @@ class Parser {
             '👉 Revisa que cada SI tenga su FIN SI\n'
             '   y cada REPETIR tenga su FIN REPETIR.';
 
-      case TipoToken.ENTONCES:
+      case TipoToken.entonces:
         return '❌ Línea $linea: En el SI falta escribir ENTONCES: después de la condición.';
 
-      case TipoToken.DOS_PUNTOS:
+      case TipoToken.dosPuntos:
         return '❌ Línea $linea: Falta el ":" al final de esta línea.';
 
-      case TipoToken.VECES:
+      case TipoToken.veces:
         return '❌ Línea $linea: Después de la expresión falta escribir VECES:';
 
-      case TipoToken.CORCHETE_IZQ:
+      case TipoToken.corcheteIzq:
         return '❌ Línea $linea: Después de REPETIR falta el "[" para encerrar la variable o número.';
 
-      case TipoToken.CORCHETE_DER:
+      case TipoToken.corcheteDer:
         return '❌ Línea $linea: Falta cerrar el corchete "]" después de la variable o número.';
 
-      case TipoToken.IDENTIFICADOR:
+      case TipoToken.identificador:
         return '❌ Línea $linea: Se esperaba el nombre de una variable pero encontré $encontradoStr.';
 
-      case TipoToken.NUMERO:
+      case TipoToken.numero:
         return '❌ Línea $linea: Se esperaba un número pero encontré $encontradoStr.';
 
-      case TipoToken.ASIGNACION:
+      case TipoToken.asignacion:
         return '❌ Línea $linea: Falta el "=" para asignarle un valor a la variable.';
 
       default:
@@ -82,12 +82,12 @@ class Parser {
 
   bool _esInicioInstruccion() {
     switch (_actual.tipo) {
-      case TipoToken.IDENTIFICADOR:
-      case TipoToken.GIRAR:
-      case TipoToken.AVANZAR:
-      case TipoToken.SI:
-      case TipoToken.REPETIR:
-      case TipoToken.COMANDO_CUSTOM:
+      case TipoToken.identificador:
+      case TipoToken.girar:
+      case TipoToken.avanzar:
+      case TipoToken.si:
+      case TipoToken.repetir:
+      case TipoToken.comandoCustom:
         return true;
       default:
         return false;
@@ -95,11 +95,11 @@ class Parser {
   }
 
   NodoPrograma parsePrograma() {
-    _consumir(TipoToken.PROGRAMA);
-    final nombre = _consumir(TipoToken.TEXTO).valor;
+    _consumir(TipoToken.programa);
+    final nombre = _consumir(TipoToken.texto).valor;
     final instrucciones = parseInstrucciones();
-    _consumir(TipoToken.FIN);
-    _consumir(TipoToken.PROGRAMA);
+    _consumir(TipoToken.fin);
+    _consumir(TipoToken.programa);
     return NodoPrograma(nombre, instrucciones);
   }
 
@@ -113,26 +113,26 @@ class Parser {
 
   Nodo parseInstruccion() {
     switch (_actual.tipo) {
-      case TipoToken.IDENTIFICADOR: return parseAsignacion();
-      case TipoToken.GIRAR:         return parseGirar();
-      case TipoToken.AVANZAR:       return parseAvanzar();
-      case TipoToken.SI:            return parseCondicional();
-      case TipoToken.REPETIR:       return parseCiclo();
-      case TipoToken.COMANDO_CUSTOM: return parseCustom();
+      case TipoToken.identificador: return parseAsignacion();
+      case TipoToken.girar:         return parseGirar();
+      case TipoToken.avanzar:       return parseAvanzar();
+      case TipoToken.si:            return parseCondicional();
+      case TipoToken.repetir:       return parseCiclo();
+      case TipoToken.comandoCustom: return parseCustom();
       default:
         throw ErrorSintactico('😕 Línea ${_actual.linea}: No reconozco la instrucción "${_actual.valor}".');
     }
   }
 
   NodoCustom parseCustom() {
-    final token = _consumir(TipoToken.COMANDO_CUSTOM);
+    final token = _consumir(TipoToken.comandoCustom);
     NodoExpArit? arg;
     
     // Si el siguiente token puede ser una expresión aritmética, lo parseamos como argumento
-    if (_es(TipoToken.NUMERO) || 
-        _es(TipoToken.IDENTIFICADOR) || 
-        _es(TipoToken.PARENTESIS_IZQ) ||
-        _es(TipoToken.SEN) || _es(TipoToken.COS) || _es(TipoToken.TANG)) {
+    if (_es(TipoToken.numero) || 
+        _es(TipoToken.identificador) || 
+        _es(TipoToken.parentesisIzq) ||
+        _es(TipoToken.sen) || _es(TipoToken.cos) || _es(TipoToken.tang)) {
       arg = _parseExpArit();
     }
     
@@ -140,45 +140,45 @@ class Parser {
   }
 
   NodoAsignacion parseAsignacion() {
-    final id  = _consumir(TipoToken.IDENTIFICADOR).valor;
-    _consumir(TipoToken.ASIGNACION);
+    final id  = _consumir(TipoToken.identificador).valor;
+    _consumir(TipoToken.asignacion);
     final exp = _parseExpArit();
     return NodoAsignacion(id, exp);
   }
 
   NodoGirar parseGirar() {
-    _consumir(TipoToken.GIRAR);
+    _consumir(TipoToken.girar);
     final exp = _parseExpArit();
     return NodoGirar(exp);
   }
 
   NodoAvanzar parseAvanzar() {
-    _consumir(TipoToken.AVANZAR);
+    _consumir(TipoToken.avanzar);
     final exp = _parseExpArit();
     return NodoAvanzar(exp);
   }
 
   NodoCondicional parseCondicional() {
-    _consumir(TipoToken.SI);
+    _consumir(TipoToken.si);
     final condicion = _parseExpBool();
-    _consumir(TipoToken.ENTONCES);
-    _consumir(TipoToken.DOS_PUNTOS);
+    _consumir(TipoToken.entonces);
+    _consumir(TipoToken.dosPuntos);
     final instrucciones = parseInstrucciones();
-    _consumir(TipoToken.FIN);
-    _consumir(TipoToken.SI);
+    _consumir(TipoToken.fin);
+    _consumir(TipoToken.si);
     return NodoCondicional(condicion, instrucciones);
   }
 
   NodoCiclo parseCiclo() {
-    _consumir(TipoToken.REPETIR);
-    _consumir(TipoToken.CORCHETE_IZQ);
+    _consumir(TipoToken.repetir);
+    _consumir(TipoToken.corcheteIzq);
     final exp = _parseExpArit();
-    _consumir(TipoToken.CORCHETE_DER);
-    _consumir(TipoToken.VECES);
-    _consumir(TipoToken.DOS_PUNTOS);
+    _consumir(TipoToken.corcheteDer);
+    _consumir(TipoToken.veces);
+    _consumir(TipoToken.dosPuntos);
     final instrucciones = parseInstrucciones();
-    _consumir(TipoToken.FIN);
-    _consumir(TipoToken.REPETIR);
+    _consumir(TipoToken.fin);
+    _consumir(TipoToken.repetir);
     return NodoCiclo(exp, instrucciones);
   }
 
@@ -188,7 +188,7 @@ class Parser {
 
   NodoExpArit _parseTermino() {
     NodoExpArit nodo = _parseFactor();
-    while (_es(TipoToken.MAS) || _es(TipoToken.MENOS)) {
+    while (_es(TipoToken.mas) || _es(TipoToken.menos)) {
       final op = _consumir(_actual.tipo).valor;
       final der = _parseFactor();
       nodo = NodoOpBinaria(nodo, op, der);
@@ -198,7 +198,7 @@ class Parser {
 
   NodoExpArit _parseFactor() {
     NodoExpArit nodo = _parsePrimario();
-    while (_es(TipoToken.MULTIPLICACION) || _es(TipoToken.DIVISION)) {
+    while (_es(TipoToken.multiplicacion) || _es(TipoToken.division)) {
       final op = _consumir(_actual.tipo).valor;
       final der = _parsePrimario();
       nodo = NodoOpBinaria(nodo, op, der);
@@ -207,23 +207,23 @@ class Parser {
   }
 
   NodoExpArit _parsePrimario() {
-    if (_es(TipoToken.NUMERO)) {
-      return NodoNumero(double.parse(_consumir(TipoToken.NUMERO).valor));
+    if (_es(TipoToken.numero)) {
+      return NodoNumero(double.parse(_consumir(TipoToken.numero).valor));
     }
-    if (_es(TipoToken.IDENTIFICADOR)) {
-      return NodoVariable(_consumir(TipoToken.IDENTIFICADOR).valor);
+    if (_es(TipoToken.identificador)) {
+      return NodoVariable(_consumir(TipoToken.identificador).valor);
     }
-    if (_es(TipoToken.SEN) || _es(TipoToken.COS) || _es(TipoToken.TANG)) {
+    if (_es(TipoToken.sen) || _es(TipoToken.cos) || _es(TipoToken.tang)) {
       final func = _consumir(_actual.tipo).valor;
-      _consumir(TipoToken.PARENTESIS_IZQ);
+      _consumir(TipoToken.parentesisIzq);
       final arg = _parseExpArit();
-      _consumir(TipoToken.PARENTESIS_DER);
+      _consumir(TipoToken.parentesisDer);
       return NodoFuncTrig(func, arg);
     }
-    if (_es(TipoToken.PARENTESIS_IZQ)) {
-      _consumir(TipoToken.PARENTESIS_IZQ);
+    if (_es(TipoToken.parentesisIzq)) {
+      _consumir(TipoToken.parentesisIzq);
       final exp = _parseExpArit();
-      _consumir(TipoToken.PARENTESIS_DER);
+      _consumir(TipoToken.parentesisDer);
       return exp;
     }
     throw ErrorSintactico('❌ Línea ${_actual.linea}: Se esperaba un número, variable o función.');
@@ -235,7 +235,7 @@ class Parser {
 
   NodoExpBool _parseOr() {
     NodoExpBool nodo = _parseAnd();
-    while (_es(TipoToken.OR)) {
+    while (_es(TipoToken.or)) {
       _pos++;
       final der = _parseAnd();
       nodo = NodoOr(nodo, der);
@@ -245,7 +245,7 @@ class Parser {
 
   NodoExpBool _parseAnd() {
     NodoExpBool nodo = _parseNot();
-    while (_es(TipoToken.AND)) {
+    while (_es(TipoToken.and)) {
       _pos++;
       final der = _parseNot();
       nodo = NodoAnd(nodo, der);
@@ -254,7 +254,7 @@ class Parser {
   }
 
   NodoExpBool _parseNot() {
-    if (_es(TipoToken.NOT)) {
+    if (_es(TipoToken.not)) {
       _pos++;
       final exp = _parseNot();
       return NodoNot(exp);
@@ -270,9 +270,9 @@ class Parser {
   }
 
   String _parseComparador() {
-    if (_es(TipoToken.IGUAL)) { _pos++; return '=='; }
-    if (_es(TipoToken.MAYOR)) { _pos++; return '>'; }
-    if (_es(TipoToken.MENOR)) { _pos++; return '<'; }
+    if (_es(TipoToken.igual)) { _pos++; return '=='; }
+    if (_es(TipoToken.mayor)) { _pos++; return '>'; }
+    if (_es(TipoToken.menor)) { _pos++; return '<'; }
     throw ErrorSintactico('❌ Línea ${_actual.linea}: Se esperaba un comparador (<, >, ==).');
   }
 }

@@ -46,12 +46,13 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
       // Al tener éxito, regresamos al IDE (el stream de Auth se encarga del resto)
-      if (mounted) {
-        final profile = await _auth.getCurrentUserProfile();
-        final name = profile?['name'] ?? 'Usuario';
-        
-        // Mensaje de bienvenida personalizado
-        showDialog(
+      if (!mounted) return;
+      final profile = await _auth.getCurrentUserProfile();
+      if (!mounted) return;
+      final name = profile?['name'] ?? 'Usuario';
+
+      // Mensaje de bienvenida personalizado
+      showDialog(
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
@@ -70,7 +71,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         );
-      }
     } catch (e) {
       _showError(e.toString());
     } finally {

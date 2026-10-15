@@ -1,16 +1,17 @@
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:convert';
+import 'dart:js_interop';
 
-/// Procesa la descarga de un archivo directamente en el navegador
+import 'package:web/web.dart';
+
+/// Descarga un archivo de texto directamente en el navegador.
 void downloadWebFile(String content, String fileName) {
-  final bytes = utf8.encode(content);
-  final blob = html.Blob([bytes]);
-  final url = html.Url.createObjectUrlFromBlob(blob);
-  
-  html.AnchorElement(href: url)
-    ..setAttribute("download", fileName)
+  final blob = Blob(
+    <BlobPart>[content.toJS].toJS,
+    BlobPropertyBag(type: 'text/plain;charset=utf-8'),
+  );
+  final url = URL.createObjectURL(blob);
+  HTMLAnchorElement()
+    ..href = url
+    ..download = fileName
     ..click();
-    
-  html.Url.revokeObjectUrl(url);
+  URL.revokeObjectURL(url);
 }

@@ -40,7 +40,6 @@ class _SimulationScreenState extends State<SimulationScreen>
   int    _cmdIndex   = 0;       // comando actual
   int    _stepIndex  = 0;       // paso dentro del comando
   int    _totalSteps = 0;       // pasos totales del comando actual
-  double _stepSize   = 0;       // magnitud por paso (avanzar)
   int    _stepSign   = 1;       // dirección (+1 / -1)
 
   static const double _rotSpeed  = 0.05;  // radianes por step (girar)
@@ -108,10 +107,8 @@ class _SimulationScreenState extends State<SimulationScreen>
     _stepIndex  = 0;
 
     if (cmd == 'AVANZAR') {
-      _stepSize = _moveSpeed.toDouble();
       _animateSteps(_stepAvanzar);
     } else if (cmd == 'GIRAR') {
-      _stepSize = _rotSpeed;
       _animateSteps(_stepGirar);
     } else {
       _cmdIndex++;
