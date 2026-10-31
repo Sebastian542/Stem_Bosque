@@ -1,0 +1,243 @@
+import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../utils/responsive.dart';
+
+class BlockModeScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> initialObstacles;
+  const BlockModeScreen({super.key, this.initialObstacles = const []});
+
+  @override
+  State<BlockModeScreen> createState() => _BlockModeScreenState();
+}
+
+class _BlockModeScreenState extends State<BlockModeScreen> {
+  final List<DraggableComponent> _components = [
+    DraggableComponent(name: 'Arbusto', icon: Icons.park, color: AppTheme.green),
+    DraggableComponent(name: 'Piedra', icon: Icons.landscape, color: AppTheme.comment),
+    DraggableComponent(name: 'Sensor', icon: Icons.settings_input_component, color: AppTheme.cyan),
+    DraggableComponent(name: 'Robot', icon: Icons.smart_toy, color: AppTheme.purple),
+  ];
+
+  final List<PlacedComponent> _placedComponents = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialObstacles();
+  }
+
+  void _loadInitialObstacles() {
+    for (var data in widget.initialObstacles) {
+      final type = data['type'];
+      final x = (data['x'] as num).toDouble();
+      final y = (data['y'] as num).toDouble();
+
+      final component = _components.firstWhere(
+        (c) => c.name == type,
+        orElse: () => _components[0],
+      );
+
+      _placedComponents.add(PlacedComponent(
+        component: component,
+        position: Offset(x, y),
+      ));
+    }
+  }
+
+  List<Map<String, dynamic>> _serializeObstacles() {
+    return _placedComponents.map((pc) => {
+      'type': pc.component.name,
+      'x': pc.position.dx,
+      'y': pc.position.dy,
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = context.responsive;
+    final paletteHeight = r.isLandscape ? 80.0 : (r.isCompact ? 88.0 : 100.0);
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text('Modo Bloque - Simulación'),
+        backgroundColor: AppTheme.currentLine,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check, color: AppTheme.green),
+            tooltip: 'Confirmar y Guardar',
+            onPressed: () {
+              Navigator.pop(context, _serializeObstacles());
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            height: paletteHeight,
+            padding: EdgeInsets.symmetric(vertical: r.verticalPadding * 0.6),
+            color: AppTheme.currentLine.withAlpha(50),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _components.length,
+              itemBuilder: (context, index) {
+                final component = _components[index];
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: r.isCompact ? 8 : 12),
+                  child: Draggable<DraggableComponent>(
+                    data: component,
+                    feedback: Material(
+                      color: Colors.transparent,
+                      child: Icon(component.icon, size: r.scale(50), color: component.color.withAlpha(150)),
+                    ),
+                    childWhenDragging: Opacity(
+                      opacity: 0.5,
+                      child: _buildToolItem(component),
+                    ),
+                    child: _buildToolItem(component),
+                  ),
+                );
+              },
+            ),
+          ),
+          const Divider(height: 1, color: AppTheme.comment),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return DragTarget<DraggableComponent>(
+                  onAcceptWithDetails: (details) {
+                    final box = context.findRenderObject() as RenderBox?;
+                    if (box == null) return;
+                    final localOffset = box.globalToLocal(details.offset);
+                    setState(() {
+                      _placedComponents.add(PlacedComponent(
+                        component: details.data,
+                        position: Offset(
+                          localOffset.dx.clamp(0, constraints.maxWidth - 24),
+                          localOffset.dy.clamp(0, constraints.maxHeight - 24),
+                        ),
+                      ));
+                    });
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    return Stack(
+                      children: [
+                        _buildGrid(),
+                        ..._placedComponents.map((pc) => Positioned(
+                          left: pc.position.dx,
+                          top: pc.position.dy,
+                          child: GestureDetector(
+                            onLongPress: () {
+                              setState(() {
+                                _placedComponents.remove(pc);
+                              });
+                            },
+                            child: Icon(
+                              pc.component.icon,
+                              size: r.scale(40),
+                              color: pc.component.color,
+                            ),
+                          ),
+                        )),
+                        if (candidateData.isNotEmpty)
+                          Container(
+                            color: AppTheme.cyan.withAlpha(30),
+                            child: const Center(
+                              child: Text(
+                                'Suelta para colocar',
+                                style: TextStyle(color: AppTheme.cyan),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: r.horizontalPadding,
+                vertical: 8,
+              ),
+              color: AppTheme.currentLine,
+              child: Text(
+                'Arrastra elementos al escenario. Mantén presionado para eliminar.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppTheme.comment,
+                  fontSize: r.isCompact ? 11 : 12,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToolItem(DraggableComponent component) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: component.color.withAlpha(20),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: component.color.withAlpha(50)),
+          ),
+          child: Icon(component.icon, color: component.color, size: 30),
+        ),
+        const SizedBox(height: 4),
+        Text(component.name, style: const TextStyle(color: AppTheme.foreground, fontSize: 10)),
+      ],
+    );
+  }
+
+  Widget _buildGrid() {
+    return CustomPaint(
+      painter: GridPainter(),
+      child: Container(),
+    );
+  }
+}
+
+class DraggableComponent {
+  final String name;
+  final IconData icon;
+  final Color color;
+
+  DraggableComponent({required this.name, required this.icon, required this.color});
+}
+
+class PlacedComponent {
+  final DraggableComponent component;
+  final Offset position;
+
+  PlacedComponent({required this.component, required this.position});
+}
+
+class GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppTheme.comment.withAlpha(30)
+      ..strokeWidth = 0.5;
+
+    const step = 30.0;
+    for (double x = 0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

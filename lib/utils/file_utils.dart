@@ -1,0 +1,108 @@
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+
+class FileUtils {
+  /// Abre un archivo desde el directorio de StemBosque
+  static Future<String?> openFile() async {
+    try {
+      // Obtener la ruta del directorio de StemBosque
+      final directory = await getApplicationDocumentsDirectory();
+      final stemBosqueDir = Directory('${directory.path}/StemBosque');
+
+      // Crear el directorio si no existe
+      if (!await stemBosqueDir.exists()) {
+        await stemBosqueDir.create(recursive: true);
+      }
+
+      // OPCIÓN 1: Intentar con file_picker (puede tener limitaciones en Android)
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['txt', 'sb'],
+        dialogTitle: 'Seleccionar programa',
+        initialDirectory: stemBosqueDir.path,
+      );
+
+      if (files.isNotEmpty && files.single.path != null) {
+        final file = File(files.single.path!);
+        final content = await file.readAsString();
+        return content;
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('Error en FileUtils.openFile: $e');
+
+      // FALLBACK: Si falla, intentar con método alternativo
+      try {
+        return await _openFileAlternative();
+      } catch (e2) {
+        debugPrint('Error en método alternativo: $e2');
+        return null;
+      }
+    }
+  }
+
+  /// Método alternativo: Mostrar lista de archivos de StemBosque
+  static Future<String?> _openFileAlternative() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final stemBosqueDir = Directory('${directory.path}/StemBosque');
+
+      if (!await stemBosqueDir.exists()) {
+        return null;
+      }
+
+      // Listar todos los archivos .sb en el directorio
+      List<FileSystemEntity> entities = stemBosqueDir.listSync();
+      List<File> txtFiles = entities
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.sb') || file.path.endsWith('.txt'))
+          .toList();
+
+      if (txtFiles.isEmpty) {
+        return null;
+      }
+
+      // Si solo hay un archivo, abrirlo directamente
+      if (txtFiles.length == 1) {
+        return await txtFiles.first.readAsString();
+      }
+
+      // Si hay múltiples archivos, aquí podrías mostrar un diálogo
+      // Por ahora, retornamos el primero
+      return await txtFiles.first.readAsString();
+
+    } catch (e) {
+      debugPrint('Error en _openFileAlternative: $e');
+      return null;
+    }
+  }
+
+  /// Guarda un archivo en el directorio de StemBosque
+  static Future<bool> saveFile(String content) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final stemBosqueDir = Directory('${directory.path}/StemBosque');
+
+      // Crear directorio si no existe
+      if (!await stemBosqueDir.exists()) {
+        await stemBosqueDir.create(recursive: true);
+      }
+
+      // Guardar con nombre por defecto
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'compilado_$timestamp.sb';
+      final filePath = '${stemBosqueDir.path}/$fileName';
+
+      final file = File(filePath);
+      await file.writeAsString(content);
+
+      return await file.exists();
+    } catch (e) {
+      debugPrint('Error en FileUtils.saveFile: $e');
+      return false;
+    }
+  }
+}

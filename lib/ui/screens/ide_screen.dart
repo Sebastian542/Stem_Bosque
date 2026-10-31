@@ -1,0 +1,1102 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/database_service.dart';
+import '../../models/project_model.dart';
+import 'cloud_explorer_screen.dart';
+import '../../bluetooth/bluetooth_manager.dart';
+import '../../compiler/compiler.dart';
+import '../../services/file_manager.dart';
+import '../theme/app_theme.dart';
+import '../widgets/bluetooth_panel.dart';
+import '../widgets/code_editor_validated.dart';
+import '../widgets/toolbar.dart';
+import '../widgets/duo_button.dart';
+import '../widgets/ide_drawer.dart';
+import '../widgets/confetti_widget.dart';
+import '../widgets/control_editor.dart';
+import '../../compiler/syntax_validator.dart' show ErrorCodigo;
+import 'simulation_screen.dart';
+import '../widgets/tita.dart';
+import 'block_mode_screen.dart';
+import 'login_screen.dart';
+import '../utils/responsive.dart';
+import 'dart:async';
+
+class IDEScreen extends StatefulWidget {
+  const IDEScreen({super.key});
+
+  @override
+  State<IDEScreen> createState() => _IDEScreenState();
+}
+
+class _IDEScreenState extends State<IDEScreen> {
+  final _bt = BluetoothManager.instance;
+  final _fm = FileManager.instance;
+
+  // ── Editor ───────────────────────────────────────────────────
+  final _codeController = CodeEditorController();
+  bool         _isRunning       = false;
+  bool         _codeIsValid     = false;
+  bool         _compiledSuccess = false;
+  OverlayEntry? _confettiOverlay;
+  OverlayEntry? _vampiritoOverlay;
+  bool          _vampiritoAnimating = false;
+  List<String> _compiledLines   = [];
+  List<Map<String, dynamic>> _currentObstacles = [];
+  String?      _lastErrorMessage;
+  bool _isTyping = false;
+  Timer? _typingTimer;
+  List<String> _customCommands = [];
+  StreamSubscription? _commandsSub;
+  StreamSubscription<User?>? _authSub;
+
+  /// Errores que Tita cuenta y el control para llevar el cursor a uno de ellos.
+  List<ErrorCodigo> _errores = const [];
+  final ControlEditor _controlEditor = ControlEditor();
+
+  // ── Bluetooth UI ─────────────────────────────────────────────
+  bool _bluetoothEnabled   = false;
+  bool _showBluetoothPanel = false;
+  final List<UnifiedBluetoothDevice> _discoveredDevices = [];
+
+  bool get _isScanning    => _bt.isScanning;
+  bool get _isConnecting  => _bt.isConnecting;
+  UnifiedBluetoothDevice? get _connectedDevice => _bt.connectedDevice;
+
+  static const String _sampleCode = '''/*Un sencillo programa de ejemplo.*/
+PROGRAMA "Programa numero 1"
+
+  AVANZAR 5
+  AVANZAR -5
+  GIRAR 5
+  GIRAR -5
+
+  N=100
+  Contador = 1
+
+  REPETIR [N] VECES:
+    GIRAR 1
+  FIN REPETIR
+
+  SI N<200 ENTONCES:
+    REPETIR [N] VECES:
+      GIRAR -1
+    FIN REPETIR
+  FIN SI
+
+FIN PROGRAMA''';
+
+  // ─────────────────────────────────────────────────────────────
+  // LIFECYCLE
+  // ─────────────────────────────────────────────────────────────
+
+  @override
+  void initState() {
+    super.initState();
+    _codeController.text = _sampleCode;
+    _bt.init(_btCallbacks);
+    _loadAutoSaved();
+    _codeController.addListener(_onCodeChanged);
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      _commandsSub?.cancel();
+      if (mounted) {
+        setState(() => _customCommands = []);
+      }
+      _listenToCustomCommands();
+      if (user != null) {
+        unawaited(_prepareCloud());
+      }
+    });
+    _listenToCustomCommands();
+  }
+
+  Future<void> _prepareCloud() async {
+    try {
+      await DatabaseService().ensureCollections();
+    } catch (error) {
+      debugPrint('No se pudieron preparar las colecciones: $error');
+    }
+  }
+
+  void _listenToCustomCommands() {
+    _commandsSub?.cancel();
+    _commandsSub = DatabaseService().getCustomCommands().listen(
+      (snapshot) {
+        if (mounted) {
+          setState(() {
+            _customCommands = snapshot.docs
+                .map((doc) {
+                  final data = doc.data() as Map<String, dynamic>?;
+                  if (data?['system'] == true) return '';
+                  return (data?['keyword'] ?? data?['name'] ?? '')
+                      .toString()
+                      .toUpperCase();
+                })
+                .where((name) => name.isNotEmpty)
+                .toList();
+          });
+        }
+      },
+      onError: (Object error) {
+        debugPrint('No se pudieron cargar comandos personalizados: $error');
+      },
+    );
+  }
+
+  String _ultimoTexto = '';
+
+  void _onCodeChanged() {
+    final texto = _codeController.text;
+    if (texto == _ultimoTexto) return;
+    _ultimoTexto = texto;
+
+    _typingTimer?.cancel();
+    // Solo el primer carácter reconstruye la pantalla (Tita se aparta).
+    // El resto de la ráfaga no vuelve a dibujar el IDE entero.
+    if (!_isTyping) {
+      setState(() => _isTyping = true);
+    }
+    _typingTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted && _isTyping) setState(() => _isTyping = false);
+    });
+    if (_compiledSuccess) {
+      setState(() {
+        _compiledSuccess  = false;
+        _compiledLines    = [];
+        _lastErrorMessage = null;
+      });
+    }
+  }
+
+  bool _estadoEditorPendiente = false;
+
+  /// Junta los avisos del editor (válido / errores) en un solo redibujo.
+  void _programarEstadoEditor() {
+    if (_estadoEditorPendiente) return;
+    _estadoEditorPendiente = true;
+    scheduleMicrotask(() {
+      _estadoEditorPendiente = false;
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    _bt.dispose();
+    _confettiOverlay?.remove();
+    _codeController.removeListener(_onCodeChanged);
+    _typingTimer?.cancel();
+    _vampiritoOverlay?.remove();
+    _authSub?.cancel();
+    _commandsSub?.cancel();
+    super.dispose();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // BLUETOOTH
+  // ─────────────────────────────────────────────────────────────
+
+  BluetoothCallbacks get _btCallbacks => BluetoothCallbacks(
+    onLog: (msg, isError) {
+      debugPrint('[BT] $msg');
+      if (isError && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(msg),
+          backgroundColor: AppTheme.currentLine,
+          duration: const Duration(seconds: 2),
+        ));
+      }
+    },
+    onBluetoothStateChanged: (v) {
+      if (mounted) setState(() => _bluetoothEnabled = v);
+    },
+    onDeviceFound: (d) {
+      if (mounted) setState(() => _discoveredDevices.add(d));
+    },
+    onConnectionChanged: (_) { if (mounted) setState(() {}); },
+    onScanStateChanged:  (_) { if (mounted) setState(() {}); },
+  );
+
+  void _toggleBluetoothPanel() {
+    setState(() => _showBluetoothPanel = !_showBluetoothPanel);
+    if (_showBluetoothPanel && _bluetoothEnabled) {
+      setState(() => _discoveredDevices.clear());
+      _bt.startScan(_btCallbacks, _discoveredDevices);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ARCHIVOS
+  // ─────────────────────────────────────────────────────────────
+
+  Future<void> _loadAutoSaved() async {
+    final content = await _fm.loadAutoSaved();
+    if (content != null && mounted) {
+      setState(() => _codeController.text = content);
+    }
+  }
+
+  Future<void> _saveWithName() async {
+    final currentName = _fm.currentFilePath != null
+        ? _fm.currentFilePath!.split('/').last.replaceAll('.txt', '')
+        : 'mi_programa';
+
+    final nameCtrl = TextEditingController(text: currentName);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.currentLine,
+        insetPadding: ctx.responsive.dialogInsets,
+        title: const Row(children: [
+          Icon(Icons.save, color: AppTheme.purple),
+          SizedBox(width: 12),
+          Flexible(child: Text('Guardar archivo', style: TextStyle(color: AppTheme.foreground))),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Nombre del archivo:',
+                style: TextStyle(color: AppTheme.comment, fontSize: 12)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              style: const TextStyle(color: AppTheme.foreground),
+              onSubmitted: (_) => Navigator.of(ctx).pop(true),
+              decoration: InputDecoration(
+                suffixText: '.txt',
+                suffixStyle: const TextStyle(color: AppTheme.comment),
+                filled: true,
+                fillColor: AppTheme.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: const BorderSide(color: AppTheme.comment),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: const BorderSide(color: AppTheme.cyan),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppTheme.comment)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            icon: const Icon(Icons.save, size: 16),
+            label: const Text('Guardar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.purple,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final name = nameCtrl.text.trim();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      nameCtrl.dispose();
+    });
+
+    if (confirmed != true || name.isEmpty || !mounted) return;
+
+    final fullName = name.endsWith('.txt') ? name : '$name.txt';
+    final saved = await _fm.saveToFile(
+      _codeController.text,
+      customFileName: fullName,
+    );
+    if (!mounted) return;
+    setState(() {});
+
+    final user = FirebaseAuth.instance.currentUser;
+    var cloudSaved = false;
+
+    if (user != null) {
+      try {
+        await DatabaseService().saveProject(
+          name: fullName,
+          code: _codeController.text,
+          obstacles: _currentObstacles,
+        );
+        cloudSaved = true;
+      } catch (e) {
+        debugPrint("Error guardando en la nube: $e");
+      }
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Row(children: [
+            Icon(saved ? Icons.check_circle : Icons.error,
+                color: saved ? AppTheme.green : AppTheme.red),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(saved
+                  ? (cloudSaved 
+                      ? 'Guardado en dispositivo y nube ☁️' 
+                      : 'Guardado localmente como "$fullName"')
+                  : 'Error al guardar'),
+            ),
+          ]),
+          backgroundColor: AppTheme.currentLine,
+          duration: const Duration(seconds: 2),
+        ));
+  }
+
+  Future<void> _openFromCloud() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicia sesión para abrir desde la nube')),
+      );
+      return;
+    }
+
+    final ProjectModel? selected = await Navigator.push<ProjectModel>(
+      context,
+      MaterialPageRoute(builder: (context) => const CloudExplorerScreen()),
+    );
+
+    if (selected != null && mounted) {
+      setState(() {
+        _codeController.text = selected.code;
+        _currentObstacles = selected.obstacles;
+        // No actualizamos _fm.currentFilePath porque es un archivo remoto, 
+        // pero podríamos simular un "estado remoto" si fuera necesario.
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Proyecto "${selected.name}" cargado desde la nube ☁️')),
+      );
+    }
+  }
+
+  Future<void> _openFile() async {
+    final files = await _fm.listFiles();
+
+    if (files.isEmpty) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.currentLine,
+          title: const Row(children: [
+            Icon(Icons.folder_open, color: AppTheme.orange),
+            SizedBox(width: 12),
+            Text('Sin archivos', style: TextStyle(color: AppTheme.foreground)),
+          ]),
+          content: const Text(
+            'No hay archivos guardados todavía.\nUsa "Guardar archivo" para crear uno.',
+            style: TextStyle(color: AppTheme.foreground),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Entendido', style: TextStyle(color: AppTheme.cyan)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final mutableFiles = List<File>.from(files);
+
+    if (!mounted) return;
+    final r = context.responsive;
+    final selected = await showDialog<File>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          backgroundColor: AppTheme.currentLine,
+          insetPadding: r.dialogInsets,
+          title: const Row(children: [
+            Icon(Icons.folder_open, color: AppTheme.cyan),
+            SizedBox(width: 12),
+            Flexible(child: Text('Abrir archivo', style: TextStyle(color: AppTheme.foreground))),
+          ]),
+          content: SizedBox(
+            width: r.dialogMaxWidth,
+            height: r.dialogListHeight,
+            child: mutableFiles.isEmpty
+                ? const Center(
+                child: Text('No hay archivos',
+                    style: TextStyle(color: AppTheme.comment)))
+                : ListView.builder(
+              itemCount: mutableFiles.length,
+              itemBuilder: (_, i) {
+                final file     = mutableFiles[i];
+                final fileName = file.path.split('/').last;
+                final stat     = file.statSync();
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.background,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: AppTheme.comment.withValues(alpha: 0.3)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.insert_drive_file,
+                            color: AppTheme.cyan, size: 28),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(fileName,
+                                  style: const TextStyle(
+                                    color: AppTheme.foreground,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              Text(
+                                '${(stat.size / 1024).toStringAsFixed(1)} KB  •  ${_fm.formatDate(stat.modified)}',
+                                style: const TextStyle(
+                                    color: AppTheme.comment, fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Abrir',
+                          icon: const Icon(Icons.folder_open,
+                              color: AppTheme.green, size: 24),
+                          onPressed: () => Navigator.pop(ctx, file),
+                        ),
+                        IconButton(
+                          tooltip: 'Eliminar',
+                          icon: const Icon(Icons.delete,
+                              color: AppTheme.red, size: 24),
+                          onPressed: () async {
+                            final ok = await showDialog<bool>(
+                              context: ctx,
+                              builder: (c) => AlertDialog(
+                                backgroundColor: AppTheme.currentLine,
+                                title: const Text('Eliminar archivo',
+                                    style: TextStyle(
+                                        color: AppTheme.foreground)),
+                                content: Text(
+                                    '¿Eliminar "$fileName"?\nEsta acción no se puede deshacer.',
+                                    style: const TextStyle(
+                                        color: AppTheme.foreground)),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(c, false),
+                                    child: const Text('Cancelar',
+                                        style: TextStyle(
+                                            color: AppTheme.comment)),
+                                  ),
+                                  ElevatedButton.icon(
+                                    onPressed: () =>
+                                        Navigator.pop(c, true),
+                                    icon: const Icon(Icons.delete,
+                                        size: 16),
+                                    label: const Text('Eliminar'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.red,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (ok == true) {
+                              await file.delete();
+                              if (_fm.currentFilePath == file.path) {
+                                _fm.clear();
+                                if (mounted) setState(() {});
+                              }
+                              setDialog(() => mutableFiles.removeAt(i));
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar',
+                  style: TextStyle(color: AppTheme.comment)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selected != null && mounted) {
+      final content        = await selected.readAsString();
+      _fm.currentFilePath  = selected.path;
+      _fm.lastSavedContent = content;
+      setState(() => _codeController.text = content);
+    }
+  }
+
+  void _clearCode() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.currentLine,
+        title: const Text('Limpiar código',
+            style: TextStyle(color: AppTheme.foreground)),
+        content: const Text('¿Está seguro de que desea limpiar todo el código?',
+            style: TextStyle(color: AppTheme.foreground)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () {
+              _codeController.clear();
+              _fm.clear();
+              setState(() {});
+              Navigator.pop(ctx);
+            },
+            child: const Text('Limpiar', style: TextStyle(color: AppTheme.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _shareFile() async {
+    final code = _codeController.text;
+    String fileName = 'programa.sb';
+    
+    if (_fm.currentFilePath != null) {
+      // Extraer el nombre del archivo de la ruta si existe
+      fileName = _fm.currentFilePath!.split(Platform.isWindows ? '\\' : '/').last;
+    }
+    
+    await _fm.share(code, fileName: fileName);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // EJECUCIÓN
+  // ─────────────────────────────────────────────────────────────
+
+  Future<void> _executeProgram() async {
+    if (_isRunning) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _isRunning = true);
+
+    try {
+      final r = Compilador(comandosPersonalizados: _customCommands)
+          .compilar(_codeController.text);
+      final compiled = r.exito
+          ? fusionarComandos((r.salidaEjecucion ?? [])
+              .where((l) =>
+                  l.trim().startsWith('GIRAR') || l.trim().startsWith('AVANZAR'))
+              .toList())
+          : <String>[];
+
+      setState(() {
+        _compiledSuccess = r.exito && compiled.isNotEmpty;
+        _compiledLines = compiled;
+        _lastErrorMessage = r.exito
+            ? null
+            : (_codeIsValid ? r.error : (_lastErrorMessage ?? r.error));
+      });
+
+      if (!r.exito) {
+        _launchVampiritoAnimation(success: false, errorMsg: r.error);
+      } else if (compiled.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Compiló bien, pero no hay ningún GIRAR ni AVANZAR: el robot no tendría nada que hacer.'),
+          ));
+        }
+      } else {
+        await _fm.deleteCompiled();
+        await _fm.saveCompiled(compiled.join('\n'));
+        if (!mounted) return;
+        _launchVampiritoAnimation(
+            success: true, commandCount: compiled.length);
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    } finally {
+      if (mounted) setState(() => _isRunning = false);
+    }
+  }
+
+  Future<void> _sendProgram() async {
+    if (_codeController.text.trim().isEmpty) {
+      _showSnack('No hay programa para enviar');
+      return;
+    }
+
+    final loggedIn = FirebaseAuth.instance.currentUser != null;
+    if (loggedIn && _bluetoothEnabled) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.currentLine,
+          title: const Text('Enviar programa', style: TextStyle(color: AppTheme.foreground)),
+          content: const Text(
+            'Puedes mandarlo a otra cuenta o compartirlo por Bluetooth.',
+            style: TextStyle(color: AppTheme.foreground),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar', style: TextStyle(color: AppTheme.comment)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'bluetooth'),
+              child: const Text('Bluetooth', style: TextStyle(color: AppTheme.cyan)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'nube'),
+              child: const Text('Nube', style: TextStyle(color: AppTheme.green)),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || choice == null) return;
+      if (choice == 'nube') {
+        await _promptCloudSend();
+      } else {
+        await _fm.share(_codeController.text, fileName: _suggestedProgramName());
+      }
+      return;
+    }
+
+    if (loggedIn) {
+      await _promptCloudSend();
+      return;
+    }
+
+    if (_bluetoothEnabled) {
+      await _fm.share(_codeController.text, fileName: _suggestedProgramName());
+      return;
+    }
+
+    await _promptCloudSend();
+  }
+
+  String _suggestedProgramName() {
+    final path = _fm.currentFilePath;
+    if (path != null && path.isNotEmpty) {
+      return path.split(Platform.isWindows ? '\\' : '/').last;
+    }
+    return 'Programa';
+  }
+
+  Future<void> _promptCloudSend() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      _showSnack('Inicia sesión para enviar el programa por la nube');
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      if (!mounted || FirebaseAuth.instance.currentUser == null) return;
+    }
+
+    final emailCtrl = TextEditingController();
+    final nameCtrl = TextEditingController(text: _suggestedProgramName());
+    var sending = false;
+
+    final sent = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          backgroundColor: AppTheme.currentLine,
+          title: const Text('Enviar por la nube', style: TextStyle(color: AppTheme.foreground)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'El programa llegará a la cuenta que tenga este correo.',
+                style: TextStyle(color: AppTheme.comment),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                style: const TextStyle(color: AppTheme.foreground),
+                decoration: const InputDecoration(labelText: 'Nombre del programa'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(color: AppTheme.foreground),
+                decoration: const InputDecoration(labelText: 'Correo de quien lo recibe'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar', style: TextStyle(color: AppTheme.comment)),
+            ),
+            ElevatedButton(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      setLocal(() => sending = true);
+                      try {
+                        final recipient = await DatabaseService().sendProgramToEmail(
+                          toEmail: emailCtrl.text,
+                          name: nameCtrl.text,
+                          code: _codeController.text,
+                          obstacles: _currentObstacles,
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx, true);
+                        if (mounted) {
+                          _showSnack('Programa enviado a $recipient');
+                        }
+                      } catch (e) {
+                        setLocal(() => sending = false);
+                        final message = e.toString().replaceFirst('Exception: ', '');
+                        if (mounted) _showSnack(message);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.cyan),
+              child: Text(sending ? 'Enviando...' : 'Enviar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    emailCtrl.dispose();
+    nameCtrl.dispose();
+    if (sent == true) return;
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────────
+
+  Widget _buildBluetoothPanelWidget() {
+    return BluetoothPanel(
+      bluetoothEnabled:  _bluetoothEnabled,
+      isScanning:        _isScanning,
+      isConnecting:      _isConnecting,
+      devices:           _discoveredDevices,
+      connectedDevice:   _connectedDevice,
+      onToggle:          _toggleBluetoothPanel,
+      onToggleBluetooth: () => _bt.toggleBluetooth(onUnsupported: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bluetooth no soportado en esta plataforma')),
+        );
+      }),
+      onStartScan:       _startScan,
+      onStopScan:        _stopScan,
+      onOpenSettings:    () => _bt.openSettings(),
+      onDisconnect:      () => _bt.disconnect(_btCallbacks),
+      onConnect:         (d) => _bt.connect(d, _btCallbacks),
+    );
+  }
+
+  VampiritoState _estadoTita() {
+    if (_isRunning) return VampiritoState.running;
+    if (_compiledSuccess) return VampiritoState.success;
+    final hayCodigo = _codeController.text.trim().isNotEmpty;
+    if (!hayCodigo) return VampiritoState.idle;
+    return !_codeIsValid || _lastErrorMessage != null
+        ? VampiritoState.error
+        : VampiritoState.watching;
+  }
+
+  List<ErrorCodigo> _erroresParaTita() {
+    if (_errores.isNotEmpty) return _errores;
+    final msg = _lastErrorMessage;
+    return msg == null ? const [] : [ErrorCodigo(null, msg)];
+  }
+
+  Widget _buildCodeEditor() {
+    return ValidatedCodeEditor(
+      controller: _codeController,
+      customCommands: _customCommands,
+      control: _controlEditor,
+      onErrorsChanged: (errores) {
+        _errores = errores;
+        _programarEstadoEditor();
+      },
+      onValidityChanged: (isValid, errorMsg) {
+        _codeIsValid = isValid;
+        _lastErrorMessage = errorMsg;
+        _programarEstadoEditor();
+      },
+    );
+  }
+
+  Widget _buildActionBar(Responsive r) {
+    if (!_compiledSuccess) return const SizedBox.shrink();
+
+    final simulateBtn = DuoButton(
+      label: 'SIMULAR',
+      icon: Icons.play_circle_fill,
+      color: AppTheme.purple,
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SimulationScreen(commands: _compiledLines),
+        ),
+      ),
+    );
+
+    final sendBtn = DuoButton(
+      label: 'ENVIAR',
+      icon: Icons.send_rounded,
+      color: AppTheme.cyan,
+      onPressed: _sendProgram,
+    );
+
+    return Container(
+      padding: EdgeInsets.all(r.isCompact ? 8 : 12),
+      color: AppTheme.currentLine.withAlpha(100),
+      child: r.denseControls
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(width: double.infinity, child: simulateBtn),
+                const SizedBox(height: 8),
+                SizedBox(width: double.infinity, child: sendBtn),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(child: simulateBtn),
+                SizedBox(width: r.isCompact ? 8 : 12),
+                Expanded(child: sendBtn),
+              ],
+            ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unsaved = _fm.hasUnsavedChanges(_codeController.text);
+    final r = context.responsive;
+    final useSidePanel = r.useSidePanelLayout && _showBluetoothPanel;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('StemBosque IDE', overflow: TextOverflow.ellipsis),
+        actions: [
+          if (unsaved)
+            Padding(
+              padding: EdgeInsets.only(right: r.isCompact ? 8 : 16),
+              child: Center(
+                child: Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.orange.withAlpha(50),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.orange),
+                  ),
+                  child: Text(r.isCompact ? '●' : 'SIN GUARDAR',
+                      style: const TextStyle(
+                          color: AppTheme.orange,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+        ],
+      ),
+      drawer: IDEDrawer(
+        hasUnsavedChanges: unsaved,
+        isRunning:         _isRunning,
+        bluetoothEnabled:  _bluetoothEnabled,
+        currentFilePath:   _fm.currentFilePath,
+        onOpenFile:        _openFile,
+        onOpenCloud:       _openFromCloud,
+        onSendCloud:       _promptCloudSend,
+        onSaveFile:        _saveWithName,
+        onClearCode:       _clearCode,
+        onShareFile:       _shareFile,
+        onToggleBluetooth: () => _bt.toggleBluetooth(onUnsupported: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Bluetooth no soportado en esta plataforma')),
+          );
+        }),
+        onOpenBlockMode: () async {
+          final result = await Navigator.push<List<Map<String, dynamic>>>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BlockModeScreen(
+                initialObstacles: _currentObstacles,
+              ),
+            ),
+          );
+          if (result != null && context.mounted) {
+            setState(() {
+              _currentObstacles = result;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Obstáculos del Modo Bloque actualizados")),
+            );
+          }
+        },
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              SafeArea(
+                child: useSidePanel
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Toolbar(
+                                  onRun:     _executeProgram,
+                                  onClear:   _clearCode,
+                                  onOpen:    _openFile,
+                                  onSave:    _saveWithName,
+                                  isRunning: _isRunning,
+                                ),
+                                Expanded(child: _buildCodeEditor()),
+                                _buildActionBar(r),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            width: r.sidePanelWidth,
+                            child: _buildBluetoothPanelWidget(),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          Toolbar(
+                            onRun:     _executeProgram,
+                            onClear:   _clearCode,
+                            onOpen:    _openFile,
+                            onSave:    _saveWithName,
+                            isRunning: _isRunning,
+                          ),
+                          if (_showBluetoothPanel) _buildBluetoothPanelWidget(),
+                          Expanded(child: _buildCodeEditor()),
+                          _buildActionBar(r),
+                        ],
+                      ),
+              ),
+              Positioned(
+                right:  r.isCompact ? 8 : 16,
+                bottom: MediaQuery.viewPaddingOf(context).bottom +
+                    (_compiledSuccess
+                        ? (r.isCompact ? 72 : 88)
+                        : (r.isCompact ? 12 : 20)),
+                child: Transform.scale(
+                  scale: r.vampiritoScale,
+                  alignment: Alignment.bottomRight,
+                  child: AnimatedOpacity(
+                    opacity:  _vampiritoAnimating ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: RepaintBoundary(
+                      child: VampiritoPet(
+                        errores: _erroresParaTita(),
+                        onIrALinea: _controlEditor.irALinea,
+                        isTyping: _isTyping,
+                        state: _estadoTita(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // HELPERS
+  // ─────────────────────────────────────────────────────────────
+
+  void _launchVampiritoAnimation({
+    required bool success,
+    String? errorMsg,
+    int? commandCount,
+  }) {
+    _vampiritoOverlay?.remove();
+    _vampiritoOverlay = null;
+    setState(() => _vampiritoAnimating = true);
+
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => VampiritoExecutionAnimation(
+        success: success,
+        errorMessage: errorMsg,
+        commandCount: commandCount,
+        onComplete: () {
+          entry.remove();
+          _vampiritoOverlay = null;
+          if (mounted) {
+            setState(() => _vampiritoAnimating = false);
+            if (success) _launchConfetti();
+          }
+        },
+      ),
+    );
+    _vampiritoOverlay = entry;
+    overlay.insert(entry);
+  }
+
+  void _startScan() {
+    setState(() => _discoveredDevices.clear());
+    _bt.startScan(_btCallbacks, _discoveredDevices);
+  }
+
+  void _stopScan() {
+    _bt.stopScan();
+    setState(() {});
+  }
+
+  void _launchConfetti() {
+    _confettiOverlay?.remove();
+    _confettiOverlay = null;
+
+    final overlay = Overlay.of(context);
+    final entry   = OverlayEntry(builder: (_) => ConfettiWidget());
+    _confettiOverlay = entry;
+    overlay.insert(entry);
+
+    Future.delayed(const Duration(milliseconds: 3500), () {
+      entry.remove();
+      if (_confettiOverlay == entry) _confettiOverlay = null;
+    });
+  }
+}

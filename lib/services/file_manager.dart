@@ -1,0 +1,187 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
+import 'file_manager_stub.dart'
+    if (dart.library.html) 'web_downloader.dart';
+
+class FileManager {
+  static final FileManager instance = FileManager._internal();
+  FileManager._internal();
+
+  static const String _autoSaveFileName = 'stembosque_current_program.txt';
+
+  String? currentFilePath;
+  String? lastSavedContent;
+
+  bool hasUnsavedChanges(String currentContent) {
+    if (lastSavedContent == null) return true;
+    return currentContent != lastSavedContent;
+  }
+
+  Future<Directory> getAppDirectory() async {
+    final dir    = await getApplicationDocumentsDirectory();
+    final appDir = Directory('${dir.path}/StemBosque');
+    if (!await appDir.exists()) await appDir.create(recursive: true);
+    return appDir;
+  }
+
+  /// Guarda el archivo. En PC/Web abre un selector para elegir ubicación (Windows Explorer).
+  Future<bool> saveToFile(String content, {String? customFileName}) async {
+    try {
+      if (kIsWeb) {
+        downloadWebFile(content, customFileName ?? 'programa.txt');
+        return true;
+      }
+
+      if (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        // En PC, intentamos abrir el selector de carpetas
+        String? selectedDirectory;
+        try {
+          selectedDirectory = await FilePicker.getDirectoryPath(
+            dialogTitle: 'Selecciona la carpeta para guardar tu programa',
+          );
+        } catch (e) {
+          debugPrint('Error al abrir selector de carpetas: $e');
+          return false;
+        }
+
+        if (selectedDirectory == null) return false;
+
+        final fileName = customFileName ?? 'programa.txt';
+        final file = File('$selectedDirectory/$fileName');
+        await file.writeAsString(content);
+        currentFilePath = file.path;
+        lastSavedContent = content;
+        return true;
+      }
+
+      // Caso Android/Otros
+      final dir = await getAppDirectory();
+      final fileName = customFileName ?? _autoSaveFileName;
+      final filePath = '${dir.path}/$fileName';
+
+      final file = File(filePath);
+      await file.writeAsString(content);
+
+      currentFilePath = filePath;
+      lastSavedContent = content;
+      return true;
+    } catch (e) {
+      debugPrint('Error general en saveToFile: $e');
+      return false;
+    }
+  }
+
+  Future<String?> loadAutoSaved() async {
+    if (kIsWeb) return null;
+    try {
+      final dir  = await getAppDirectory();
+      final file = File('${dir.path}/$_autoSaveFileName');
+      if (!await file.exists()) return null;
+
+      final content    = await file.readAsString();
+      currentFilePath  = file.path;
+      lastSavedContent = content;
+      return content;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Abre un selector de archivos (Windows Explorer / Web) y devuelve el contenido.
+  Future<String?> pickAndReadFile() async {
+    final files = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['sb', 'txt'],
+    );
+
+    if (files.isEmpty) return null;
+
+    final picked = files.first;
+    if (kIsWeb) {
+      final bytes = await picked.readAsBytes();
+      return utf8.decode(bytes);
+    }
+
+    final path = picked.path;
+    if (path == null) return null;
+    final file = File(path);
+    currentFilePath = file.path;
+    final content = await file.readAsString();
+    lastSavedContent = content;
+    return content;
+  }
+
+  Future<List<File>> listFiles() async {
+    if (kIsWeb) return [];
+    try {
+      final dir      = await getAppDirectory();
+      final entities = dir.listSync();
+      return entities
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.txt') || f.path.endsWith('.sb'))
+          .toList()
+        ..sort((a, b) =>
+            b.statSync().modified.compareTo(a.statSync().modified));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<void> share(String content, {String? fileName}) async {
+    if (kIsWeb || !Platform.isAndroid) {
+      // En PC/Web "Compartir" abre el gestor de archivos para guardar
+      await saveToFile(content, customFileName: fileName);
+      return;
+    }
+    
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/${fileName ?? 'programa.txt'}');
+      await file.writeAsString(content);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Programa StemBosque',
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error al compartir: $e');
+    }
+  }
+
+  Future<String?> saveCompiled(String content) async {
+    if (kIsWeb) return null;
+    try {
+      final dir  = await getAppDirectory();
+      final file = File('${dir.path}/compilado.txt');
+      await file.writeAsString(content);
+      return file.path;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> deleteCompiled() async {
+    if (kIsWeb) return;
+    try {
+      final dir  = await getAppDirectory();
+      final file = File('${dir.path}/compilado.txt');
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
+  }
+
+  void clear() {
+    currentFilePath  = null;
+    lastSavedContent = null;
+  }
+
+  String formatDate(DateTime date) =>
+      '${date.day}/${date.month}/${date.year} '
+      '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+}

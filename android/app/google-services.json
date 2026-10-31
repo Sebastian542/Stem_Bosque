@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "668756871119",
+    "project_id": "stembosque",
+    "storage_bucket": "stembosque.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:668756871119:android:79719a26ef34ebfc8c34ba",
+        "android_client_info": {
+          "package_name": "co.edu.unbosque"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwNDScXf66dTN9SY75Urxzk8aPKRpKloY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,58 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'ui/screens/ide_screen.dart';
+import 'ui/theme/app_theme.dart';
+import 'ui/widgets/immersive_mode.dart';
+import 'ui/widgets/permission_request_screen.dart';
+import 'ui/utils/app_scaler.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Error inicializando Firebase: $e");
+  }
+
+  runApp(const StemBosqueApp());
+}
+
+class StemBosqueApp extends StatelessWidget {
+  const StemBosqueApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final MaterialApp app = MaterialApp(
+      title: 'StemBosque - DSL para Robótica',
+      theme: AppTheme.darkTheme,
+      debugShowCheckedModeBanner: false,
+      scrollBehavior: const AppScrollBehavior(),
+      // En el celular esconde las barras del sistema. En escritorio solo
+      // ajusta un poco el texto de las pantallas muy angostas.
+      builder: (context, child) {
+        return ImmersiveMode(
+          child: AppScaler(
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
+      home: const IDEScreen(),
+    );
+
+    if (kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      return app;
+    }
+
+    return PermissionRequestScreen(
+      child: app,
+    );
+  }
+}
