@@ -1,4 +1,4 @@
-# 🤖 STEMBosque DSL (v1.1.0)
+# 🤖 STEMBosque DSL (v1.0.0)
 
 ### ✍️ Autores
 - **Sebastian** ([@Sebastian542](https://github.com/Sebastian542))
@@ -9,7 +9,7 @@
 
 🚀 **¡Pruébalo ahora!**
 
-| Web (Wasm) | Android (APK) | iPhone (IPA) |
+| Web | Android (APK) | iPhone (IPA) |
 | :---: | :---: | :---: |
 | [🌐 Abrir IDE Web](https://sebastian542.github.io/Stem_Bosque/) | [🤖 Descargar APK](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk) | [🍎 Descargar IPA](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app.ipa) |
 
@@ -48,7 +48,9 @@
 | 🧠 **Intérprete Avanzado**  | Evaluación de expresiones matemáticas, trigonométricas y lógicas (`AND`, `OR`, `NOT`). |
 | ☁️ **Sincronización Cloud**  | Persistencia de programas y configuración de obstáculos mediante Firestore. |
 | 🧩 **Modo Bloque & DSL**    | Edición dual: escribe código o coloca obstáculos visualmente en la simulación. |
-| 🎨 **Editor Inteligente**   | Resaltado de sintaxis dinámico, sugerencias automáticas y validación en tiempo real. |
+| 🎨 **Editor Inteligente**   | Resaltado de sintaxis (incluye comentarios `/* */` de varias líneas), sugerencias con texto fantasma y validación en tiempo real. |
+| 🦦 **Tita, la guía**        | La mascota cuenta los errores en una insignia, los lista al tocarla y lleva el cursor a la línea del error. |
+| 💬 **Errores amables**      | Mensajes en lenguaje sencillo, con sugerencias ("¿Quisiste escribir...?") y un ejemplo de la sintaxis correcta. |
 | 🔵 **Bluetooth Dual**       | Soporte para Bluetooth Clásico (Android) y BLE (Web/Móvil) para conectar con hardware real. |
 | 🕹️ **Control Remoto**       | Interfaz de mando directo para el robot integrada en la app. |
 | 📱 **UI adaptativa**        | Layouts compact / medium / expanded / large según el ancho de ventana (móvil, tablet, escritorio y web). |
@@ -62,12 +64,13 @@ La sintaxis está diseñada para ser legible y educativa:
 
 ```stembosque
 PROGRAMA "Prueba Logica"
-  SI DISTANCIA < 20 AND NOT OBSTACULO ENTONCES
+  N = 10
+  SI N < 20 AND NOT N == 5 ENTONCES:
     GIRAR 90
     AVANZAR 50
   FIN SI
   
-  REPETIR 4 VECES:
+  REPETIR [4] VECES:
     AVANZAR 100
     GIRAR 90
   FIN REPETIR
@@ -77,8 +80,10 @@ FIN PROGRAMA
 ### Funciones Disponibles
 - **Movimiento**: `AVANZAR`, `GIRAR`.
 - **Matemáticas**: `+`, `-`, `*`, `/`, `SEN()`, `COS()`, `TANG()`.
-- **Lógica**: `AND`, `OR`, `NOT`, `>`, `<`, `=`, `!=`.
-- **Sensores Virtuales**: `DISTANCIA`, `OBSTACULO`, `PISO`.
+- **Variables**: asignación con `=` (por ejemplo `N = 100`), usables en expresiones y en `REPETIR [N] VECES`.
+- **Lógica**: `AND`, `OR`, `NOT` y comparaciones `>`, `<`, `==`.
+
+> Todavía no están implementados los operadores `!=`, `>=` y `<=`, ni sensores virtuales como `DISTANCIA`, `OBSTACULO` o `PISO`.
 
 ### Palabras Clave del Lenguaje
 | Categoría | Palabras reservadas |
@@ -126,7 +131,7 @@ Código fuente (String)
 └───────────────────┘     └───────────────────┘
 ```
 
-Adicionalmente, el `SyntaxValidator` (`lib/compiler/syntax_validator.dart`) alimenta la validación en tiempo real del editor, mostrando errores mientras el usuario escribe.
+Adicionalmente, el `SyntaxValidator` (`lib/compiler/syntax_validator.dart`) alimenta la validación en tiempo real del editor, mostrando errores mientras el usuario escribe. Analiza el programa hasta 8 veces: tras cada error repara el texto y vuelve a analizar, así detecta varios errores a la vez. Cada error lleva un mensaje amable y, cuando aplica, un ejemplo de la sintaxis correcta (`lib/compiler/syntax_help.dart`).
 
 | Etapa | Archivo | Responsabilidad |
 |-------|---------|-----------------|
@@ -136,7 +141,8 @@ Adicionalmente, el `SyntaxValidator` (`lib/compiler/syntax_validator.dart`) alim
 | AST | `compiler/ast/nodes.dart` | Nodos del árbol de sintaxis. |
 | Ejecución | `compiler/interpreter/interpreter.dart` | Evalúa el AST y produce la salida/simulación. |
 | Generación | `compiler/codegen/code_generator.dart` | Traduce el AST a código de salida. |
-| Validación | `compiler/syntax_validator.dart` | Validación en vivo para el editor. |
+| Validación | `compiler/syntax_validator.dart` | Validación en vivo para el editor (varios errores a la vez). |
+| Ayuda de sintaxis | `compiler/syntax_help.dart` | Explicaciones y ejemplos para cada tipo de error. |
 
 ---
 
@@ -151,6 +157,7 @@ Stem_Bosque/
 │   ├── compiler/                    # Núcleo del lenguaje DSL
 │   │   ├── compiler.dart            # Orquestador del pipeline de compilación
 │   │   ├── syntax_validator.dart    # Validación de sintaxis en tiempo real
+│   │   ├── syntax_help.dart         # Ayuda y ejemplos para los errores
 │   │   ├── lexer/lexer.dart         # Analizador léxico
 │   │   ├── parser/parser.dart       # Analizador sintáctico (AST)
 │   │   ├── ast/nodes.dart           # Definición de nodos del AST
@@ -180,12 +187,14 @@ Stem_Bosque/
 │   └── ui/                          # Capa de presentación
 │       ├── screens/                 # Pantallas de la app
 │       ├── widgets/                 # Componentes reutilizables
-│       ├── theme/app_theme.dart     # Tema visual (Dracula / Material 3)
+│       ├── theme/app_theme.dart     # Tema visual (fondo azul-verdoso, bordes de 2 px, Material 3)
 │       └── utils/
 │           ├── responsive.dart      # Breakpoints por ancho de ventana
 │           └── app_scaler.dart      # Escala de texto en viewports pequeños
 │
-├── assets/images/                   # Recursos (mascota "Tita", etc.)
+├── assets/images/                   # Mascota "Tita" (WebP, 600 px de ancho)
+├── assets/fonts/                    # Nunito y JetBrains Mono (con su licencia OFL)
+├── test/                            # Pruebas (resaltado del editor)
 ├── android/ · ios/ · web/           # Proyectos nativos por plataforma
 ├── .github/workflows/               # Pipelines de CI/CD
 └── pubspec.yaml                     # Dependencias y configuración Flutter
@@ -223,7 +232,7 @@ Ubicadas en `lib/ui/screens/`:
 | Explorador Cloud | `cloud_explorer_screen.dart` | Navegación y carga de proyectos guardados. |
 | Panel de Admin | `admin_panel_screen.dart` | Administración (gestión de usuarios/roles). |
 
-Componentes destacados (`lib/ui/widgets/`): editor con validación y resaltado (`code_editor_validated.dart`), barra de herramientas (`toolbar.dart`), panel Bluetooth (`bluetooth_panel.dart`), menú lateral (`ide_drawer.dart`), consola de ejecución (`execution_console.dart`), asistente visual **Tita / Vampirito** (`tita.dart`), documentación DSL (`help_dialog.dart`) y pantalla de permisos BLE.
+Componentes destacados (`lib/ui/widgets/`): editor con validación y resaltado (`code_editor_validated.dart`), barra de herramientas (`toolbar.dart`), panel Bluetooth (`bluetooth_panel.dart`), menú lateral (`ide_drawer.dart`), consola de ejecución (`execution_console.dart`), botones con relieve (`duo_button.dart`), modo inmersivo en móvil (`immersive_mode.dart`), asistente visual **Tita / Vampirito** (`tita.dart`), documentación DSL (`help_dialog.dart`) y pantalla de permisos BLE.
 
 ---
 
@@ -289,7 +298,7 @@ El módulo requiere permisos de ubicación/Bluetooth en móvil, gestionados medi
 
 - **Lenguaje**: Dart / Flutter
 - **Backend**: Firebase (Auth & Firestore)
-- **Compilación**: Web (Wasm/CanvasKit), Android, iOS.
+- **Compilación**: Web (CanvasKit), Android, iOS, Windows, macOS y Linux.
 - **Librerías Clave**: `flutter_blue_plus`, `share_plus` (v10+), `flutter_animate`.
 - **Tipografías**: Nunito y JetBrains Mono, incluidas en `assets/fonts` (no se descargan al abrir la app).
 
@@ -313,8 +322,10 @@ Definidas en `pubspec.yaml` (Dart SDK `>=3.0.0 <4.0.0`).
 - `flutter_test` — pruebas.
 - `flutter_lints` — análisis estático / linting.
 
-### Nota de compatibilidad
-Se fija `permission_handler_html: 0.1.3+5` mediante `dependency_overrides` porque la versión `0.1.4+0` usa `isA()` sobre `Object` (disponible solo en Dart 3.12+), lo que rompe la compilación en Web con Dart 3.11.
+### Notas de compatibilidad
+- Se fija `permission_handler: 12.0.3` porque la serie 13.x usa `permission_handler_android` 14.x, cuyo `build.gradle.kts` no compila con AGP 8.11 / Kotlin 2.3 y rompe `flutter build apk`.
+- Se fija `permission_handler_html: 0.1.3+5` mediante `dependency_overrides` porque la versión `0.1.4+0` usa `isA()` sobre `Object` (disponible solo en Dart 3.12+), lo que rompe la compilación en Web con Dart 3.11.
+- `google_fonts` ya no se usa (las fuentes van incluidas). `web` y `cupertino_icons` no suben a su última versión porque exigen Dart 3.12 o superior; la app usa Flutter 3.41.5 (Dart 3.11).
 
 ---
 
@@ -323,6 +334,9 @@ Se fija `permission_handler_html: 0.1.3+5` mediante `dependency_overrides` porqu
 1. **Clonar**: `git clone https://github.com/Sebastian542/Stem_Bosque.git`
 2. **Dependencias**: `flutter pub get`
 3. **Ejecutar**: `flutter run` (Compatible con Windows, Web, Android e iOS).
+4. **Análisis y pruebas**: `flutter analyze` y `flutter test`.
+
+> En Windows, `flutter pub get` y las compilaciones con plugins piden activar el **Modo de desarrollador** (`start ms-settings:developers`).
 
 > **Firebase**: la app inicializa Firebase al arrancar (`main.dart`) usando `firebase_options.dart`. Si vas a usar tu propio proyecto Firebase, regenera este archivo con `flutterfire configure`.
 
@@ -331,11 +345,11 @@ Se fija `permission_handler_html: 0.1.3+5` mediante `dependency_overrides` porqu
 ## 🏗️ Compilación por Plataforma
 
 ```bash
-# Web (Wasm)
-flutter build web --wasm
+# Web
+flutter build web --release
 
 # Android (APK)
-flutter build apk --release
+flutter build apk --release --android-skip-build-dependency-validation
 
 # iOS (sin firma, empaquetado manual)
 flutter build ios --release --no-codesign
@@ -345,10 +359,10 @@ flutter build ios --release --no-codesign
 
 ## ⚙️ CI/CD (GitHub Actions)
 
-Definido en `.github/workflows/deploy.yml`. Se dispara en push a `main` o `aleja2` y:
+Definido en `.github/workflows/deploy.yml`. Usa Flutter 3.41.5 y `flutter pub get --enforce-lockfile`, así que `pubspec.lock` siempre debe estar actualizado. Se dispara en push a `main` o `aleja2` y:
 1. Si el push es a `aleja2`, sincroniza esa rama hacia `main`.
-2. Compila la versión **Web** (`flutter build web --wasm`) y la despliega en GitHub Pages.
-3. Genera el **APK** de Android en modo release.
+2. Compila la versión **Web** (`flutter build web --release`) y la despliega en GitHub Pages.
+3. Genera el **APK** de Android en modo release (`--android-skip-build-dependency-validation`).
 4. Genera el **IPA** de iOS (sin firma, empaquetado manual).
 5. Publica un **Release** `latest` con APK e IPA.
 
@@ -356,5 +370,5 @@ Definido en `.github/workflows/deploy.yml`. Se dispara en push a `main` o `aleja
 
 © 2026 STEMBosque — Innovación en Educación Tecnológica.
 
-<!-- Documentación actualizada: 2026-09 (rev. 2) -->
+<!-- Documentación actualizada: 2026-11 (rev. 3) -->
 
