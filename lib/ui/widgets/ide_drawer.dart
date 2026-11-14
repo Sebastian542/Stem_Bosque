@@ -7,6 +7,7 @@ import '../utils/responsive.dart';
 import '../screens/login_screen.dart';
 import '../screens/admin_panel_screen.dart';
 import '../screens/remote_control_screen.dart';
+import '../screens/graph_screen.dart';
 import 'help_dialog.dart';
 
 class IDEDrawer extends StatelessWidget {
@@ -146,6 +147,19 @@ class IDEDrawer extends StatelessWidget {
                     showDialog(
                       context: context,
                       builder: (context) => const HelpDialog(),
+                    );
+                  },
+                ),
+                _buildItem(
+                  context,
+                  icon: Icons.show_chart_rounded,
+                  title: 'Gráfica SEN COS TANG',
+                  subtitle: 'Ver la curva de una función',
+                  color: AppTheme.cyan,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const GraphScreen()),
                     );
                   },
                 ),

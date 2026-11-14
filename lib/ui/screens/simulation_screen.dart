@@ -4,6 +4,8 @@ import '../theme/app_theme.dart';
 import '../utils/responsive.dart';
 import '../widgets/confetti_widget.dart';
 import '../widgets/duo_button.dart';
+import 'graph_screen.dart';
+import '../../bluetooth/bluetooth_manager.dart';
 
 // ══════════════════════════════════════════════════════════════
 //  SimulationScreen
@@ -32,6 +34,12 @@ class _SimulationScreenState extends State<SimulationScreen>
   // ── Obstáculos y Edición ──────────────────────────────────
   final List<Rect> _obstacles = [];
   bool _isEditMode = false;
+  bool _graficaActiva = false;
+  FuncionTrig _funcionGraf = FuncionTrig.sen;
+  int _pasoGraf = 0;
+  int _pasosGraf = 1;
+  double _gradosObjetivo = 0;
+  final TextEditingController _anguloCtrl = TextEditingController(text: '90');
   bool _collisionDetected = false;
 
   // ── Rastro (trail) ─────────────────────────────────────────
@@ -99,6 +107,7 @@ class _SimulationScreenState extends State<SimulationScreen>
     _runToken++; // cancela cualquier temporizador pendiente
     _confeti?.remove();
     _chipsCtrl.dispose();
+    _anguloCtrl.dispose();
     _pose.dispose();
     _tc.dispose();
     super.dispose();
@@ -132,6 +141,10 @@ class _SimulationScreenState extends State<SimulationScreen>
     if (_isPlaying || _isDone) return;
     _runToken++;
     setState(() => _isPlaying = true);
+    if (_graficaActiva) {
+      _animarGrafica();
+      return;
+    }
     if (_activeStep != null && _remaining > 1e-9) {
       // Reanuda el comando que quedó a medias.
       _animateSteps(_activeStep!, _activeStepSize);
@@ -156,6 +169,8 @@ class _SimulationScreenState extends State<SimulationScreen>
       _activeStep = null;
       _angle      = 0;
       _distance   = 0;
+      _graficaActiva = false;
+      _pasoGraf   = 0;
       _trail.clear();
       // El robot vuelve al centro del plano en el próximo build
     });
@@ -163,6 +178,155 @@ class _SimulationScreenState extends State<SimulationScreen>
       if (mounted) _centrarEnRobot();
     });
   }
+
+  /// El robot recorre la curva desde 0° hasta el ángulo que escribió el usuario.
+  void _empezarGrafica(FuncionTrig funcion) {
+    final grados = double.tryParse(_anguloCtrl.text.trim().replaceAll(',', '.'));
+    if (grados == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe el ángulo en grados, por ejemplo 90')),
+      );
+      return;
+    }
+
+    _runToken++;
+    _confeti?.remove();
+    _confeti = null;
+    _x = _worldSize / 2;
+    _y = _worldSize / 2;
+    _trail.clear();
+    _gradosObjetivo = grados;
+    _pasosGraf = min(360, max(24, grados.abs().round()));
+    setState(() {
+      _funcionGraf = funcion;
+      _graficaActiva = true;
+      _pasoGraf = 0;
+      _isPlaying = true;
+      _isDone = false;
+      _collisionDetected = false;
+      _cmdIndex = 0;
+      _remaining = 0;
+      _activeStep = null;
+      _angle = 0;
+      _distance = 0;
+    });
+    _encuadrarGrafica();
+    _animarGrafica();
+  }
+
+  Future<void> _enviarAlRobot() async {
+    final grados = double.tryParse(_anguloCtrl.text.trim().replaceAll(',', '.'));
+    if (grados == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe el ángulo en grados, por ejemplo 90')),
+      );
+      return;
+    }
+    final ordenes = comandosParaDibujar(_funcionGraf, grados);
+    if (ordenes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Con ese ángulo no hay trazo para enviar')),
+      );
+      return;
+    }
+    final bt = BluetoothManager.instance;
+    if (bt.connectedDevice == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Conecta el robot por Bluetooth para que lo dibuje')),
+      );
+      return;
+    }
+    final cb = BluetoothCallbacks(
+      onLog: (_, __) {},
+      onBluetoothStateChanged: (_) {},
+      onDeviceFound: (_) {},
+      onConnectionChanged: (_) {},
+      onScanStateChanged: (_) {},
+    );
+    try {
+      await bt.sendFile('${ordenes.join('\n')}\n', cb);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Enviado: el robot dibuja $_nombreFuncion(${_fmt(grados)})')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo enviar: $e')),
+      );
+    }
+  }
+
+  void _encuadrarGrafica() {
+    if (_viewSize.isEmpty) return;
+    final anchoCm = max(80.0, _gradosObjetivo.abs() + 40);
+    final s = min(
+      _viewSize.width / (anchoCm * _pxPerCm),
+      _viewSize.height / (140 * _pxPerCm),
+    ).clamp(0.3, 1.5);
+    final cx = _worldSize / 2 + _gradosObjetivo / 2 * _pxPerCm;
+    final cy = _worldSize / 2;
+    _tc.value = Matrix4(
+      s, 0, 0, 0,
+      0, s, 0, 0,
+      0, 0, 1, 0,
+      _viewSize.width / 2 - cx * s,
+      _viewSize.height / 2 - cy * s,
+      0, 1,
+    );
+  }
+
+  void _animarGrafica() {
+    if (!_isPlaying || !mounted || !_graficaActiva) return;
+    if (_pasoGraf >= _pasosGraf) {
+      setState(() {
+        _isPlaying = false;
+        _isDone = true;
+      });
+      _celebrar();
+      return;
+    }
+
+    final grados = _gradosObjetivo * (_pasoGraf + 1) / _pasosGraf;
+    final y = valorFuncion(_funcionGraf, grados);
+    final destino = _puntoFuncion(grados, y);
+
+    if (y == null) {
+      _trail.add(const Offset(double.nan, double.nan));
+    } else {
+      final dx = destino.dx - _x;
+      final dy = destino.dy - _y;
+      if (dx.abs() + dy.abs() > 0.01) {
+        _angle = atan2(dy, dx);
+        _distance += sqrt(dx * dx + dy * dy) / _pxPerCm;
+      }
+      _x = destino.dx;
+      _y = destino.dy;
+      _trail.add(destino);
+    }
+    _pasoGraf++;
+    _refrescarRobot();
+
+    final token = _runToken;
+    Future.delayed(const Duration(milliseconds: 12), () {
+      if (token == _runToken) _animarGrafica();
+    });
+  }
+
+  /// 1° = 1 cm en X. En Y, 1 unidad de la función = 40 cm hacia arriba.
+  Offset _puntoFuncion(double grados, double? valor) {
+    final yCm = (valor ?? 0) * 40;
+    return Offset(
+      _worldSize / 2 + grados * _pxPerCm,
+      _worldSize / 2 - yCm * _pxPerCm,
+    );
+  }
+
+  String get _nombreFuncion => switch (_funcionGraf) {
+        FuncionTrig.sen => 'SEN',
+        FuncionTrig.cos => 'COS',
+        FuncionTrig.tang => 'TANG',
+      };
 
   void _runNextCommand() {
     if (!_isPlaying) return;
@@ -303,6 +467,13 @@ class _SimulationScreenState extends State<SimulationScreen>
 
   /// Qué cara pone Tita y qué dice, según lo que esté pasando.
   (String, String) _guia() {
+    if (_graficaActiva && _isPlaying) {
+      final g = (_gradosObjetivo * _pasoGraf / _pasosGraf).round();
+      return ('excited', 'Graficando $_nombreFuncion hasta ${_fmt(_gradosObjetivo)}°. Va en $g°.');
+    }
+    if (_graficaActiva && _isDone) {
+      return ('happy', '¡Listo! El robot dibujó $_nombreFuncion.');
+    }
     if (_isEditMode && !_isPlaying) {
       return ('watching', 'Modo bloques: toca el plano para poner o quitar obstáculos.');
     }
@@ -419,9 +590,10 @@ class _SimulationScreenState extends State<SimulationScreen>
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: Image.asset(
-                'assets/images/tita_$img.png',
+                'assets/images/tita_$img.webp',
                 key: ValueKey(img),
                 height: 92,
+                cacheHeight: (92 * MediaQuery.devicePixelRatioOf(context)).ceil(),
                 gaplessPlayback: true,
               ),
             ),
@@ -676,6 +848,61 @@ class _SimulationScreenState extends State<SimulationScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Row(
+                children: [
+                  SizedBox(
+                    width: 110,
+                    child: TextField(
+                      controller: _anguloCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                        signed: true,
+                      ),
+                      style: AppTheme.fuente(fontWeight: FontWeight.w800),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        labelText: 'Grados',
+                        labelStyle: AppTheme.fuente(color: AppTheme.comment, fontSize: 12),
+                        filled: true,
+                        fillColor: AppTheme.currentLine,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  for (final f in FuncionTrig.values) ...[
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: DuoButton(
+                          label: switch (f) {
+                            FuncionTrig.sen => 'SEN',
+                            FuncionTrig.cos => 'COS',
+                            FuncionTrig.tang => 'TANG',
+                          },
+                          icon: Icons.gesture_rounded,
+                          color: switch (f) {
+                            FuncionTrig.sen => AppTheme.cyan,
+                            FuncionTrig.cos => AppTheme.green,
+                            FuncionTrig.tang => AppTheme.orange,
+                          },
+                          height: corto ? 36 : 40,
+                          onPressed: () => _empezarGrafica(f),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              SizedBox(height: corto ? 8 : 10),
+              DuoButton(
+                label: 'ENVIAR AL ROBOT',
+                icon: Icons.bluetooth_rounded,
+                color: AppTheme.cyan,
+                height: corto ? 36 : 42,
+                onPressed: _enviarAlRobot,
+              ),
+              SizedBox(height: corto ? 8 : 12),
               TweenAnimationBuilder<double>(
                 tween: Tween<double>(end: progreso),
                 duration: const Duration(milliseconds: 300),
@@ -905,9 +1132,19 @@ class _RobotPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
-    final path = Path()..moveTo(trail.first.dx, trail.first.dy);
-    for (int i = 1; i < trail.length; i++) {
-      path.lineTo(trail[i].dx, trail[i].dy);
+    final path = Path();
+    var abierto = false;
+    for (final p in trail) {
+      if (p.dx.isNaN || p.dy.isNaN) {
+        abierto = false;
+        continue;
+      }
+      if (!abierto) {
+        path.moveTo(p.dx, p.dy);
+        abierto = true;
+      } else {
+        path.lineTo(p.dx, p.dy);
+      }
     }
     canvas.drawPath(path, paint);
   }

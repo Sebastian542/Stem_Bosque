@@ -13,6 +13,8 @@
 | :---: | :---: | :---: |
 | [🌐 Abrir IDE Web](https://sebastian542.github.io/Stem_Bosque/) | [🤖 Descargar APK](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app-release.apk) | [🍎 Descargar IPA](https://github.com/Sebastian542/Stem_Bosque/releases/download/latest/app.ipa) |
 
+> 📘 **¿Primera vez?** Lee el [Manual de usuario](docs/MANUAL_DE_USUARIO.md).
+
 ---
 
 ## 📑 Tabla de Contenidos
